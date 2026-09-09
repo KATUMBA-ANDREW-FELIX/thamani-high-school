@@ -1,15 +1,12 @@
 {
   "name": "thamani-academy",
   "version": "1.0.0",
-  "description": "",
-  "main": "puppeteer-crawl.js",
+  "description": "Thamani High School (TAK) Web Platform",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "cd app && npm install && npm run build",
+    "dev": "cd app && npm run dev"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "puppeteer": "^25.10.0"
-  }
+  "license": "ISC"
 }
