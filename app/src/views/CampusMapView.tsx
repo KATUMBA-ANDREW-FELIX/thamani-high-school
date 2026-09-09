@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Building2, FlaskConical, Laptop, BookOpen, ShieldCheck, Trophy, X } from 'lucide-react';
+import { Building2, FlaskConical, Laptop, BookOpen, ShieldCheck, Trophy, X } from 'lucide-react';
 
 interface CampusLocation {
   id: string;
@@ -85,7 +85,7 @@ export const CampusMapView: React.FC = () => {
       <div className="bg-gradient-to-r from-brand-green to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-3 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Kakiri Campus Navigation
+            <Building2 className="w-4 h-4" /> Kakiri Campus Navigation
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Interactive Campus Map</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">
@@ -158,9 +158,6 @@ export const CampusMapView: React.FC = () => {
                     : 'bg-brand-green text-white border-2 border-brand-gold'
                 }`}>
                   <Icon className="w-5 h-5" />
-                  
-                  {/* Ping animation effect */}
-                  <span className="absolute inset-0 rounded-full bg-brand-gold animate-ping opacity-40"></span>
                 </div>
 
                 {/* Tooltip Label */}

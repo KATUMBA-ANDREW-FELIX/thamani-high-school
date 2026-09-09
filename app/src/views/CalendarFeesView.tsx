@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { CalendarEvent } from '../types';
-import { Calendar, Calculator, Sparkles, Clock } from 'lucide-react';
+import { Calendar, Calculator, Clock } from 'lucide-react';
 
 interface CalendarFeesViewProps {
   events: CalendarEvent[];
@@ -29,7 +29,7 @@ export const CalendarFeesView: React.FC<CalendarFeesViewProps> = ({ events }) =>
       <div className="bg-gradient-to-r from-brand-green via-emerald-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-3 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Academic Financial Transparency
+            <Calculator className="w-4 h-4" /> Academic Financial Transparency
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Academic Calendar & Tuition Fees</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">

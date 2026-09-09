@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { LibraryResource, AcademicLevel } from '../types';
-import { BookOpen, Search, Download, Sparkles } from 'lucide-react';
+import { BookOpen, Search, Download } from 'lucide-react';
 
 interface LibraryViewProps {
   resources: LibraryResource[];
@@ -33,7 +33,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ resources, onIncrement
       <div className="bg-gradient-to-r from-brand-green via-emerald-900 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-3 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> UNEB Digital E-Learning Hub
+            <BookOpen className="w-4 h-4" /> UNEB Digital E-Learning Hub
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Digital Study Resource Library</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">

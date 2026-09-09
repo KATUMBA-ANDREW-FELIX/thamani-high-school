@@ -1,6 +1,6 @@
 import React from 'react';
 import type { NewsArticle, CalendarEvent } from '../types';
-import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, Sparkles, MapPin } from 'lucide-react';
+import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, MapPin } from 'lucide-react';
 
 interface HomeViewProps {
   news: NewsArticle[];
@@ -22,7 +22,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, setActiveView 
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-emerald-900/90 text-brand-gold px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold border border-brand-gold/40 shadow-lg">
-                <Sparkles className="w-4 h-4 text-brand-gold animate-pulse" />
+                <GraduationCap className="w-4 h-4 text-brand-gold" />
                 Premier Secondary Education in Wakiso District
               </div>
               

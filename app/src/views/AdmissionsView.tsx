@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Applicant, AcademicLevel } from '../types';
-import { GraduationCap, CheckCircle2, Search, UserCheck, Sparkles, AlertCircle, Phone } from 'lucide-react';
+import { GraduationCap, CheckCircle2, Search, UserCheck, AlertCircle, Phone } from 'lucide-react';
 
 interface AdmissionsViewProps {
   onAddApplicant: (applicantData: Omit<Applicant, 'id' | 'refCode' | 'status' | 'appliedDate'>) => Applicant;
@@ -80,7 +80,7 @@ export const AdmissionsView: React.FC<AdmissionsViewProps> = ({ onAddApplicant, 
       <div className="bg-gradient-to-r from-brand-green to-emerald-950 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-4 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Official 2026/2027 Admissions
+            <GraduationCap className="w-4 h-4" /> Official 2026/2027 Admissions
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Apply For Student Admission</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">

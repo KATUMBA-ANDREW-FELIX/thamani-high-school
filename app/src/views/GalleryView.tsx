@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { GalleryItem } from '../types';
-import { Sparkles, X, ZoomIn } from 'lucide-react';
+import { X, ZoomIn } from 'lucide-react';
 
 interface GalleryViewProps {
   gallery: GalleryItem[];
@@ -23,7 +23,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ gallery }) => {
       <div className="bg-gradient-to-r from-brand-green to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-3 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Campus Achievements & Life
+            <ZoomIn className="w-4 h-4" /> Campus Achievements & Life
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Photo & Video Gallery</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">
