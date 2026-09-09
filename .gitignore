@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+app/node_modules/
+app/dist/
+app/build/
+.env
+.env.local
