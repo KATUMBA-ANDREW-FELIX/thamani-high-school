@@ -122,7 +122,7 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       
       {/* Teacher Portal Header & Profile Switcher */}
-      <div className="bg-gradient-to-r from-brand-maroon via-slate-900 to-brand-green text-white rounded-3xl p-8 shadow-xl flex flex-wrap justify-between items-center gap-6">
+      <div className="bg-gradient-to-r from-red-950 via-slate-900 to-emerald-950 text-white rounded-3xl p-8 shadow-xl flex flex-wrap justify-between items-center gap-6">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
             <UserCheck className="w-4 h-4" /> Passwordless Staff Portal

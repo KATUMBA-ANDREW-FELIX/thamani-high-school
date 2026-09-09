@@ -1,12 +1,10 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --brand-green: #1A472A;
-    --brand-maroon: #800000;
-    --brand-gold: #D4AF37;
-    --brand-gold-light: #F4E8C1;
-  }
+@theme {
+  --color-brand-green: #1A472A;
+  --color-brand-maroon: #800000;
+  --color-brand-gold: #D4AF37;
+  --color-brand-gold-light: #F4E8C1;
 }
 
 body {
@@ -16,7 +14,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom utility styling */
+/* Custom utility fallback styling */
 .bg-brand-green { background-color: #1A472A; }
 .text-brand-green { color: #1A472A; }
 .border-brand-green { border-color: #1A472A; }

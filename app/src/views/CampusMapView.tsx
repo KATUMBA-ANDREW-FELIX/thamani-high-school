@@ -82,7 +82,7 @@ export const CampusMapView: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
       
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-brand-green to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-900 via-emerald-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-3 max-w-3xl">
           <span className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
             <Building2 className="w-4 h-4" /> Kakiri Campus Navigation

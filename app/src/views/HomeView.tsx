@@ -12,7 +12,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, setActiveView 
   return (
     <div className="space-y-16 pb-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-brand-green via-emerald-950 to-slate-900 text-white overflow-hidden py-20 lg:py-28">
+      <section className="relative bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-900 text-white overflow-hidden py-20 lg:py-28">
         {/* Subtle grid pattern background */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D4AF37_1px,transparent_1px)] [background-size:16px_16px]"></div>
 

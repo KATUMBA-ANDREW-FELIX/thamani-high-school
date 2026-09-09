@@ -105,7 +105,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       
       {/* Executive Admin Header */}
-      <div className="bg-gradient-to-r from-brand-green via-slate-900 to-brand-maroon text-white rounded-3xl p-8 shadow-xl flex flex-wrap justify-between items-center gap-6">
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-red-950 text-white rounded-3xl p-8 shadow-xl flex flex-wrap justify-between items-center gap-6">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
             <Shield className="w-4 h-4" /> Chief Executive Administration Panel
