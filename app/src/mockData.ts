@@ -1,4 +1,4 @@
-import type { Applicant, Student, Teacher, LibraryResource, CalendarEvent, GalleryItem, NewsArticle, StudentMarkReport } from './types';
+import type { Applicant, Student, Teacher, LibraryResource, CalendarEvent, GalleryItem, NewsArticle, StudentMarkReport, TimetableSlot, DutyRosterItem, DisciplineLogEntry, SubjectSyllabus, NoticeCircular } from './types';
 
 // Helper to generate natural, clean SVG graphics for school photos (no AI neon gradients)
 export const createSvgPlaceholder = (title: string, subtitle: string, bgColor = '#1A472A', textColor = '#ffffff') => {
@@ -398,3 +398,240 @@ export const SAMPLE_MARKS_REPORT: StudentMarkReport = {
   teacherComments: 'Paul is a focused student with consistent effort across all subjects.',
   headteacherComments: 'Promoted to Senior 4 Final Examination registration.'
 };
+
+export const INITIAL_TIMETABLE: TimetableSlot[] = [
+  // Monday S.4 West
+  { id: 'TT-001', day: 'Monday', period: 'P1 (8:00 - 8:40 AM)', periodIndex: 1, classStream: 'Senior 4 West', subject: 'Physics', teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', room: 'Physics Lab 1' },
+  { id: 'TT-002', day: 'Monday', period: 'P2 (8:40 - 9:20 AM)', periodIndex: 2, classStream: 'Senior 4 West', subject: 'Physics Practical', teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', room: 'Physics Lab 1' },
+  { id: 'TT-003', day: 'Monday', period: 'P3 (9:20 - 10:00 AM)', periodIndex: 3, classStream: 'Senior 4 West', subject: 'Chemistry', teacherId: 'TCH-002', teacherName: 'Mrs. Nabwire Christine', room: 'Chemistry Lab' },
+  { id: 'TT-004', day: 'Monday', period: 'P4 (10:30 - 11:10 AM)', periodIndex: 4, classStream: 'Senior 4 West', subject: 'Mathematics', teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', room: 'Room S4W' },
+  { id: 'TT-005', day: 'Monday', period: 'P5 (11:10 - 11:50 AM)', periodIndex: 5, classStream: 'Senior 4 West', subject: 'English Language', teacherId: 'TCH-004', teacherName: 'Madam Akite Harriet', room: 'Room S4W' },
+  { id: 'TT-006', day: 'Monday', period: 'P7 (2:00 - 2:40 PM)', periodIndex: 7, classStream: 'Senior 4 West', subject: 'ICT / Computer Studies', teacherId: 'TCH-003', teacherName: 'Mr. Kiwanuka Patrick', room: 'ICT Lab 1' },
+
+  // Wednesday S.6 PCM/ICT
+  { id: 'TT-007', day: 'Wednesday', period: 'P1 (8:00 - 8:40 AM)', periodIndex: 1, classStream: 'Senior 6 PCM/ICT', subject: 'Advanced Physics P510/1', teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', room: 'Room S6 Science' },
+  { id: 'TT-008', day: 'Wednesday', period: 'P2 (8:40 - 9:20 AM)', periodIndex: 2, classStream: 'Senior 6 PCM/ICT', subject: 'Advanced Physics P510/2', teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', room: 'Room S6 Science' },
+  { id: 'TT-009', day: 'Wednesday', period: 'P4 (10:30 - 11:10 AM)', periodIndex: 4, classStream: 'Senior 6 PCM/ICT', subject: 'Subsidiary ICT P241/1', teacherId: 'TCH-003', teacherName: 'Mr. Kiwanuka Patrick', room: 'ICT Lab 2' },
+  { id: 'TT-010', day: 'Friday', period: 'P3 (9:20 - 10:00 AM)', periodIndex: 3, classStream: 'Senior 4 West', subject: 'English Literature', teacherId: 'TCH-004', teacherName: 'Madam Akite Harriet', room: 'Room S4W' },
+];
+
+export const INITIAL_DUTY_ROSTER: DutyRosterItem[] = [
+  {
+    id: 'DUTY-W01',
+    weekNumber: 3,
+    startDate: '2026-09-14',
+    endDate: '2026-09-20',
+    assignedTeachers: [
+      { teacherId: 'TCH-001', teacherName: 'Mr. Musoke Raymond', dutyRole: 'Assembly & Morning Prep Warden' },
+      { teacherId: 'TCH-004', teacherName: 'Madam Akite Harriet', dutyRole: 'Dining Hall & Meal Inspector' }
+    ],
+    notes: 'Focus on student punctuality for 7:30 AM morning devotion and evening preps.'
+  },
+  {
+    id: 'DUTY-W02',
+    weekNumber: 4,
+    startDate: '2026-09-21',
+    endDate: '2026-09-27',
+    assignedTeachers: [
+      { teacherId: 'TCH-002', teacherName: 'Mrs. Nabwire Christine', dutyRole: 'Senior Matron & Dormitory Inspector' },
+      { teacherId: 'TCH-003', teacherName: 'Mr. Kiwanuka Patrick', dutyRole: 'ICT Lab Security & Evening Warden' }
+    ],
+    notes: 'Monitor boarding dormitories check-in at 9:30 PM lights-out.'
+  }
+];
+
+export const INITIAL_DISCIPLINE_LOGS: DisciplineLogEntry[] = [
+  {
+    id: 'DISC-001',
+    studentId: 'STU-2026-101',
+    studentName: 'Kato Paul Mark',
+    classStream: 'Senior 4 West',
+    date: '2026-09-02',
+    type: 'commendation',
+    category: 'academics',
+    description: 'Awarded Certificate of Excellence for leading the Senior 4 Physics practical project.',
+    loggedByTeacherName: 'Mr. Musoke Raymond'
+  },
+  {
+    id: 'DISC-002',
+    studentId: 'STU-2026-102',
+    studentName: 'Namutebi Brenda',
+    classStream: 'Senior 4 West',
+    date: '2026-09-05',
+    type: 'warning',
+    category: 'punctuality',
+    description: 'Arrived 15 minutes late for morning 7:30 AM roll call assembly.',
+    loggedByTeacherName: 'Madam Akite Harriet'
+  },
+  {
+    id: 'DISC-003',
+    studentId: 'STU-2026-103',
+    studentName: 'Wasswa Brian',
+    classStream: 'Senior 2 East',
+    date: '2026-09-07',
+    type: 'commendation',
+    category: 'uniform',
+    description: 'Recognized for outstanding smartness and neat school uniform presentation.',
+    loggedByTeacherName: 'Mrs. Nabwire Christine'
+  }
+];
+
+export const INITIAL_SYLLABI: SubjectSyllabus[] = [
+  {
+    id: 'SYL-001',
+    subject: 'Physics',
+    classStream: 'Senior 4 West',
+    level: 'O-Level',
+    departmentHeadId: 'TCH-001',
+    departmentHeadName: 'Mr. Musoke Raymond (HOD Sciences)',
+    title: 'UNEB UCE Senior 4 Physics Complete Curriculum (P530)',
+    topics: [
+      {
+        id: 'TP-101',
+        topicNumber: 1,
+        topicTitle: 'Mechanics: Linear Motion & Newton\'s Laws',
+        subtopics: ['Velocity-time graphs', 'Equations of motion', 'Momentum & Impulse'],
+        status: 'completed',
+        targetDate: '2026-06-15',
+        completedDate: '2026-06-12',
+        notes: 'Practical experiments completed in Physics Lab 1.'
+      },
+      {
+        id: 'TP-102',
+        topicNumber: 2,
+        topicTitle: 'Light & Optics: Refraction & Lenses',
+        subtopics: ['Snell\'s Law', 'Total Internal Reflection', 'Lens formula & power'],
+        status: 'completed',
+        targetDate: '2026-07-30',
+        completedDate: '2026-07-28',
+        notes: 'Ray box practical diagrams verified for all candidates.'
+      },
+      {
+        id: 'TP-103',
+        topicNumber: 3,
+        topicTitle: 'Electricity & Magnetism: Current & Circuits',
+        subtopics: ['Ohm\'s Law', 'Series & Parallel Resistors', 'Electromagnetism'],
+        status: 'in_progress',
+        targetDate: '2026-09-25',
+        notes: 'Currently covering Wheatstone bridge and potentiometer circuits.'
+      },
+      {
+        id: 'TP-104',
+        topicNumber: 4,
+        topicTitle: 'Modern Physics: Radioactivity & Atomic Structure',
+        subtopics: ['Alpha, Beta, Gamma emission', 'Half-life calculations', 'Nuclear energy'],
+        status: 'pending',
+        targetDate: '2026-10-15',
+        notes: 'Scheduled ahead of UNEB briefing on November 6.'
+      }
+    ]
+  },
+  {
+    id: 'SYL-002',
+    subject: 'Chemistry',
+    classStream: 'Senior 4 West',
+    level: 'O-Level',
+    departmentHeadId: 'TCH-002',
+    departmentHeadName: 'Mrs. Nabwire Christine (HOD Chemistry)',
+    title: 'UNEB UCE Senior 4 Chemistry Practical & Theory Curriculum (P545)',
+    topics: [
+      {
+        id: 'TP-201',
+        topicNumber: 1,
+        topicTitle: 'Volumetric Analysis (Titration)',
+        subtopics: ['Acid-base indicators', 'Molarity & Normality', 'Calculation of percentage purity'],
+        status: 'completed',
+        targetDate: '2026-07-10',
+        completedDate: '2026-07-08',
+        notes: 'Titration practical exam scored above 85% average.'
+      },
+      {
+        id: 'TP-202',
+        topicNumber: 2,
+        topicTitle: 'Qualitative Analysis (Cation & Anion Tests)',
+        subtopics: ['Flame tests', 'Precipitate observations', 'Ammonia gas tests'],
+        status: 'in_progress',
+        targetDate: '2026-09-30',
+        notes: 'Qualitative practical work in progress in Chemistry Lab.'
+      },
+      {
+        id: 'TP-203',
+        topicNumber: 3,
+        topicTitle: 'Organic Chemistry: Hydrocarbons & Alkanols',
+        subtopics: ['Alkanes, Alkenes, Alkynes', 'Esterification', 'Polymers & Plastics'],
+        status: 'pending',
+        targetDate: '2026-10-20'
+      }
+    ]
+  },
+  {
+    id: 'SYL-003',
+    subject: 'ICT / Computer Studies',
+    classStream: 'Senior 6 PCM/ICT',
+    level: 'A-Level',
+    departmentHeadId: 'TCH-003',
+    departmentHeadName: 'Mr. Kiwanuka Patrick (Director of ICT)',
+    title: 'UACE Subsidiary ICT P241/1 & P241/2 Advanced Curriculum',
+    topics: [
+      {
+        id: 'TP-301',
+        topicNumber: 1,
+        topicTitle: 'Electronic Spreadsheets: Advanced Formulas & VLOOKUP',
+        subtopics: ['Nested IF functions', 'Pivot tables', 'Data validation'],
+        status: 'completed',
+        targetDate: '2026-05-30',
+        completedDate: '2026-05-25'
+      },
+      {
+        id: 'TP-302',
+        topicNumber: 2,
+        topicTitle: 'Relational Database Management (MS Access)',
+        subtopics: ['Primary & Foreign Keys', 'SQL Queries', 'Form & Report Design'],
+        status: 'completed',
+        targetDate: '2026-07-20',
+        completedDate: '2026-07-18'
+      },
+      {
+        id: 'TP-303',
+        topicNumber: 3,
+        topicTitle: 'Web Design & HTML/CSS Coding',
+        subtopics: ['HTML5 semantic elements', 'CSS Flexbox/Grid', 'Publishing web projects'],
+        status: 'in_progress',
+        targetDate: '2026-09-28',
+        notes: 'Candidates building modern responsive school project websites.'
+      }
+    ]
+  }
+];
+
+export const INITIAL_NOTICES: NoticeCircular[] = [
+  {
+    id: 'NOT-001',
+    title: 'Official Term III Re-opening & Reporting Guidelines for Parents',
+    publishDate: '2026-09-01',
+    targetAudience: 'all',
+    category: 'urgent',
+    content: 'All boarding scholars are required to report to Thamani High School, Kakiri, on Tuesday September 15th, 2026 before 4:00 PM. Please bring bank slip receipts for fee clearing at the Bursar\'s office.',
+    isPinned: true,
+    pdfAttachmentName: 'Term_III_2026_School_Circular.pdf'
+  },
+  {
+    id: 'NOT-002',
+    title: 'UNEB S.4 (UCE) & S.6 (UACE) Candidate Briefing Schedule',
+    publishDate: '2026-09-05',
+    targetAudience: 'students',
+    category: 'academic',
+    content: 'The official UNEB candidate briefing will take place on Friday November 6th in the Main Assembly Hall. All examination candidates must attend in full school uniform.',
+    isPinned: true
+  },
+  {
+    id: 'NOT-003',
+    title: 'Annual Inter-House Sports Gala & Athletics Day Invitation',
+    publishDate: '2026-09-08',
+    targetAudience: 'parents',
+    category: 'general',
+    content: 'Parents and guardians are cordially invited to attend our Annual Sports Competition between Crane, Crest, Lion, and Shield Houses on Sunday October 4th.',
+    isPinned: false
+  }
+];
+

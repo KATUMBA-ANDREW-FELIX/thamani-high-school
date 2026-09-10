@@ -1,22 +1,61 @@
 import React, { useState } from 'react';
-import type { Teacher, Student, LibraryResource, StudentMarkReport } from '../types';
-import { UserCheck, BookOpen, CheckSquare, Award, Plus, Save, Printer, FileText, Check, X } from 'lucide-react';
+import type { 
+  Teacher, 
+  Student, 
+  LibraryResource, 
+  StudentMarkReport, 
+  TimetableSlot, 
+  DutyRosterItem, 
+  DisciplineLogEntry, 
+  SubjectSyllabus,
+  SyllabusTopic
+} from '../types';
+import { 
+  UserCheck, 
+  BookOpen, 
+  CheckSquare, 
+  Award, 
+  Plus, 
+  Save, 
+  Printer, 
+  FileText, 
+  Check, 
+  X, 
+  Calendar, 
+  Clock, 
+  ShieldAlert, 
+  Layers
+} from 'lucide-react';
 
 interface TeacherPortalViewProps {
   teachers: Teacher[];
   students: Student[];
+  timetableSlots: TimetableSlot[];
+  dutyRosters: DutyRosterItem[];
+  disciplineLogs: DisciplineLogEntry[];
+  subjectSyllabi: SubjectSyllabus[];
   onAddLibraryResource: (resource: Omit<LibraryResource, 'id' | 'downloads'>) => void;
   onUpdateStudentMark: (studentId: string, markReport: StudentMarkReport) => void;
+  onAddDisciplineLog: (log: Omit<DisciplineLogEntry, 'id'>) => void;
+  onAddSyllabus: (syllable: Omit<SubjectSyllabus, 'id'>) => void;
+  onToggleTopicStatus: (syllabusId: string, topicId: string, status: SyllabusTopic['status']) => void;
 }
 
 export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
   teachers,
   students,
+  timetableSlots,
+  dutyRosters,
+  disciplineLogs,
+  subjectSyllabi,
   onAddLibraryResource,
-  onUpdateStudentMark
+  onUpdateStudentMark,
+  onAddDisciplineLog,
+  onAddSyllabus,
+  onToggleTopicStatus
 }) => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(teachers[0]?.id || 'TCH-001');
-  const [activeTab, setActiveTab] = useState<'marks' | 'attendance' | 'upload' | 'reports'>('marks');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'syllabus' | 'tod' | 'discipline' | 'marks' | 'attendance' | 'upload' | 'reports'>('schedule');
 
   const currentTeacher = teachers.find(t => t.id === selectedTeacherId) || teachers[0];
 
@@ -48,6 +87,21 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
 
   // Selected Student for Report Card Preview
   const [previewStudentId, setPreviewStudentId] = useState<string>('STU-2026-101');
+
+  // Discipline Log Entry Form State
+  const [discStudentId, setDiscStudentId] = useState<string>(students[0]?.id || '');
+  const [discType, setDiscType] = useState<'commendation' | 'warning' | 'demerit'>('commendation');
+  const [discCategory, setDiscCategory] = useState<'punctuality' | 'academics' | 'uniform' | 'conduct'>('academics');
+  const [discDescription, setDiscDescription] = useState('');
+  const [discSuccess, setDiscSuccess] = useState(false);
+
+  // Syllabus Tracker Filter & Form State
+  const [syllableClassStream, setSyllableClassStream] = useState<string>('Senior 4 West');
+  const [showAddSyllabusModal, setShowAddSyllabusModal] = useState(false);
+  const [newSylSubject, setNewSylSubject] = useState('Physics');
+  const [newSylClassStream, setNewSylClassStream] = useState('Senior 4 West');
+  const [newSylTitle, setNewSylTitle] = useState('');
+  const [newSylTopicsText, setNewSylTopicsText] = useState('1. Thermal Physics: Heat capacity and expansion\n2. Light: Lenses & Refraction\n3. Electricity: Current & Ohm Law');
 
   // Compute UNEB Grade helper (O-Level & A-Level)
   const computeUnebGrade = (total: number, isALevel: boolean) => {
@@ -116,7 +170,63 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
     setTimeout(() => setUploadSuccess(false), 3000);
   };
 
+  const handleAddDisciplineSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const st = students.find(s => s.id === discStudentId);
+    if (!st || !discDescription) return;
+
+    onAddDisciplineLog({
+      studentId: st.id,
+      studentName: st.fullName,
+      classStream: st.classStream,
+      date: new Date().toISOString().split('T')[0],
+      type: discType,
+      category: discCategory,
+      description: discDescription,
+      loggedByTeacherName: currentTeacher.name
+    });
+
+    setDiscSuccess(true);
+    setDiscDescription('');
+    setTimeout(() => setDiscSuccess(false), 3000);
+  };
+
+  const handleCreateSyllabus = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSylTitle) return;
+
+    const topicLines = newSylTopicsText.split('\n').filter(l => l.trim().length > 0);
+    const parsedTopics: SyllabusTopic[] = topicLines.map((line, idx) => ({
+      id: `TP-NEW-${Date.now()}-${idx}`,
+      topicNumber: idx + 1,
+      topicTitle: line.replace(/^\d+\.\s*/, ''),
+      subtopics: ['Key concepts & formulas', 'Practical application exercise'],
+      status: 'pending',
+      targetDate: '2026-10-30'
+    }));
+
+    onAddSyllabus({
+      subject: newSylSubject,
+      classStream: newSylClassStream,
+      level: newSylClassStream.includes('Senior 5') || newSylClassStream.includes('Senior 6') ? 'A-Level' : 'O-Level',
+      departmentHeadId: currentTeacher.id,
+      departmentHeadName: `${currentTeacher.name} (${currentTeacher.title})`,
+      title: newSylTitle,
+      topics: parsedTopics
+    });
+
+    setShowAddSyllabusModal(false);
+    setNewSylTitle('');
+    alert(`New Syllabus created for ${newSylSubject} (${newSylClassStream})!`);
+  };
+
   const previewStudent = students.find(s => s.id === previewStudentId) || students[0];
+
+  // Teacher Schedule Filter
+  const mySchedule = timetableSlots.filter(s => s.teacherId === currentTeacher.id || s.teacherName.toLowerCase().includes(currentTeacher.name.split(' ')[0].toLowerCase()));
+
+  // Filtered Syllabi for selected classStream
+  const filteredSyllabi = subjectSyllabi.filter(s => s.classStream === syllableClassStream);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -124,10 +234,10 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
       {/* Teacher Portal Header & Profile Switcher */}
       <div className="bg-gradient-to-r from-red-950 via-slate-900 to-emerald-950 text-white rounded-3xl p-8 shadow-xl flex flex-wrap justify-between items-center gap-6">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-            <UserCheck className="w-4 h-4" /> Passwordless Staff Portal
+          <div className="inline-flex items-center gap-2 bg-brand-gold text-slate-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+            <UserCheck className="w-4 h-4" /> Educator Workstation & Portal
           </div>
-          <h1 className="text-3xl font-black font-serif">Teacher Academic Workstation</h1>
+          <h1 className="text-3xl font-black font-serif">Teacher Academic Portal</h1>
           <p className="text-slate-200 text-xs sm:text-sm">
             Active Educator: <strong className="text-brand-gold font-semibold">{currentTeacher.name}</strong> ({currentTeacher.title})
           </p>
@@ -135,7 +245,7 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
 
         {/* Passwordless Teacher Profile Selector */}
         <div className="bg-white/10 p-2 rounded-2xl border border-white/20 backdrop-blur text-xs">
-          <label className="block text-[10px] uppercase font-bold text-brand-gold mb-1">Switch Teacher Account:</label>
+          <label className="block text-[10px] uppercase font-bold text-brand-gold mb-1">Switch Educator Account:</label>
           <select
             value={selectedTeacherId}
             onChange={(e) => setSelectedTeacherId(e.target.value)}
@@ -153,8 +263,44 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
       {/* Navigation Tabs */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2 max-w-full">
         <button
+          onClick={() => setActiveTab('schedule')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'schedule' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-brand-gold" /> My Teaching Schedule
+        </button>
+
+        <button
+          onClick={() => setActiveTab('syllabus')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'syllabus' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-brand-gold" /> Class & Stream Syllabus Tracker
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tod')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'tod' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Clock className="w-4 h-4 text-brand-gold" /> Teacher on Duty (TOD) Roster
+        </button>
+
+        <button
+          onClick={() => setActiveTab('discipline')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'discipline' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4 text-brand-gold" /> Discipline & Conduct Log
+        </button>
+
+        <button
           onClick={() => setActiveTab('marks')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeTab === 'marks' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -163,31 +309,382 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
 
         <button
           onClick={() => setActiveTab('attendance')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeTab === 'attendance' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
-          <CheckSquare className="w-4 h-4 text-brand-gold" /> Class Attendance Roll Call
+          <CheckSquare className="w-4 h-4 text-brand-gold" /> Attendance Roll Call
         </button>
 
         <button
           onClick={() => setActiveTab('upload')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeTab === 'upload' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
-          <BookOpen className="w-4 h-4 text-brand-gold" /> Upload E-Notes to Library
+          <BookOpen className="w-4 h-4 text-brand-gold" /> Upload E-Notes
         </button>
 
         <button
           onClick={() => setActiveTab('reports')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeTab === 'reports' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
-          <FileText className="w-4 h-4 text-brand-gold" /> Student Report Card Preview
+          <FileText className="w-4 h-4 text-brand-gold" /> Report Card Preview
         </button>
       </div>
+
+      {/* TAB: MY TEACHING SCHEDULE */}
+      {activeTab === 'schedule' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">Personal Teaching Schedule & Timetable Grid</h2>
+              <p className="text-xs text-slate-500">Filtered weekly timetable slots assigned to <strong className="text-brand-green">{currentTeacher.name}</strong>.</p>
+            </div>
+            <span className="bg-emerald-100 text-brand-green font-bold text-xs px-3 py-1.5 rounded-full">
+              {mySchedule.length} Assigned Weekly Lessons
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
+              const daySlots = mySchedule.filter(s => s.day === day).sort((a, b) => a.periodIndex - b.periodIndex);
+              return (
+                <div key={day} className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
+                  <h3 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2 text-center bg-emerald-900 text-white py-1.5 rounded-xl">
+                    {day}
+                  </h3>
+
+                  {daySlots.length === 0 ? (
+                    <div className="text-[11px] text-slate-400 italic text-center py-6">No scheduled lessons</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {daySlots.map(slot => (
+                        <div key={slot.id} className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-1">
+                          <span className="text-[10px] font-black uppercase text-brand-maroon block">{slot.period}</span>
+                          <h4 className="font-bold text-slate-900 text-xs">{slot.subject}</h4>
+                          <div className="text-[11px] font-semibold text-brand-green">{slot.classStream}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">Room: {slot.room}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: CLASS & STREAM SYLLABUS COVERAGE TRACKER */}
+      {activeTab === 'syllabus' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">UNEB Syllabus Coverage & Topic Completion Tracker</h2>
+              <p className="text-xs text-slate-500">Syllabi uploaded by Department Heads, linked to specific classes and streams.</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Filter Class & Stream:</label>
+                <select
+                  value={syllableClassStream}
+                  onChange={(e) => setSyllableClassStream(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none"
+                >
+                  <option value="Senior 4 West">Senior 4 West</option>
+                  <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                  <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                  <option value="Senior 2 East">Senior 2 East</option>
+                </select>
+              </div>
+
+              <button
+                onClick={() => setShowAddSyllabusModal(true)}
+                className="mt-4 px-4 py-2 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow"
+              >
+                <Plus className="w-4 h-4 text-brand-gold" /> Upload New Syllabus (HOD)
+              </button>
+            </div>
+          </div>
+
+          {filteredSyllabi.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <Layers className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm font-bold text-slate-700">No active syllabus found for {syllableClassStream}</p>
+              <p className="text-xs text-slate-500">Click "Upload New Syllabus" to define topics and subtopics for this stream.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {filteredSyllabi.map((syl) => {
+                const totalTopics = syl.topics.length;
+                const completedTopics = syl.topics.filter(t => t.status === 'completed').length;
+                const progressPct = Math.round((completedTopics / Math.max(1, totalTopics)) * 100);
+
+                return (
+                  <div key={syl.id} className="bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-4">
+                    <div className="flex flex-wrap justify-between items-start gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-brand-gold text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                            {syl.level} • {syl.subject}
+                          </span>
+                          <span className="text-xs font-bold text-brand-green">{syl.classStream}</span>
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 font-serif mt-1">{syl.title}</h3>
+                        <p className="text-xs text-slate-500">Department Head: <strong>{syl.departmentHeadName}</strong></p>
+                      </div>
+
+                      {/* Completion Progress Bar */}
+                      <div className="w-full sm:w-64 space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-slate-700">Syllabus Completion</span>
+                          <span className="text-brand-green">{progressPct}% ({completedTopics}/{totalTopics} Topics)</span>
+                        </div>
+                        <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-brand-green transition-all duration-500"
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Topics Table */}
+                    <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                            <th className="p-3 w-12 text-center">#</th>
+                            <th className="p-3">Topic & Subtopics</th>
+                            <th className="p-3">Target Completion Date</th>
+                            <th className="p-3">Status Mark</th>
+                            <th className="p-3">HOD & Teacher Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium">
+                          {syl.topics.map((tp) => (
+                            <tr key={tp.id} className="hover:bg-slate-50">
+                              <td className="p-3 text-center font-bold text-slate-500">{tp.topicNumber}</td>
+                              
+                              <td className="p-3 space-y-1">
+                                <div className="font-bold text-slate-900">{tp.topicTitle}</div>
+                                <div className="text-[11px] text-slate-500 flex flex-wrap gap-1">
+                                  {tp.subtopics.map((sub, i) => (
+                                    <span key={i} className="bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 text-[10px]">
+                                      • {sub}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+
+                              <td className="p-3 text-slate-600 font-mono">{tp.targetDate}</td>
+
+                              <td className="p-3">
+                                <select
+                                  value={tp.status}
+                                  onChange={(e) => onToggleTopicStatus(syl.id, tp.id, e.target.value as any)}
+                                  className={`px-3 py-1.5 rounded-xl font-extrabold text-xs outline-none cursor-pointer ${
+                                    tp.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                    tp.status === 'in_progress' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-200 text-slate-700'
+                                  }`}
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="completed">Completed</option>
+                                </select>
+                              </td>
+
+                              <td className="p-3 text-slate-500 italic text-[11px]">
+                                {tp.notes || 'No remarks recorded.'}
+                                {tp.completedDate && (
+                                  <span className="block text-emerald-600 font-bold text-[10px] not-italic">
+                                    Done on: {tp.completedDate}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: TEACHER ON DUTY (TOD) ROSTER */}
+      {activeTab === 'tod' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">Teacher on Duty (TOD) Weekly Allocation Roster</h2>
+              <p className="text-xs text-slate-500">Weekly duty assignments for assembly supervision, dining hall, and dormitories.</p>
+            </div>
+            <span className="bg-brand-maroon text-white font-bold text-xs px-3 py-1.5 rounded-full">
+              Term III Duty Rotations
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {dutyRosters.map((roster) => (
+              <div key={roster.id} className="bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <div>
+                    <span className="bg-brand-gold text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-full">
+                      Week #{roster.weekNumber}
+                    </span>
+                    <h3 className="font-bold text-slate-900 text-sm mt-1">{roster.startDate} to {roster.endDate}</h3>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase">Assigned Teachers on Duty:</h4>
+                  {roster.assignedTeachers.map((t, idx) => (
+                    <div key={idx} className="p-3 bg-white rounded-xl border border-slate-200 flex justify-between items-center text-xs">
+                      <div>
+                        <div className="font-bold text-slate-900">{t.teacherName}</div>
+                        <div className="text-brand-green font-semibold text-[11px]">{t.dutyRole}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-amber-900 text-xs italic">
+                  <strong>Notes & Instructions:</strong> {roster.notes}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: CLASS DISCIPLINE & BEHAVIORAL LOG */}
+      {activeTab === 'discipline' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">Class Discipline & Student Conduct Log</h2>
+              <p className="text-xs text-slate-500">Record commendations, punctuality warnings, or conduct demerits.</p>
+            </div>
+            <span className="bg-emerald-100 text-brand-green font-bold text-xs px-3 py-1 rounded-full">
+              {disciplineLogs.length} Entries Logged
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Form to log discipline entry */}
+            <div className="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Record Conduct Incident</h3>
+
+              {discSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <Check className="w-4 h-4" /> Conduct entry logged successfully!
+                </div>
+              )}
+
+              <form onSubmit={handleAddDisciplineSubmit} className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Select Student *</label>
+                  <select
+                    value={discStudentId}
+                    onChange={(e) => setDiscStudentId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.fullName} ({s.classStream})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Entry Type</label>
+                    <select
+                      value={discType}
+                      onChange={(e) => setDiscType(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="commendation">Commendation</option>
+                      <option value="warning">Warning</option>
+                      <option value="demerit">Demerit</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Category</label>
+                    <select
+                      value={discCategory}
+                      onChange={(e) => setDiscCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="academics">Academics</option>
+                      <option value="punctuality">Punctuality</option>
+                      <option value="uniform">Smartness / Uniform</option>
+                      <option value="conduct">General Conduct</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Description / Remarks *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Provide details about the incident or achievement..."
+                    value={discDescription}
+                    onChange={(e) => setDiscDescription(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Save Conduct Entry
+                </button>
+              </form>
+            </div>
+
+            {/* List of existing discipline entries */}
+            <div className="lg:col-span-7 space-y-3">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Recent Student Conduct Records</h3>
+
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                {disciplineLogs.map((log) => (
+                  <div key={log.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2 text-xs">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-slate-900 text-sm">{log.studentName}</div>
+                        <div className="text-[10px] text-slate-500">{log.classStream} • Logged by: {log.loggedByTeacherName}</div>
+                      </div>
+
+                      <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] uppercase ${
+                        log.type === 'commendation' ? 'bg-emerald-100 text-emerald-800' :
+                        log.type === 'demerit' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {log.type}
+                      </span>
+                    </div>
+
+                    <p className="text-slate-700 font-medium">{log.description}</p>
+                    <div className="text-[10px] text-slate-400">Date: {log.date} • Category: <strong className="capitalize">{log.category}</strong></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: MARK ENTRY & UNEB GRADING */}
       {activeTab === 'marks' && (
@@ -578,6 +1075,92 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD NEW SYLLABUS (HOD) */}
+      {showAddSyllabusModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 font-serif">Upload Subject Syllabus (HOD Portal)</h3>
+                <p className="text-xs text-slate-500">Define curriculum topics for a specific class and stream.</p>
+              </div>
+              <button onClick={() => setShowAddSyllabusModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSyllabus} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Physics"
+                    value={newSylSubject}
+                    onChange={(e) => setNewSylSubject(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Class & Stream</label>
+                  <select
+                    value={newSylClassStream}
+                    onChange={(e) => setNewSylClassStream(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    <option value="Senior 4 West">Senior 4 West</option>
+                    <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                    <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                    <option value="Senior 2 East">Senior 2 East</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Syllabus Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UNEB UCE Senior 4 Physics Curriculum (P530)"
+                  value={newSylTitle}
+                  onChange={(e) => setNewSylTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Curriculum Topics List (1 per line) *</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={newSylTopicsText}
+                  onChange={(e) => setNewSylTopicsText(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSyllabusModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Upload Syllabus
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,14 +1,51 @@
 import React, { useState } from 'react';
-import type { Applicant, Student, Teacher, NewsArticle, ApplicantStatus } from '../types';
-import { Shield, Users, GraduationCap, CheckCircle2, XCircle, Clock, UserCheck, FileText, RefreshCw, Eye, Check, Plus } from 'lucide-react';
+import type { 
+  Applicant, 
+  Student, 
+  Teacher, 
+  NewsArticle, 
+  ApplicantStatus,
+  TimetableSlot, 
+  DutyRosterItem, 
+  NoticeCircular, 
+  DayOfWeek 
+} from '../types';
+import { 
+  Shield, 
+  Users, 
+  GraduationCap, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  UserCheck, 
+  FileText, 
+  RefreshCw, 
+  Eye, 
+  Check, 
+  Plus, 
+  Calendar, 
+  Pin, 
+  Trash2, 
+  Bell 
+} from 'lucide-react';
 
 interface AdminPortalViewProps {
   applicants: Applicant[];
   students: Student[];
   teachers: Teacher[];
   news: NewsArticle[];
+  timetableSlots: TimetableSlot[];
+  dutyRosters: DutyRosterItem[];
+  notices: NoticeCircular[];
   onUpdateApplicantStatus: (id: string, status: ApplicantStatus, notes?: string) => void;
   onAddNewsArticle: (article: Omit<NewsArticle, 'id'>) => void;
+  onAddTimetableSlot: (slot: Omit<TimetableSlot, 'id'>) => void;
+  onDeleteTimetableSlot: (id: string) => void;
+  onAddDutyRoster: (item: Omit<DutyRosterItem, 'id'>) => void;
+  onDeleteDutyRoster: (id: string) => void;
+  onAddNotice: (notice: Omit<NoticeCircular, 'id'>) => void;
+  onTogglePinNotice: (id: string) => void;
+  onDeleteNotice: (id: string) => void;
   onResetDemoData: () => void;
 }
 
@@ -17,11 +54,21 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   students,
   teachers,
   news,
+  timetableSlots,
+  dutyRosters,
+  notices,
   onUpdateApplicantStatus,
   onAddNewsArticle,
+  onAddTimetableSlot,
+  onDeleteTimetableSlot,
+  onAddDutyRoster,
+  onDeleteDutyRoster,
+  onAddNotice,
+  onTogglePinNotice,
+  onDeleteNotice,
   onResetDemoData
 }) => {
-  const [adminTab, setAdminTab] = useState<'overview' | 'applicants' | 'students' | 'teachers' | 'news'>('overview');
+  const [adminTab, setAdminTab] = useState<'overview' | 'timetable' | 'tod' | 'notices' | 'applicants' | 'students' | 'teachers' | 'news'>('overview');
 
   // Applicant Filter & Modal State
   const [applicantFilterStatus, setApplicantFilterStatus] = useState<string>('All');
@@ -39,6 +86,35 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [newsContent, setNewsContent] = useState('');
   const [newsSuccess, setNewsSuccess] = useState(false);
 
+  // Timetable Form State
+  const [ttDay, setTtDay] = useState<DayOfWeek>('Monday');
+  const [ttPeriodIndex, setTtPeriodIndex] = useState<number>(1);
+  const [ttPeriodText, setTtPeriodText] = useState('P1 (8:00 - 8:40 AM)');
+  const [ttClassStream, setTtClassStream] = useState('Senior 4 West');
+  const [ttSubject, setTtSubject] = useState('Physics');
+  const [ttTeacherId, setTtTeacherId] = useState(teachers[0]?.id || 'TCH-001');
+  const [ttRoom, setTtRoom] = useState('Physics Lab 1');
+  const [ttFilterClass, setTtFilterClass] = useState('All');
+
+  // Duty Roster Form State
+  const [dutyWeekNum, setDutyWeekNum] = useState<number>(5);
+  const [dutyStartDate, setDutyStartDate] = useState('2026-09-28');
+  const [dutyEndDate, setDutyEndDate] = useState('2026-10-04');
+  const [dutyTeacher1, setDutyTeacher1] = useState(teachers[0]?.id || '');
+  const [dutyRole1, setDutyRole1] = useState('Assembly & Morning Prep Warden');
+  const [dutyTeacher2, setDutyTeacher2] = useState(teachers[1]?.id || '');
+  const [dutyRole2, setDutyRole2] = useState('Dining Hall & Meal Inspector');
+  const [dutyNotes, setDutyNotes] = useState('Ensure full attendance during evening preps.');
+
+  // Notice Board Form State
+  const [notTitle, setNotTitle] = useState('');
+  const [notCategory, setNotCategory] = useState<'general' | 'fees' | 'academic' | 'urgent'>('general');
+  const [notTarget, setNotTarget] = useState<'all' | 'parents' | 'teachers' | 'students'>('all');
+  const [notContent, setNotContent] = useState('');
+  const [notIsPinned, setNotIsPinned] = useState(false);
+  const [notPdfName, setNotPdfName] = useState('');
+  const [notSuccess, setNotSuccess] = useState(false);
+
   // Calculations
   const pendingApplicantsCount = applicants.filter(a => a.status === 'pending').length;
   const approvedApplicantsCount = applicants.filter(a => a.status === 'approved').length;
@@ -53,6 +129,10 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     const matchesClass = studentClassFilter === 'All' || s.classStream === studentClassFilter;
     return matchesSearch && matchesClass;
   });
+
+  const filteredTimetable = ttFilterClass === 'All'
+    ? timetableSlots
+    : timetableSlots.filter(s => s.classStream === ttFilterClass);
 
   const handleApproveApplicant = (id: string) => {
     onUpdateApplicantStatus(id, 'approved', adminNoteInput || 'Approved by Admissions Board.');
@@ -76,7 +156,6 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     e.preventDefault();
     if (!newsTitle || !newsSummary) return;
 
-    // Create custom SVG placeholder for published news
     const svgBg = newsCategory === 'Academics' ? '#1A472A' : newsCategory === 'Infrastructure' ? '#800000' : '#1E293B';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
       <rect width="800" height="500" fill="${svgBg}"/>
@@ -99,6 +178,66 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     setNewsSummary('');
     setNewsContent('');
     setTimeout(() => setNewsSuccess(false), 3000);
+  };
+
+  const handleAddTimetableSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t = teachers.find(tch => tch.id === ttTeacherId);
+    if (!t) return;
+
+    onAddTimetableSlot({
+      day: ttDay,
+      periodIndex: Number(ttPeriodIndex),
+      period: ttPeriodText,
+      classStream: ttClassStream,
+      subject: ttSubject,
+      teacherId: t.id,
+      teacherName: t.name,
+      room: ttRoom
+    });
+
+    alert(`Timetable slot added for ${ttSubject} (${ttClassStream})!`);
+  };
+
+  const handleAddDutyRosterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t1 = teachers.find(t => t.id === dutyTeacher1);
+    const t2 = teachers.find(t => t.id === dutyTeacher2);
+    if (!t1 || !t2) return;
+
+    onAddDutyRoster({
+      weekNumber: Number(dutyWeekNum),
+      startDate: dutyStartDate,
+      endDate: dutyEndDate,
+      assignedTeachers: [
+        { teacherId: t1.id, teacherName: t1.name, dutyRole: dutyRole1 },
+        { teacherId: t2.id, teacherName: t2.name, dutyRole: dutyRole2 }
+      ],
+      notes: dutyNotes
+    });
+
+    alert(`Duty roster for Week #${dutyWeekNum} published successfully!`);
+  };
+
+  const handleAddNoticeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notTitle || !notContent) return;
+
+    onAddNotice({
+      title: notTitle,
+      publishDate: new Date().toISOString().split('T')[0],
+      targetAudience: notTarget,
+      category: notCategory,
+      content: notContent,
+      isPinned: notIsPinned,
+      pdfAttachmentName: notPdfName || undefined
+    });
+
+    setNotSuccess(true);
+    setNotTitle('');
+    setNotContent('');
+    setNotPdfName('');
+    setTimeout(() => setNotSuccess(false), 3000);
   };
 
   return (
@@ -131,7 +270,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
       <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2 max-w-full">
         <button
           onClick={() => setAdminTab('overview')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             adminTab === 'overview' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -139,12 +278,39 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
         </button>
 
         <button
+          onClick={() => setAdminTab('timetable')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            adminTab === 'timetable' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-brand-gold" /> Master Timetable Manager
+        </button>
+
+        <button
+          onClick={() => setAdminTab('tod')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            adminTab === 'tod' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Clock className="w-4 h-4 text-brand-gold" /> TOD Roster Manager
+        </button>
+
+        <button
+          onClick={() => setAdminTab('notices')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            adminTab === 'notices' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Bell className="w-4 h-4 text-brand-gold" /> Notice Board & Circulars
+        </button>
+
+        <button
           onClick={() => setAdminTab('applicants')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 relative ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 relative ${
             adminTab === 'applicants' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
-          <GraduationCap className="w-4 h-4 text-brand-gold" /> Applicants Review Board
+          <GraduationCap className="w-4 h-4 text-brand-gold" /> Applicants Board
           {pendingApplicantsCount > 0 && (
             <span className="bg-amber-500 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
               {pendingApplicantsCount}
@@ -154,7 +320,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
         <button
           onClick={() => setAdminTab('students')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             adminTab === 'students' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -163,7 +329,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
         <button
           onClick={() => setAdminTab('teachers')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             adminTab === 'teachers' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -172,7 +338,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
         <button
           onClick={() => setAdminTab('news')}
-          className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             adminTab === 'news' ? 'bg-brand-green text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -183,9 +349,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
       {/* TAB 1: EXECUTIVE METRICS OVERVIEW */}
       {adminTab === 'overview' && (
         <div className="space-y-8">
-          {/* Top Metric Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2">
               <div className="flex justify-between items-center text-slate-500">
                 <span className="text-xs font-bold uppercase tracking-wider">Total Enrolled Scholars</span>
@@ -212,13 +376,9 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               <div className="text-3xl font-black text-slate-900 font-mono">{teachers.length}</div>
               <p className="text-[11px] text-emerald-600 font-semibold">• Active Department Heads</p>
             </div>
-
           </div>
 
-          {/* Quick Action Summary Panels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* Pending Applicants Spotlight */}
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 className="font-bold text-slate-900 text-base">Pending Applicant Dossiers</h3>
@@ -253,7 +413,6 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               </div>
             </div>
 
-            {/* Academic Division Breakdown */}
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
               <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3">Academic Stream Statistics</h3>
               <div className="space-y-3 text-xs font-medium text-slate-700">
@@ -271,12 +430,489 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: MASTER TIMETABLE MANAGER */}
+      {adminTab === 'timetable' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">Master School Timetable Manager</h2>
+              <p className="text-xs text-slate-500">Configure weekly class schedules, period allocations, and room assignments.</p>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Filter by Class Stream:</label>
+              <select
+                value={ttFilterClass}
+                onChange={(e) => setTtFilterClass(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none"
+              >
+                <option value="All">All Streams ({timetableSlots.length} slots)</option>
+                <option value="Senior 4 West">Senior 4 West</option>
+                <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                <option value="Senior 2 East">Senior 2 East</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Form to add slot */}
+            <div className="lg:col-span-4 bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 text-xs">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Add Timetable Slot</h3>
+              
+              <form onSubmit={handleAddTimetableSubmit} className="space-y-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Day of Week</label>
+                  <select
+                    value={ttDay}
+                    onChange={(e) => setTtDay(e.target.value as DayOfWeek)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Period Index</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      value={ttPeriodIndex}
+                      onChange={(e) => setTtPeriodIndex(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Class Stream</label>
+                    <select
+                      value={ttClassStream}
+                      onChange={(e) => setTtClassStream(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="Senior 4 West">Senior 4 West</option>
+                      <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                      <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                      <option value="Senior 2 East">Senior 2 East</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Period Time Text</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. P1 (8:00 - 8:40 AM)"
+                    value={ttPeriodText}
+                    onChange={(e) => setTtPeriodText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Subject Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Advanced Physics P510/1"
+                    value={ttSubject}
+                    onChange={(e) => setTtSubject(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned Educator</label>
+                  <select
+                    value={ttTeacherId}
+                    onChange={(e) => setTtTeacherId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.subjects.join(', ')})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Room / Lab Location</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Physics Lab 1"
+                    value={ttRoom}
+                    onChange={(e) => setTtRoom(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Assign Timetable Slot
+                </button>
+              </form>
+            </div>
+
+            {/* List of slots */}
+            <div className="lg:col-span-8 space-y-3">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Active Timetable Matrix</h3>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                      <th className="p-3 rounded-l-xl">Day & Period</th>
+                      <th className="p-3">Class Stream</th>
+                      <th className="p-3">Subject & Room</th>
+                      <th className="p-3">Educator Name</th>
+                      <th className="p-3 rounded-r-xl text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {filteredTimetable.map((slot) => (
+                      <tr key={slot.id} className="hover:bg-slate-50">
+                        <td className="p-3">
+                          <span className="font-bold text-brand-green block">{slot.day}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">{slot.period}</span>
+                        </td>
+                        <td className="p-3 font-bold text-slate-800">{slot.classStream}</td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{slot.subject}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{slot.room}</div>
+                        </td>
+                        <td className="p-3 text-slate-700 font-semibold">{slot.teacherName}</td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => onDeleteTimetableSlot(slot.id)}
+                            className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold"
+                            title="Delete Slot"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
           </div>
         </div>
       )}
 
-      {/* TAB 2: APPLICANTS REVIEW BOARD (PRIVACY ENFORCED) */}
+      {/* TAB: TOD ROSTER MANAGER */}
+      {adminTab === 'tod' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-xl font-black text-slate-900 font-serif">Teacher on Duty (TOD) Roster Publisher</h2>
+            <p className="text-xs text-slate-500">Assign weekly duty wardens for student assembly, dining hall, and dormitories.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3 text-xs">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Publish New Weekly TOD Allocation</h3>
+
+              <form onSubmit={handleAddDutyRosterSubmit} className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Week #</label>
+                    <input
+                      type="number"
+                      value={dutyWeekNum}
+                      onChange={(e) => setDutyWeekNum(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={dutyStartDate}
+                      onChange={(e) => setDutyStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none text-[11px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={dutyEndDate}
+                      onChange={(e) => setDutyEndDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none text-[11px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-t border-slate-200 pt-2">
+                  <h4 className="font-bold text-slate-800">Primary Duty Educator 1:</h4>
+                  <select
+                    value={dutyTeacher1}
+                    onChange={(e) => setDutyTeacher1(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Duty Role / Designation"
+                    value={dutyRole1}
+                    onChange={(e) => setDutyRole1(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2 border-t border-slate-200 pt-2">
+                  <h4 className="font-bold text-slate-800">Assisting Duty Educator 2:</h4>
+                  <select
+                    value={dutyTeacher2}
+                    onChange={(e) => setDutyTeacher2(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Duty Role / Designation"
+                    value={dutyRole2}
+                    onChange={(e) => setDutyRole2(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Weekly Directives & Notes</label>
+                  <textarea
+                    rows={2}
+                    value={dutyNotes}
+                    onChange={(e) => setDutyNotes(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Publish TOD Roster
+                </button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-7 space-y-4">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Active Duty Roster Records</h3>
+              <div className="space-y-4">
+                {dutyRosters.map((roster) => (
+                  <div key={roster.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="font-black text-brand-maroon">Week #{roster.weekNumber} ({roster.startDate} to {roster.endDate})</span>
+                      <button
+                        onClick={() => onDeleteDutyRoster(roster.id)}
+                        className="text-rose-600 hover:text-rose-800 font-bold"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      {roster.assignedTeachers.map((t, idx) => (
+                        <div key={idx} className="flex justify-between text-slate-700">
+                          <span className="font-bold">{t.teacherName}</span>
+                          <span className="text-brand-green italic">{t.dutyRole}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-slate-500 italic text-[11px]">"{roster.notes}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: NOTICE BOARD & CIRCULAR MANAGER */}
+      {adminTab === 'notices' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
+          <div className="border-b border-slate-200 pb-3 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-serif">Notice Board & Official Circular Manager</h2>
+              <p className="text-xs text-slate-500">Publish school circulars with PDF attachments visible on the public noticeboard.</p>
+            </div>
+            <span className="bg-brand-maroon text-white font-bold text-xs px-3 py-1 rounded-full">
+              {notices.length} Published Notices
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3 text-xs">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Create & Pin Official Notice</h3>
+
+              {notSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <Check className="w-4 h-4" /> Notice published to Home Page noticeboard!
+                </div>
+              )}
+
+              <form onSubmit={handleAddNoticeSubmit} className="space-y-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Notice / Circular Title *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Official Term III Re-opening & Fee Guidelines"
+                    value={notTitle}
+                    onChange={(e) => setNotTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Category</label>
+                    <select
+                      value={notCategory}
+                      onChange={(e) => setNotCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="general">General</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="fees">Fees & Finance</option>
+                      <option value="academic">Academic</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Target Audience</label>
+                    <select
+                      value={notTarget}
+                      onChange={(e) => setNotTarget(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="all">All Stakeholders</option>
+                      <option value="parents">Parents & Guardians</option>
+                      <option value="teachers">Teaching Staff</option>
+                      <option value="students">Students</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Content / Announcement Text *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Detailed notice text..."
+                    value={notContent}
+                    onChange={(e) => setNotContent(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Mock Attachment Filename (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Term_III_2026_School_Circular.pdf"
+                    value={notPdfName}
+                    onChange={(e) => setNotPdfName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-[11px] outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="pinCheck"
+                    checked={notIsPinned}
+                    onChange={(e) => setNotIsPinned(e.target.checked)}
+                    className="w-4 h-4 rounded text-brand-green"
+                  />
+                  <label htmlFor="pinCheck" className="font-bold text-slate-800 cursor-pointer">Pin to top of Home Page noticeboard</label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Publish Circular
+                </button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-7 space-y-3">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-200 pb-2">Active School Notices</h3>
+
+              <div className="space-y-3">
+                {notices.map((n) => (
+                  <div key={n.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full font-black text-[10px] uppercase ${
+                            n.category === 'urgent' ? 'bg-rose-500 text-white' : 'bg-emerald-600 text-white'
+                          }`}>
+                            {n.category}
+                          </span>
+                          <span className="font-bold text-slate-500">{n.publishDate}</span>
+                          <span className="text-slate-400">• Audience: <strong className="capitalize text-slate-700">{n.targetAudience}</strong></span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-sm mt-1">{n.title}</h4>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onTogglePinNotice(n.id)}
+                          className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${
+                            n.isPinned ? 'bg-brand-gold text-slate-950' : 'bg-slate-200 text-slate-600'
+                          }`}
+                          title="Toggle Pin"
+                        >
+                          <Pin className="w-3.5 h-3.5" /> {n.isPinned ? 'Pinned' : 'Pin'}
+                        </button>
+                        <button
+                          onClick={() => onDeleteNotice(n.id)}
+                          className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg"
+                          title="Delete Notice"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-700 font-medium">{n.content}</p>
+                    {n.pdfAttachmentName && (
+                      <div className="text-[11px] text-brand-green font-bold flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5" /> Attachment: {n.pdfAttachmentName}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: APPLICANTS REVIEW BOARD */}
       {adminTab === 'applicants' && (
         <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
           <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
@@ -285,7 +921,6 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               <p className="text-xs text-slate-500">Applicant records are strictly confidential and managed inside the Admin Portal.</p>
             </div>
 
-            {/* Status Filter Tabs */}
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
               {['All', 'pending', 'approved', 'interview', 'rejected'].map((st) => (
                 <button
@@ -301,7 +936,6 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             </div>
           </div>
 
-          {/* Applicants Data Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>

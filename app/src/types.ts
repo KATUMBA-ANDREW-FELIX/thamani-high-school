@@ -123,3 +123,78 @@ export interface NewsArticle {
   imageUrl: string;
   author: string;
 }
+
+export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+
+export interface TimetableSlot {
+  id: string;
+  day: DayOfWeek;
+  period: string; // e.g. "P1 (8:00 - 8:40 AM)", "P2 (8:40 - 9:20 AM)"
+  periodIndex: number; // 1..8
+  classStream: string; // e.g. "Senior 4 West"
+  subject: string;
+  teacherId: string;
+  teacherName: string;
+  room: string;
+}
+
+export interface DutyRosterTeacher {
+  teacherId: string;
+  teacherName: string;
+  dutyRole: string; // e.g. "Assembly & Morning Prep Warden", "Dormitory Inspector"
+}
+
+export interface DutyRosterItem {
+  id: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  assignedTeachers: DutyRosterTeacher[];
+  notes: string;
+}
+
+export interface DisciplineLogEntry {
+  id: string;
+  studentId: string;
+  studentName: string;
+  classStream: string;
+  date: string;
+  type: 'commendation' | 'warning' | 'demerit';
+  category: 'punctuality' | 'academics' | 'uniform' | 'conduct';
+  description: string;
+  loggedByTeacherName: string;
+}
+
+export interface SyllabusTopic {
+  id: string;
+  topicNumber: number;
+  topicTitle: string;
+  subtopics: string[];
+  status: 'pending' | 'in_progress' | 'completed';
+  targetDate: string;
+  completedDate?: string;
+  notes?: string;
+}
+
+export interface SubjectSyllabus {
+  id: string;
+  subject: string;
+  classStream: string; // Specific class and stream (e.g. "Senior 4 West")
+  level: AcademicLevel;
+  departmentHeadId: string;
+  departmentHeadName: string;
+  title: string;
+  topics: SyllabusTopic[];
+}
+
+export interface NoticeCircular {
+  id: string;
+  title: string;
+  publishDate: string;
+  targetAudience: 'all' | 'parents' | 'teachers' | 'students';
+  category: 'general' | 'fees' | 'academic' | 'urgent';
+  content: string;
+  isPinned: boolean;
+  pdfAttachmentName?: string;
+}
+

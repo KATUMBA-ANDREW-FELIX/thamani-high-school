@@ -1,14 +1,19 @@
 import React from 'react';
-import type { NewsArticle, CalendarEvent } from '../types';
-import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, MapPin } from 'lucide-react';
+import type { NewsArticle, CalendarEvent, NoticeCircular } from '../types';
+import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, MapPin, Bell, Pin, FileText } from 'lucide-react';
 
 interface HomeViewProps {
   news: NewsArticle[];
   events: CalendarEvent[];
+  notices: NoticeCircular[];
   setActiveView: (view: string) => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ news, events, setActiveView }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setActiveView }) => {
+  const pinnedNotices = notices.filter(n => n.isPinned);
+  const otherNotices = notices.filter(n => !n.isPinned);
+  const displayNotices = [...pinnedNotices, ...otherNotices].slice(0, 4);
+
   return (
     <div className="space-y-16 pb-16">
       {/* Hero Section */}
@@ -119,6 +124,61 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, setActiveView 
           </div>
         </div>
       </section>
+
+      {/* Official Notice Board & School Circulars Banner */}
+      {displayNotices.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-r from-red-950 via-slate-900 to-emerald-950 rounded-3xl p-8 text-white shadow-xl space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4 border-b border-white/20 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-brand-gold text-slate-950 rounded-2xl shadow-md">
+                  <Bell className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black font-serif">Notice Board & Official Circulars</h2>
+                  <p className="text-xs text-slate-300">Verified official communications from the Administration Board</p>
+                </div>
+              </div>
+              <span className="bg-brand-maroon text-brand-gold px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border border-brand-gold/30">
+                Live Admin Stream
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {displayNotices.map((n) => (
+                <div key={n.id} className="bg-white/10 p-5 rounded-2xl border border-white/15 backdrop-blur space-y-3 relative hover:bg-white/15 transition-all">
+                  {n.isPinned && (
+                    <span className="absolute top-4 right-4 text-brand-gold flex items-center gap-1 text-[10px] font-black uppercase bg-brand-gold/20 px-2 py-0.5 rounded-md border border-brand-gold/30">
+                      <Pin className="w-3 h-3" /> Pinned Notice
+                    </span>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-300">
+                    <span className={`px-2 py-0.5 rounded-full uppercase font-bold text-[10px] ${
+                      n.category === 'urgent' ? 'bg-rose-500 text-white' :
+                      n.category === 'fees' ? 'bg-amber-400 text-slate-950' : 'bg-emerald-600 text-white'
+                    }`}>
+                      {n.category}
+                    </span>
+                    <span>• {n.publishDate}</span>
+                    <span>• Target: <strong className="text-brand-gold capitalize">{n.targetAudience}</strong></span>
+                  </div>
+
+                  <h3 className="font-bold text-white text-base leading-snug">{n.title}</h3>
+                  <p className="text-xs text-slate-200 leading-relaxed">{n.content}</p>
+
+                  {n.pdfAttachmentName && (
+                    <div className="pt-1 flex items-center gap-1.5 text-xs text-brand-gold font-bold">
+                      <FileText className="w-4 h-4 text-brand-gold" />
+                      <span>Attached Circular: {n.pdfAttachmentName}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Headteacher Welcome Address */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
