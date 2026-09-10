@@ -9,7 +9,7 @@ export const createSvgPlaceholder = (title: string, subtitle: string, bgColor = 
     <text x="400" y="210" font-family="Georgia, serif" font-size="30" font-weight="bold" fill="${textColor}" text-anchor="middle">${title}</text>
     <text x="400" y="260" font-family="sans-serif" font-size="18" fill="#D4AF37" font-weight="600" text-anchor="middle">${subtitle}</text>
     <line x1="300" y1="300" x2="500" y2="300" stroke="#D4AF37" stroke-width="3" opacity="0.6"/>
-    <text x="400" y="420" font-family="sans-serif" font-size="14" fill="${textColor}" opacity="0.7" text-anchor="middle">THAMANI HIGH SCHOOL • KAKIRI (TAK)</text>
+    <text x="400" y="420" font-family="sans-serif" font-size="14" fill="${textColor}" opacity="0.7" text-anchor="middle">THAMANI ACADEMY • KAKIRI (TAK)</text>
   </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
@@ -329,7 +329,7 @@ export const INITIAL_GALLERY: GalleryItem[] = [
     title: 'Inter-School Football Championship Match',
     category: 'sports',
     imageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-    caption: 'Thamani High School football team during the Wakiso District secondary schools tournament.'
+    caption: 'Thamani Academy football team during the Wakiso District secondary schools tournament.'
   },
   {
     id: 'GAL-04',
@@ -350,11 +350,11 @@ export const INITIAL_GALLERY: GalleryItem[] = [
 export const INITIAL_NEWS: NewsArticle[] = [
   {
     id: 'NEWS-01',
-    title: 'Thamani High School Candidates Perform Outstandingly in UACE Examinations',
+    title: 'Thamani Academy Candidates Perform Outstandingly in UACE Examinations',
     date: '2026-08-28',
     category: 'Academics',
-    summary: '92% of our Senior 6 STEM and Humanities candidates qualified for direct university admission.',
-    content: 'The Headteacher and Management of Thamani High School, Kakiri, congratulate the Class of 2025 upon their outstanding performance in the national UNEB UACE examinations. Over 40 candidates in PCM, BCM, and HEG scored 15 points and above, qualifying for Makerere, Kyambogo, and Mbarara University slots.',
+    summary: 'Over 40 scholars achieve 15+ points in STEM and Arts combinations.',
+    content: 'The Headteacher and Management of Thamani Academy, Kakiri, congratulate the Class of 2025 upon their outstanding performance in the national UNEB UACE examinations. Over 40 candidates in PCM, BCM, and HEG scored 15 points and above, qualifying for Makerere, Kyambogo, and Mbarara University slots.',
     imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80',
     author: 'Office of the Headteacher'
   },
@@ -374,7 +374,7 @@ export const INITIAL_NEWS: NewsArticle[] = [
     date: '2026-09-01',
     category: 'Admissions',
     summary: 'Applications are now being accepted for Senior 1 and Senior 5 intake.',
-    content: 'Thamani High School invites applications for Senior 1 (PLE Division 1 and 2) and Senior 5 (PCM, BCM, PEM, HEG, MEG, LEG). Parents can submit online applications via our school website portal or visit the campus in Kakiri.',
+    content: 'Thamani Academy invites applications for Senior 1 (PLE Division 1 and 2) and Senior 5 (PCM, BCM, PEM, HEG, MEG, LEG). Parents can submit online applications via our school website portal or visit the campus in Kakiri.',
     imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
     author: 'Admissions Committee'
   }
@@ -611,7 +611,7 @@ export const INITIAL_NOTICES: NoticeCircular[] = [
     publishDate: '2026-09-01',
     targetAudience: 'all',
     category: 'urgent',
-    content: 'All boarding scholars are required to report to Thamani High School, Kakiri, on Tuesday September 15th, 2026 before 4:00 PM. Please bring bank slip receipts for fee clearing at the Bursar\'s office.',
+    content: 'All boarding scholars are required to report to Thamani Academy, Kakiri, on Tuesday September 15th, 2026 before 4:00 PM. Please bring bank slip receipts for fee clearing at the Bursar\'s office.',
     isPinned: true,
     pdfAttachmentName: 'Term_III_2026_School_Circular.pdf'
   },

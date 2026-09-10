@@ -29,7 +29,7 @@ export const AlumniView: React.FC = () => {
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Alumni Network & Guild</h1>
           <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
-            Reconnecting thousands of Thamani High School graduates across Makerere, Kyambogo, international universities, and professional sectors worldwide.
+            Reconnecting thousands of Thamani Academy graduates across Makerere, Kyambogo, international universities, and professional sectors worldwide.
           </p>
         </div>
       </div>

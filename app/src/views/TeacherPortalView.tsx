@@ -994,7 +994,7 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
                 alt="Logo" 
                 className="h-20 mx-auto object-contain"
               />
-              <h1 className="text-2xl font-black font-serif text-brand-green">THAMANI HIGH SCHOOL - KAKIRI</h1>
+              <h1 className="text-2xl font-black font-serif text-brand-green">THAMANI ACADEMY - KAKIRI</h1>
               <p className="text-xs font-bold text-brand-maroon uppercase">P.O. BOX 104, WAKISO • UNEB CENTER NO. U0892</p>
               <h2 className="text-sm font-bold text-slate-800 uppercase pt-2">STUDENT ACADEMIC PROGRESS REPORT CARD • TERM II 2026</h2>
             </div>

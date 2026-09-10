@@ -84,7 +84,7 @@ export const AdmissionsView: React.FC<AdmissionsViewProps> = ({ onAddApplicant, 
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Apply For Student Admission</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">
-            Join Thamani High School Kakiri. Complete the online cohort registration form below. All applications are directly logged into our admissions review board.
+            Join Thamani Academy Kakiri. Complete the online cohort registration form below. All applications are directly logged into our admissions review board.
           </p>
         </div>
       </div>

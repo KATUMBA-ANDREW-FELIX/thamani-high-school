@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center cursor-pointer" onClick={() => handleNavClick('home')}>
             <img 
               src="/thamani-logo.png" 
-              alt="Thamani High School Crest Logo" 
+              alt="Thamani Academy Crest Logo" 
               className="h-12 sm:h-14 w-auto object-contain drop-shadow"
             />
           </div>

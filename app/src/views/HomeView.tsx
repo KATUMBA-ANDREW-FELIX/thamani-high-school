@@ -36,7 +36,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setAc
               </h1>
               
               <p className="text-lg sm:text-xl text-slate-200 font-light leading-relaxed max-w-2xl">
-                Welcome to <strong className="text-white font-semibold">Thamani High School (Kakiri)</strong>. We nurture visionary leaders equipped with holistic academic rigor, STEM skills, and grounded Ugandan values.
+                Welcome to <strong className="text-white font-semibold">Thamani Academy (Kakiri)</strong>. We nurture visionary leaders equipped with holistic academic rigor, STEM skills, and grounded Ugandan values.
               </p>
 
               {/* Call to action buttons */}
@@ -82,12 +82,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setAc
 
                 <img 
                   src="/thamani-logo.png" 
-                  alt="Thamani High School Crest Logo" 
-                  className="h-44 mx-auto object-contain drop-shadow-md"
+                  alt="Thamani Academy Crest Logo" 
+                  className="h-16 w-auto object-contain bg-white p-2 rounded-2xl shadow-md border border-amber-100"
                 />
-
                 <div>
-                  <h2 className="text-2xl font-black text-brand-green font-serif">THAMANI HIGH SCHOOL</h2>
+                  <h2 className="text-2xl font-black text-brand-green font-serif">THAMANI ACADEMY</h2>
                   <p className="text-xs font-bold text-brand-maroon tracking-widest uppercase mt-1">
                     Kakiri Town Council • Wakiso
                   </p>
@@ -211,7 +210,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setAc
                 "Nurturing Academic Greatness and Unwavering Integrity"
               </h2>
               <p className="text-slate-600 leading-relaxed text-sm sm:text-base">
-                On behalf of the Board of Governors, teaching staff, and student body, it is my distinct honor to welcome you to Thamani High School, Kakiri. We believe that true education goes beyond textbooks—it encompasses moral fortitude, technical mastery, and leadership preparedness.
+                On behalf of the Board of Governors, teaching staff, and student body, it is my distinct honor to welcome you to Thamani Academy, Kakiri. We believe that true education goes beyond textbooks—it encompasses moral fortitude, technical mastery, and leadership preparedness.
               </p>
               <p className="text-slate-600 leading-relaxed text-sm sm:text-base">
                 With state-of-the-art science laboratories, a fiber-powered ICT innovation hub, and dedicated sports facilities, we offer our scholars an environment where talent is refined into national leadership.
@@ -234,9 +233,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setAc
       {/* Core Features Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-slate-900 font-serif">Why Choose Thamani High School?</h2>
-          <p className="text-slate-600 text-sm max-w-xl mx-auto">
-            Discover the key pillars that position Thamani High School among Wakiso's most prestigious academic centers.
+          <h2 className="text-3xl font-black text-slate-900 font-serif">Why Choose Thamani Academy?</h2>
+          <p className="text-slate-600 mt-2 max-w-2xl mx-auto">
+            Discover the key pillars that position Thamani Academy among Wakiso's most prestigious academic centers.
           </p>
         </div>
 

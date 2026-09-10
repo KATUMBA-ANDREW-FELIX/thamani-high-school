@@ -160,7 +160,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
       <rect width="800" height="500" fill="${svgBg}"/>
       <text x="400" y="240" font-family="sans-serif" font-size="32" font-weight="bold" fill="#ffffff" text-anchor="middle">${newsTitle.slice(0, 35)}</text>
-      <text x="400" y="290" font-family="sans-serif" font-size="20" fill="#D4AF37" text-anchor="middle">${newsCategory} • THAMANI HIGH SCHOOL</text>
+      <text x="400" y="290" font-family="sans-serif" font-size="20" fill="#D4AF37" text-anchor="middle">${newsCategory} • THAMANI ACADEMY</text>
     </svg>`;
 
     onAddNewsArticle({
@@ -1008,7 +1008,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
           <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
             <div>
               <h2 className="text-xl font-black text-slate-900 font-serif">Enrolled Student Directory</h2>
-              <p className="text-xs text-slate-500">Official student registry for Thamani High School.</p>
+              <p className="text-xs text-slate-500">Official student registry for Thamani Academy.</p>
             </div>
 
             <div className="flex gap-4">

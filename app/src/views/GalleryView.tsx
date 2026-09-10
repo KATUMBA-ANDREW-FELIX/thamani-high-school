@@ -27,7 +27,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ gallery }) => {
           </span>
           <h1 className="text-3xl sm:text-5xl font-black font-serif">Photo & Video Gallery</h1>
           <p className="text-emerald-100 text-sm sm:text-base leading-relaxed">
-            Explore moments of academic victory, science innovations, cultural gala performances, and athletic championships at Thamani High School.
+            Explore moments of academic victory, science innovations, cultural gala performances, and athletic championships at Thamani Academy.
           </p>
         </div>
       </div>

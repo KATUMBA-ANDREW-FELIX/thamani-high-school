@@ -166,7 +166,7 @@ export const CalendarFeesView: React.FC<CalendarFeesViewProps> = ({ events }) =>
             {/* Payment Options Guidelines */}
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-2 text-xs text-slate-700">
               <h4 className="font-bold text-slate-900 uppercase">Official Payment Gateways</h4>
-              <p>• <strong>Stanbic Bank Uganda:</strong> A/C No. 9030012345678 (Thamani High School Kakiri)</p>
+              <p>• <strong>Stanbic Bank Uganda:</strong> A/C No. 9030012345678 (Thamani Academy Kakiri)</p>
               <p>• <strong>MTN Mobile Money Pay Code:</strong> *165*3*4040# (Ref: Student Index / Ref Code)</p>
               <p>• <strong>Airtel Money Merchant ID:</strong> 606090</p>
             </div>

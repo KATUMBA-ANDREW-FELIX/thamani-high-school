@@ -16,11 +16,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveView }) => {
             <div className="flex items-center gap-3">
               <img 
                 src="/thamani-logo.png" 
-                alt="Thamani High School Logo" 
+                alt="Thamani Academy Logo" 
                 className="h-16 w-auto bg-white p-1.5 rounded-xl shadow-md"
               />
               <div>
-                <h3 className="font-serif font-black text-lg text-white">THAMANI HIGH SCHOOL</h3>
+                <h3 className="font-serif font-black text-lg text-white">THAMANI ACADEMY</h3>
                 <p className="text-xs text-brand-gold font-bold uppercase tracking-wider">KAKIRI • UGANDA</p>
               </div>
             </div>
@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveView }) => {
         </div>
 
         <div className="mt-12 pt-6 border-t border-emerald-900/80 text-center text-xs text-emerald-300 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} Thamani High School - Kakiri (TAK). All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Thamani Academy - Kakiri (TAK). All rights reserved.</p>
           <div className="flex items-center gap-4 text-emerald-200">
             <span className="flex items-center gap-1">
               <Shield className="w-3.5 h-3.5 text-brand-gold" /> UNEB Registered Center
