@@ -187,6 +187,20 @@ export interface SubjectSyllabus {
   topics: SyllabusTopic[];
 }
 
+export type AllowedDocType = 'pdf' | 'excel' | 'word' | 'image';
+
+export interface TimetableDocument {
+  id: string;
+  title: string;
+  classStream: string; // e.g. "Senior 4 West", "Senior 6 PCM/ICT", "All Classes (Master)"
+  fileType: AllowedDocType;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  uploadedBy: string;
+  downloadUrl?: string; // Data URL or Blob URL
+}
+
 export interface NoticeCircular {
   id: string;
   title: string;
@@ -196,5 +210,10 @@ export interface NoticeCircular {
   content: string;
   isPinned: boolean;
   pdfAttachmentName?: string;
+  attachmentName?: string;
+  attachmentType?: AllowedDocType;
+  attachmentSize?: string;
+  downloadUrl?: string;
 }
+
 

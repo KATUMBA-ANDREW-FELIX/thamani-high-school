@@ -13,7 +13,8 @@ import type {
   DisciplineLogEntry,
   SubjectSyllabus,
   SyllabusTopic,
-  NoticeCircular
+  NoticeCircular,
+  TimetableDocument
 } from './types';
 
 import { 
@@ -28,7 +29,8 @@ import {
   INITIAL_DUTY_ROSTER,
   INITIAL_DISCIPLINE_LOGS,
   INITIAL_SYLLABI,
-  INITIAL_NOTICES
+  INITIAL_NOTICES,
+  INITIAL_TIMETABLE_DOCS
 } from './mockData';
 
 import { Navbar } from './components/Navbar';
@@ -99,6 +101,11 @@ export function App() {
     return saved ? JSON.parse(saved) : INITIAL_NOTICES;
   });
 
+  const [timetableDocs, setTimetableDocs] = useState<TimetableDocument[]>(() => {
+    const saved = localStorage.getItem('thamani_timetable_docs');
+    return saved ? JSON.parse(saved) : INITIAL_TIMETABLE_DOCS;
+  });
+
   // Sync state to local storage
   useEffect(() => {
     localStorage.setItem('thamani_applicants', JSON.stringify(applicants));
@@ -135,6 +142,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('thamani_notices', JSON.stringify(notices));
   }, [notices]);
+
+  useEffect(() => {
+    localStorage.setItem('thamani_timetable_docs', JSON.stringify(timetableDocs));
+  }, [timetableDocs]);
 
   // Actions
   const handleAddApplicant = (data: Omit<Applicant, 'id' | 'refCode' | 'status' | 'appliedDate'>): Applicant => {
@@ -279,6 +290,7 @@ export function App() {
       localStorage.removeItem('thamani_discipline_logs');
       localStorage.removeItem('thamani_syllabi');
       localStorage.removeItem('thamani_notices');
+      localStorage.removeItem('thamani_timetable_docs');
 
       setApplicants(INITIAL_APPLICANTS);
       setStudents(INITIAL_STUDENTS);
@@ -289,6 +301,7 @@ export function App() {
       setDisciplineLogs(INITIAL_DISCIPLINE_LOGS);
       setSubjectSyllabi(INITIAL_SYLLABI);
       setNotices(INITIAL_NOTICES);
+      setTimetableDocs(INITIAL_TIMETABLE_DOCS);
 
       alert('Demo data has been reset to default.');
     }
@@ -313,6 +326,7 @@ export function App() {
             teachers={teachers}
             students={students}
             timetableSlots={timetableSlots}
+            timetableDocs={timetableDocs}
             dutyRosters={dutyRosters}
             disciplineLogs={disciplineLogs}
             subjectSyllabi={subjectSyllabi}
@@ -329,12 +343,15 @@ export function App() {
             teachers={teachers}
             news={news}
             timetableSlots={timetableSlots}
+            timetableDocs={timetableDocs}
             dutyRosters={dutyRosters}
             notices={notices}
             onUpdateApplicantStatus={handleUpdateApplicantStatus}
             onAddNewsArticle={handleAddNewsArticle}
             onAddTimetableSlot={handleAddTimetableSlot}
             onDeleteTimetableSlot={handleDeleteTimetableSlot}
+            onAddTimetableDoc={(newDoc) => setTimetableDocs(prev => [newDoc, ...prev])}
+            onDeleteTimetableDoc={(id) => setTimetableDocs(prev => prev.filter(d => d.id !== id))}
             onAddDutyRoster={handleAddDutyRoster}
             onDeleteDutyRoster={handleDeleteDutyRoster}
             onAddNotice={handleAddNotice}

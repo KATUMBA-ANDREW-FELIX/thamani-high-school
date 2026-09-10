@@ -8,8 +8,11 @@ import type {
   TimetableSlot, 
   DutyRosterItem, 
   NoticeCircular, 
-  DayOfWeek 
+  DayOfWeek,
+  TimetableDocument,
+  AllowedDocType
 } from '../types';
+import { handleDownloadFile } from '../utils/fileDownloader';
 import { 
   Shield, 
   Users, 
@@ -26,7 +29,8 @@ import {
   Calendar, 
   Pin, 
   Trash2, 
-  Bell 
+  Bell,
+  Download
 } from 'lucide-react';
 
 interface AdminPortalViewProps {
@@ -35,8 +39,11 @@ interface AdminPortalViewProps {
   teachers: Teacher[];
   news: NewsArticle[];
   timetableSlots: TimetableSlot[];
+  timetableDocs?: TimetableDocument[];
   dutyRosters: DutyRosterItem[];
   notices: NoticeCircular[];
+  onAddTimetableDoc?: (doc: TimetableDocument) => void;
+  onDeleteTimetableDoc?: (id: string) => void;
   onUpdateApplicantStatus: (id: string, status: ApplicantStatus, notes?: string) => void;
   onAddNewsArticle: (article: Omit<NewsArticle, 'id'>) => void;
   onAddTimetableSlot: (slot: Omit<TimetableSlot, 'id'>) => void;
@@ -55,6 +62,9 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   teachers,
   news,
   timetableSlots,
+  timetableDocs = [],
+  onAddTimetableDoc,
+  onDeleteTimetableDoc,
   dutyRosters,
   notices,
   onUpdateApplicantStatus,
@@ -106,6 +116,13 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [dutyRole2, setDutyRole2] = useState('Dining Hall & Meal Inspector');
   const [dutyNotes, setDutyNotes] = useState('Ensure full attendance during evening preps.');
 
+  // Timetable Document Form State
+  const [ttDocTitle, setTtDocTitle] = useState('');
+  const [ttDocClass, setTtDocClass] = useState('Senior 4 West');
+  const [ttDocType, setTtDocType] = useState<AllowedDocType>('pdf');
+  const [ttDocFileName, setTtDocFileName] = useState('');
+  const [ttDocDataUrl, setTtDocDataUrl] = useState('');
+
   // Notice Board Form State
   const [notTitle, setNotTitle] = useState('');
   const [notCategory, setNotCategory] = useState<'general' | 'fees' | 'academic' | 'urgent'>('general');
@@ -113,7 +130,56 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [notContent, setNotContent] = useState('');
   const [notIsPinned, setNotIsPinned] = useState(false);
   const [notPdfName, setNotPdfName] = useState('');
+  const [notDocType, setNotDocType] = useState<AllowedDocType>('pdf');
+  const [notDocDataUrl, setNotDocDataUrl] = useState('');
   const [notSuccess, setNotSuccess] = useState(false);
+
+  const handleTimetableFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setTtDocFileName(file.name);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        if (evt.target?.result) setTtDocDataUrl(evt.target.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadTimetableDocSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ttDocTitle) return;
+    const ext = ttDocType === 'excel' ? 'xlsx' : ttDocType === 'word' ? 'docx' : ttDocType === 'image' ? 'png' : 'pdf';
+    const fileName = ttDocFileName || `${ttDocTitle.replace(/\s+/g, '_')}.${ext}`;
+    const newDoc: TimetableDocument = {
+      id: 'TTD-' + Date.now(),
+      title: ttDocTitle,
+      classStream: ttDocClass,
+      fileType: ttDocType,
+      fileName: fileName,
+      fileSize: '1.2 MB',
+      uploadDate: new Date().toISOString().split('T')[0],
+      uploadedBy: 'Dr. Ssemwanga Ronald (Headteacher)',
+      downloadUrl: ttDocDataUrl || undefined
+    };
+    if (onAddTimetableDoc) onAddTimetableDoc(newDoc);
+    setTtDocTitle('');
+    setTtDocFileName('');
+    setTtDocDataUrl('');
+    alert(`Timetable document "${fileName}" uploaded successfully!`);
+  };
+
+  const handleNoticeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNotPdfName(file.name);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        if (evt.target?.result) setNotDocDataUrl(evt.target.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Calculations
   const pendingApplicantsCount = applicants.filter(a => a.status === 'pending').length;
@@ -230,13 +296,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
       category: notCategory,
       content: notContent,
       isPinned: notIsPinned,
-      pdfAttachmentName: notPdfName || undefined
+      pdfAttachmentName: notPdfName || undefined,
+      attachmentName: notPdfName || undefined,
+      attachmentType: notDocType,
+      attachmentSize: '1.2 MB',
+      downloadUrl: notDocDataUrl || undefined
     });
 
     setNotSuccess(true);
     setNotTitle('');
     setNotContent('');
     setNotPdfName('');
+    setNotDocDataUrl('');
     setTimeout(() => setNotSuccess(false), 3000);
   };
 
@@ -612,6 +683,139 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             </div>
 
           </div>
+
+          {/* UPLOADED TIMETABLE DOCUMENTS SECTION */}
+          <div className="pt-8 border-t border-slate-200 space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 font-serif">Uploaded Timetable Documents Repository</h3>
+                <p className="text-xs text-slate-500">Upload and manage official timetable files (PDFs, Excel spreadsheets, Word documents) accessible by teachers and students.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Form to upload timetable file */}
+              <form onSubmit={handleUploadTimetableDocSubmit} className="lg:col-span-4 bg-emerald-950 text-white p-6 rounded-2xl shadow-lg space-y-3 text-xs">
+                <h4 className="font-bold text-brand-gold text-sm border-b border-emerald-800 pb-2">Upload Timetable File</h4>
+                
+                <div>
+                  <label className="block font-bold mb-1">Document Title *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Senior 4 West Official Master Timetable"
+                    value={ttDocTitle}
+                    onChange={(e) => setTtDocTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-emerald-900 border border-emerald-700 text-white text-xs outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold mb-1">Class Stream</label>
+                    <select
+                      value={ttDocClass}
+                      onChange={(e) => setTtDocClass(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-emerald-900 border border-emerald-700 text-white text-xs outline-none"
+                    >
+                      <option value="All Classes (Master)">All Classes (Master)</option>
+                      <option value="Senior 4 West">Senior 4 West</option>
+                      <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                      <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                      <option value="Senior 2 East">Senior 2 East</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1">Format</label>
+                    <select
+                      value={ttDocType}
+                      onChange={(e) => setTtDocType(e.target.value as AllowedDocType)}
+                      className="w-full px-3 py-2 rounded-xl bg-emerald-900 border border-emerald-700 text-white text-xs outline-none"
+                    >
+                      <option value="pdf">PDF Document (.pdf)</option>
+                      <option value="excel">Excel Spreadsheet (.xlsx)</option>
+                      <option value="word">Word Document (.docx)</option>
+                      <option value="image">Image (.png/.jpg)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Select File from Device</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.xlsx,.xls,.docx,.doc,.png,.jpg,.jpeg"
+                    onChange={handleTimetableFileChange}
+                    className="w-full text-[11px] text-emerald-200 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-gold file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
+                  />
+                  {ttDocFileName && (
+                    <div className="mt-1 text-[10px] text-brand-gold font-mono truncate">Selected: {ttDocFileName}</div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-brand-gold hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-colors flex items-center justify-center gap-2 shadow"
+                >
+                  <Plus className="w-4 h-4" /> Upload Timetable File
+                </button>
+              </form>
+
+              {/* List of uploaded timetable docs */}
+              <div className="lg:col-span-8 space-y-3">
+                {timetableDocs.length === 0 ? (
+                  <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 italic">
+                    No timetable documents uploaded yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {timetableDocs.map((doc) => (
+                      <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm space-y-3 flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-start gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              doc.fileType === 'excel' ? 'bg-emerald-100 text-emerald-800' :
+                              doc.fileType === 'word' ? 'bg-blue-100 text-blue-800' :
+                              doc.fileType === 'image' ? 'bg-purple-100 text-purple-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {doc.fileType.toUpperCase()}
+                            </span>
+                            <span className="text-[10px] font-bold text-brand-green bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              {doc.classStream}
+                            </span>
+                          </div>
+
+                          <h4 className="font-bold text-slate-900 text-xs leading-snug">{doc.title}</h4>
+                          <p className="text-[11px] font-mono text-slate-500 truncate">{doc.fileName}</p>
+                          <div className="text-[10px] text-slate-400">Uploaded {doc.uploadDate} • {doc.fileSize}</div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleDownloadFile(doc.fileName, doc.title, doc.fileType, doc.downloadUrl)}
+                            className="px-3 py-1.5 bg-brand-green hover:bg-emerald-800 text-white font-bold text-[11px] rounded-xl flex items-center gap-1 shadow transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5 text-brand-gold" /> Download
+                          </button>
+
+                          {onDeleteTimetableDoc && (
+                            <button
+                              onClick={() => onDeleteTimetableDoc(doc.id)}
+                              className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold"
+                              title="Delete File"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -827,14 +1031,40 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Attachment Format</label>
+                    <select
+                      value={notDocType}
+                      onChange={(e) => setNotDocType(e.target.value as AllowedDocType)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold outline-none"
+                    >
+                      <option value="pdf">PDF Document (.pdf)</option>
+                      <option value="excel">Excel Sheet (.xlsx)</option>
+                      <option value="word">Word Document (.docx)</option>
+                      <option value="image">Image (.png/.jpg)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Attachment Filename</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Term_III_Circular.pdf"
+                      value={notPdfName}
+                      onChange={(e) => setNotPdfName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-[11px] outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Mock Attachment Filename (Optional)</label>
+                  <label className="block font-bold text-slate-700 mb-1">Upload Document File (PDF, Excel, Word, Image)</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Term_III_2026_School_Circular.pdf"
-                    value={notPdfName}
-                    onChange={(e) => setNotPdfName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-[11px] outline-none"
+                    type="file"
+                    accept=".pdf,.xlsx,.xls,.docx,.doc,.png,.jpg,.jpeg"
+                    onChange={handleNoticeFileChange}
+                    className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-green file:text-white hover:file:bg-emerald-800 cursor-pointer"
                   />
                 </div>
 
@@ -898,10 +1128,26 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                       </div>
                     </div>
 
-                    <p className="text-slate-700 font-medium">{n.content}</p>
-                    {n.pdfAttachmentName && (
-                      <div className="text-[11px] text-brand-green font-bold flex items-center gap-1">
-                        <FileText className="w-3.5 h-3.5" /> Attachment: {n.pdfAttachmentName}
+                    <p className="text-xs text-slate-600 leading-relaxed">{n.content}</p>
+
+                    {(n.attachmentName || n.pdfAttachmentName) && (
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-brand-green font-bold truncate">
+                          <FileText className="w-4 h-4 text-brand-gold shrink-0" />
+                          <span className="truncate">{n.attachmentName || n.pdfAttachmentName}</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDownloadFile(
+                            n.attachmentName || n.pdfAttachmentName || 'Notice.pdf',
+                            n.title,
+                            n.attachmentType || 'pdf',
+                            n.downloadUrl
+                          )}
+                          className="px-3 py-1 bg-brand-green hover:bg-emerald-800 text-white font-bold text-[11px] rounded-lg flex items-center gap-1 shrink-0 shadow"
+                        >
+                          <Download className="w-3.5 h-3.5 text-brand-gold" /> Download ({n.attachmentType?.toUpperCase() || 'PDF'})
+                        </button>
                       </div>
                     )}
                   </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { NewsArticle, CalendarEvent, NoticeCircular } from '../types';
-import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, MapPin, Bell, Pin, FileText } from 'lucide-react';
+import { GraduationCap, Award, BookOpen, Users, ArrowRight, CheckCircle2, Calendar, ShieldCheck, MapPin, Bell, Pin, FileText, Download } from 'lucide-react';
+import { handleDownloadFile } from '../utils/fileDownloader';
 
 interface HomeViewProps {
   news: NewsArticle[];
@@ -166,10 +167,24 @@ export const HomeView: React.FC<HomeViewProps> = ({ news, events, notices, setAc
                   <h3 className="font-bold text-white text-base leading-snug">{n.title}</h3>
                   <p className="text-xs text-slate-200 leading-relaxed">{n.content}</p>
 
-                  {n.pdfAttachmentName && (
-                    <div className="pt-1 flex items-center gap-1.5 text-xs text-brand-gold font-bold">
-                      <FileText className="w-4 h-4 text-brand-gold" />
-                      <span>Attached Circular: {n.pdfAttachmentName}</span>
+                  {(n.attachmentName || n.pdfAttachmentName) && (
+                    <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs text-brand-gold font-bold truncate">
+                        <FileText className="w-4 h-4 text-brand-gold shrink-0" />
+                        <span className="truncate">{n.attachmentName || n.pdfAttachmentName}</span>
+                      </div>
+
+                      <button
+                        onClick={() => handleDownloadFile(
+                          n.attachmentName || n.pdfAttachmentName || 'Notice.pdf',
+                          n.title,
+                          n.attachmentType || 'pdf',
+                          n.downloadUrl
+                        )}
+                        className="px-3.5 py-1.5 bg-brand-gold hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download ({n.attachmentType?.toUpperCase() || 'PDF'})
+                      </button>
                     </div>
                   )}
                 </div>

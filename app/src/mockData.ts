@@ -1,4 +1,4 @@
-import type { Applicant, Student, Teacher, LibraryResource, CalendarEvent, GalleryItem, NewsArticle, StudentMarkReport, TimetableSlot, DutyRosterItem, DisciplineLogEntry, SubjectSyllabus, NoticeCircular } from './types';
+import type { Applicant, Student, Teacher, LibraryResource, CalendarEvent, GalleryItem, NewsArticle, StudentMarkReport, TimetableSlot, DutyRosterItem, DisciplineLogEntry, SubjectSyllabus, NoticeCircular, TimetableDocument } from './types';
 
 // Helper to generate natural, clean SVG graphics for school photos (no AI neon gradients)
 export const createSvgPlaceholder = (title: string, subtitle: string, bgColor = '#1A472A', textColor = '#ffffff') => {
@@ -604,6 +604,49 @@ export const INITIAL_SYLLABI: SubjectSyllabus[] = [
   }
 ];
 
+export const INITIAL_TIMETABLE_DOCS: TimetableDocument[] = [
+  {
+    id: 'TTD-001',
+    title: 'Master Weekly Teaching Timetable - Term III 2026',
+    classStream: 'All Classes (Master)',
+    fileType: 'pdf',
+    fileName: 'Master_Weekly_Timetable_Term_III_2026.pdf',
+    fileSize: '1.4 MB',
+    uploadDate: '2026-09-02',
+    uploadedBy: 'Dr. Ssemwanga Ronald (Headteacher)'
+  },
+  {
+    id: 'TTD-002',
+    title: 'Senior 4 West Official UNEB Class Schedule',
+    classStream: 'Senior 4 West',
+    fileType: 'excel',
+    fileName: 'Senior_4_West_Class_Timetable.xlsx',
+    fileSize: '420 KB',
+    uploadDate: '2026-09-04',
+    uploadedBy: 'Mr. Musoke Raymond (HOD Physics)'
+  },
+  {
+    id: 'TTD-003',
+    title: 'Senior 6 PCM/ICT A-Level Combination Timetable',
+    classStream: 'Senior 6 PCM/ICT',
+    fileType: 'word',
+    fileName: 'Senior_6_PCM_ICT_Schedule.docx',
+    fileSize: '310 KB',
+    uploadDate: '2026-09-05',
+    uploadedBy: 'Mr. Kiwanuka Patrick (HOD ICT)'
+  },
+  {
+    id: 'TTD-004',
+    title: 'Senior 1 East Foundation Stream Timetable',
+    classStream: 'Senior 1 East',
+    fileType: 'pdf',
+    fileName: 'Senior_1_East_Weekly_Timetable.pdf',
+    fileSize: '890 KB',
+    uploadDate: '2026-09-06',
+    uploadedBy: 'Mrs. Nabwire Christine (HOD Chemistry)'
+  }
+];
+
 export const INITIAL_NOTICES: NoticeCircular[] = [
   {
     id: 'NOT-001',
@@ -613,7 +656,10 @@ export const INITIAL_NOTICES: NoticeCircular[] = [
     category: 'urgent',
     content: 'All boarding scholars are required to report to Thamani Academy, Kakiri, on Tuesday September 15th, 2026 before 4:00 PM. Please bring bank slip receipts for fee clearing at the Bursar\'s office.',
     isPinned: true,
-    pdfAttachmentName: 'Term_III_2026_School_Circular.pdf'
+    pdfAttachmentName: 'Term_III_2026_School_Circular.pdf',
+    attachmentName: 'Term_III_2026_School_Circular.pdf',
+    attachmentType: 'pdf',
+    attachmentSize: '1.2 MB'
   },
   {
     id: 'NOT-002',
@@ -622,7 +668,10 @@ export const INITIAL_NOTICES: NoticeCircular[] = [
     targetAudience: 'students',
     category: 'academic',
     content: 'The official UNEB candidate briefing will take place on Friday November 6th in the Main Assembly Hall. All examination candidates must attend in full school uniform.',
-    isPinned: true
+    isPinned: true,
+    attachmentName: 'UNEB_2026_Candidate_Timetable.xlsx',
+    attachmentType: 'excel',
+    attachmentSize: '850 KB'
   },
   {
     id: 'NOT-003',
@@ -631,7 +680,11 @@ export const INITIAL_NOTICES: NoticeCircular[] = [
     targetAudience: 'parents',
     category: 'general',
     content: 'Parents and guardians are cordially invited to attend our Annual Sports Competition between Crane, Crest, Lion, and Shield Houses on Sunday October 4th.',
-    isPinned: false
+    isPinned: false,
+    attachmentName: 'Sports_Gala_Programme_2026.docx',
+    attachmentType: 'word',
+    attachmentSize: '450 KB'
   }
 ];
+
 

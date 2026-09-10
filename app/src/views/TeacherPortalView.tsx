@@ -8,8 +8,10 @@ import type {
   DutyRosterItem, 
   DisciplineLogEntry, 
   SubjectSyllabus,
-  SyllabusTopic
+  SyllabusTopic,
+  TimetableDocument
 } from '../types';
+import { handleDownloadFile } from '../utils/fileDownloader';
 import { 
   UserCheck, 
   BookOpen, 
@@ -24,13 +26,15 @@ import {
   Calendar, 
   Clock, 
   ShieldAlert, 
-  Layers
+  Layers,
+  Download
 } from 'lucide-react';
 
 interface TeacherPortalViewProps {
   teachers: Teacher[];
   students: Student[];
   timetableSlots: TimetableSlot[];
+  timetableDocs?: TimetableDocument[];
   dutyRosters: DutyRosterItem[];
   disciplineLogs: DisciplineLogEntry[];
   subjectSyllabi: SubjectSyllabus[];
@@ -45,6 +49,7 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
   teachers,
   students,
   timetableSlots,
+  timetableDocs = [],
   dutyRosters,
   disciplineLogs,
   subjectSyllabi,
@@ -374,6 +379,60 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          {/* DOWNLOADABLE TIMETABLE DOCUMENTS SECTION */}
+          <div className="pt-8 border-t border-slate-200 space-y-4">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 font-serif">Class & Master Timetable Documents Repository</h3>
+                <p className="text-xs text-slate-500">View and download official timetable documents (PDFs, Excel spreadsheets, Word files) uploaded by Management.</p>
+              </div>
+
+              <span className="bg-emerald-100 text-brand-green font-bold text-xs px-3 py-1 rounded-full">
+                {timetableDocs.length} Official Documents Available
+              </span>
+            </div>
+
+            {timetableDocs.length === 0 ? (
+              <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 italic">
+                No official timetable documents uploaded yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {timetableDocs.map((doc) => (
+                  <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm space-y-3 flex flex-col justify-between hover:border-brand-green/40 transition-all">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          doc.fileType === 'excel' ? 'bg-emerald-100 text-emerald-800' :
+                          doc.fileType === 'word' ? 'bg-blue-100 text-blue-800' :
+                          doc.fileType === 'image' ? 'bg-purple-100 text-purple-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {doc.fileType.toUpperCase()}
+                        </span>
+                        <span className="text-[10px] font-bold text-brand-green bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          {doc.classStream}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-slate-900 text-xs leading-snug">{doc.title}</h4>
+                      <p className="text-[11px] font-mono text-slate-500 truncate">{doc.fileName}</p>
+                      <div className="text-[10px] text-slate-400">Uploaded {doc.uploadDate} • {doc.fileSize}</div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200">
+                      <button
+                        onClick={() => handleDownloadFile(doc.fileName, doc.title, doc.fileType, doc.downloadUrl)}
+                        className="w-full py-2 bg-brand-green hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-brand-gold" /> Download ({doc.fileType.toUpperCase()})
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
