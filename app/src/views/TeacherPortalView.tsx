@@ -9,7 +9,8 @@ import type {
   DisciplineLogEntry, 
   SubjectSyllabus,
   SyllabusTopic,
-  TimetableDocument
+  TimetableDocument,
+  AllowedDocType
 } from '../types';
 import { handleDownloadFile } from '../utils/fileDownloader';
 import { 
@@ -35,6 +36,7 @@ interface TeacherPortalViewProps {
   students: Student[];
   timetableSlots: TimetableSlot[];
   timetableDocs?: TimetableDocument[];
+  onAddTimetableDoc?: (doc: TimetableDocument) => void;
   dutyRosters: DutyRosterItem[];
   disciplineLogs: DisciplineLogEntry[];
   subjectSyllabi: SubjectSyllabus[];
@@ -50,6 +52,7 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
   students,
   timetableSlots,
   timetableDocs = [],
+  onAddTimetableDoc,
   dutyRosters,
   disciplineLogs,
   subjectSyllabi,
@@ -64,7 +67,49 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
 
   const currentTeacher = teachers.find(t => t.id === selectedTeacherId) || teachers[0];
 
-  // Mark Entry Form State
+  // Timetable Doc Upload State
+  const [showUploadTimetableModal, setShowUploadTimetableModal] = useState(false);
+  const [ttDocTitle, setTtDocTitle] = useState('');
+  const [ttDocClass, setTtDocClass] = useState('Senior 4 West');
+  const [ttDocType, setTtDocType] = useState<AllowedDocType>('pdf');
+  const [ttDocFileName, setTtDocFileName] = useState('');
+  const [ttDocDataUrl, setTtDocDataUrl] = useState('');
+
+  const handleTeacherTimetableFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setTtDocFileName(file.name);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        if (evt.target?.result) setTtDocDataUrl(evt.target.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTeacherUploadTimetableSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ttDocTitle) return;
+    const ext = ttDocType === 'excel' ? 'xlsx' : ttDocType === 'word' ? 'docx' : ttDocType === 'image' ? 'png' : 'pdf';
+    const fileName = ttDocFileName || `${ttDocTitle.replace(/\s+/g, '_')}.${ext}`;
+    const newDoc: TimetableDocument = {
+      id: 'TTD-' + Date.now(),
+      title: ttDocTitle,
+      classStream: ttDocClass,
+      fileType: ttDocType,
+      fileName: fileName,
+      fileSize: '1.2 MB',
+      uploadDate: new Date().toISOString().split('T')[0],
+      uploadedBy: `${currentTeacher.name} (${currentTeacher.title})`,
+      downloadUrl: ttDocDataUrl || undefined
+    };
+    if (onAddTimetableDoc) onAddTimetableDoc(newDoc);
+    setTtDocTitle('');
+    setTtDocFileName('');
+    setTtDocDataUrl('');
+    setShowUploadTimetableModal(false);
+    alert(`Timetable document "${fileName}" uploaded successfully!`);
+  };
   const [selectedClass, setSelectedClass] = useState<string>('Senior 4 West');
   const [selectedSubject, setSelectedSubject] = useState<string>('Physics');
   
@@ -386,12 +431,21 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 font-serif">Class & Master Timetable Documents Repository</h3>
-                <p className="text-xs text-slate-500">View and download official timetable documents (PDFs, Excel spreadsheets, Word files) uploaded by Management.</p>
+                <p className="text-xs text-slate-500">View and download official timetable documents (PDFs, Excel spreadsheets, Word files) uploaded by Management & Faculty.</p>
               </div>
 
-              <span className="bg-emerald-100 text-brand-green font-bold text-xs px-3 py-1 rounded-full">
-                {timetableDocs.length} Official Documents Available
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="bg-emerald-100 text-brand-green font-bold text-xs px-3 py-1.5 rounded-full">
+                  {timetableDocs.length} Official Documents Available
+                </span>
+
+                <button
+                  onClick={() => setShowUploadTimetableModal(true)}
+                  className="px-4 py-2 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Upload Timetable File
+                </button>
+              </div>
             </div>
 
             {timetableDocs.length === 0 ? (
@@ -1217,6 +1271,98 @@ export const TeacherPortalView: React.FC<TeacherPortalViewProps> = ({
                   className="px-5 py-2.5 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center gap-1.5 shadow"
                 >
                   <Plus className="w-4 h-4 text-brand-gold" /> Upload Syllabus
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD TIMETABLE DOCUMENT MODAL */}
+      {showUploadTimetableModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 font-serif">Upload Timetable Document</h3>
+                <p className="text-xs text-slate-500">Upload official PDF, Excel (.xlsx), or Word (.docx) timetable files.</p>
+              </div>
+              <button onClick={() => setShowUploadTimetableModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTeacherUploadTimetableSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Document Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Senior 4 West Term III Master Timetable"
+                  value={ttDocTitle}
+                  onChange={(e) => setTtDocTitle(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-bold outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Class Stream</label>
+                  <select
+                    value={ttDocClass}
+                    onChange={(e) => setTtDocClass(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    <option value="Senior 4 West">Senior 4 West</option>
+                    <option value="Senior 6 PCM/ICT">Senior 6 PCM/ICT</option>
+                    <option value="Senior 6 HEG/Div">Senior 6 HEG/Div</option>
+                    <option value="Senior 2 East">Senior 2 East</option>
+                    <option value="All Classes (Master)">All Classes (Master)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Document Format</label>
+                  <select
+                    value={ttDocType}
+                    onChange={(e) => setTtDocType(e.target.value as AllowedDocType)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-bold outline-none"
+                  >
+                    <option value="pdf">PDF Document (.pdf)</option>
+                    <option value="excel">Excel Spreadsheet (.xlsx)</option>
+                    <option value="word">Word Document (.docx)</option>
+                    <option value="image">Image (.png/.jpg)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Select File from Device (.pdf, .xlsx, .docx)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.xlsx,.xls,.docx,.doc,.png,.jpg,.jpeg"
+                  onChange={handleTeacherTimetableFileChange}
+                  className="w-full text-xs text-slate-600 file:mr-2 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-green file:text-white hover:file:bg-emerald-800 cursor-pointer"
+                />
+                {ttDocFileName && (
+                  <div className="mt-1 text-xs text-brand-green font-mono font-bold">Selected: {ttDocFileName}</div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadTimetableModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-brand-green hover:bg-emerald-800 text-white font-bold rounded-xl flex items-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4 text-brand-gold" /> Upload Timetable
                 </button>
               </div>
             </form>

@@ -330,6 +330,7 @@ export function App() {
             dutyRosters={dutyRosters}
             disciplineLogs={disciplineLogs}
             subjectSyllabi={subjectSyllabi}
+            onAddTimetableDoc={(newDoc) => setTimetableDocs(prev => [newDoc, ...prev])}
             onAddLibraryResource={handleAddLibraryResource}
             onUpdateStudentMark={() => {}}
             onAddDisciplineLog={handleAddDisciplineLog}
