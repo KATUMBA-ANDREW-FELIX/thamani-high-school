@@ -8,14 +8,53 @@ export const AlumniView: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone) {
-      alert('Please fill out your name and contact phone.');
+    if (!name || !currentRole || !phone) {
+      alert('Please fill out your name, profession, and phone contact.');
       return;
     }
-    setSubmitted(true);
+
+    try {
+      setSubmitting(true);
+      const response = await fetch('http://localhost/backend/register_alumni.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          year: completionYear,
+          profession: currentRole,
+          phone,
+          email,
+        }),
+      });
+
+      const responseText = await response.text();
+      let data: { success?: boolean; error?: string } = {};
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { success?: boolean; error?: string };
+        } catch {
+          throw new Error(`Backend returned an invalid response (${response.status})`);
+        }
+      }
+
+      if (response.ok && data.success) {
+        setSubmitted(true);
+      } else {
+        alert('Error: ' + (data.error || `Could not save record (HTTP ${response.status})`));
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      alert('Failed to connect to the backend server.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -36,7 +75,7 @@ export const AlumniView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Alumni Registration Form (7 cols) */}
+        {/* Alumni Registration Form */}
         <div className="lg:col-span-7">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-md space-y-6">
             <div className="border-b border-slate-200 pb-3">
@@ -49,7 +88,7 @@ export const AlumniView: React.FC = () => {
                 <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
                 <h3 className="text-xl font-bold text-slate-900 font-serif">Registration Recorded!</h3>
                 <p className="text-xs text-slate-600">
-                  Thank you, <strong>{name}</strong> (Class of {completionYear}). You have been added to the Thamani Old Students Network.
+                  Thank you, <strong>{name}</strong> (Class of {completionYear}). Your details have been saved to the database.
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
@@ -129,16 +168,17 @@ export const AlumniView: React.FC = () => {
 
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="w-full py-3.5 bg-brand-maroon hover:bg-red-900 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
                 >
-                  <Send className="w-4 h-4 text-brand-gold" /> Register with Alumni Network
+                  <Send className="w-4 h-4 text-brand-gold" /> {submitting ? 'Saving...' : 'Register as Alumni Member'}
                 </button>
               </form>
             )}
           </div>
         </div>
 
-        {/* Alumni Spotlights (5 cols) */}
+        {/* Alumni Spotlights */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-md space-y-4">
             <h3 className="font-bold text-white text-lg flex items-center gap-2 border-b border-slate-800 pb-3 font-serif">
@@ -149,13 +189,10 @@ export const AlumniView: React.FC = () => {
               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-1">
                 <span className="text-brand-gold font-bold">Dr. Kaberuka Sheila (Class of 2019)</span>
                 <p className="text-slate-300 font-medium">Head Resident Medical Officer - Mulago National Hospital</p>
-                <p className="text-slate-400 italic text-[11px]">"The rigorous chemistry practicals at Thamani laid the bedrock for my medical career."</p>
               </div>
-
               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-1">
                 <span className="text-brand-gold font-bold">Eng. Kintu Moses (Class of 2021)</span>
                 <p className="text-slate-300 font-medium">Software Systems Architect - Silicon Valley Tech</p>
-                <p className="text-slate-400 italic text-[11px]">"Thamani's ICT hub gave me my first exposure to computer programming in Senior 2."</p>
               </div>
             </div>
           </div>

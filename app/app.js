@@ -1,6 +1,6 @@
 // THAMANI ACADEMY - Application State & Operations Engine
 
-// State Initialization with localStorage Persistence
+// State Initialization with localStorage Persistence & Safe Fallback Protection
 const defaultState = {
     students: [
         { id: 1, name: "Kato Brian", class: "Senior 4", stream: "North", lin: "U0034/501", contact: "+256 772 123456" },
@@ -48,8 +48,16 @@ const defaultState = {
     ]
 };
 
-// Load App State
-let state = JSON.parse(localStorage.getItem('thamani_app_state')) || defaultState;
+// Safe LocalStorage Loading with Try/Catch Fallback
+let state;
+try {
+    const storedState = localStorage.getItem('thamani_app_state');
+    state = storedState ? JSON.parse(storedState) : defaultState;
+} catch (e) {
+    console.warn("Corrupted localStorage detected. Resetting to default state.", e);
+    state = defaultState;
+    localStorage.removeItem('thamani_app_state');
+}
 
 function saveState() {
     localStorage.setItem('thamani_app_state', JSON.stringify(state));
@@ -57,16 +65,13 @@ function saveState() {
 
 // Global Page Router
 function switchPage(pageId) {
-    // Hide all pages
     document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
 
-    // Show target page
     const target = document.getElementById(`page-${pageId}`);
     if (target) {
         target.classList.remove('hidden');
     }
 
-    // Update active nav styling
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('text-white', 'bg-brand-green');
         link.classList.add('text-gray-700');
@@ -78,15 +83,12 @@ function switchPage(pageId) {
         activeNav.classList.add('text-white', 'bg-brand-green');
     }
 
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Refresh Lucide Icons & Page Data
     if (window.lucide) {
         lucide.createIcons();
     }
 
-    // Trigger Page Specific Renderers
     if (pageId === 'home') renderHomeCirculars();
     if (pageId === 'enrollment') renderStudentDirectory();
     if (pageId === 'library') renderLibraryResources();
@@ -102,16 +104,65 @@ function toggleMobileMenu() {
     menu.classList.toggle('hidden');
 }
 
+// Robust Form Input Extraction
+async function registerAlumni(event, form) {
+    event.preventDefault();
+
+    const nameInput = form.querySelector('input[name="name"]') || form.querySelectorAll('input')[0];
+    const yearInput = form.querySelector('input[name="year"]') || form.querySelectorAll('input')[1];
+    const professionInput = form.querySelector('input[name="profession"]') || form.querySelectorAll('input')[2];
+    const emailInput = form.querySelector('input[name="email"]') || form.querySelectorAll('input')[3];
+    const phoneInput = form.querySelector('input[name="phone"]') || form.querySelectorAll('input')[4];
+
+    if (!nameInput || !yearInput || !professionInput || !emailInput || !phoneInput) {
+        alert('Please fill in all required registration fields.');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost/backend/register_alumni.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: nameInput.value,
+                year: yearInput.value,
+                profession: professionInput.value,
+                email: emailInput.value,
+                phone: phoneInput.value
+            })
+        });
+
+        const responseText = await response.text();
+        let data = {};
+        if (responseText) {
+            try {
+                data = JSON.parse(responseText);
+            } catch {
+                throw new Error(`Backend returned an invalid response (HTTP ${response.status})`);
+            }
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || `Could not save alumni record (HTTP ${response.status})`);
+        }
+
+        alert('Thank you for registering with the Thamani Academy Alumni Network!');
+        form.reset();
+    } catch (error) {
+        alert(`Registration failed: ${error.message}`);
+    }
+}
+
 // Modal Helpers
 function openModal(modalId) {
-    document.getElementById(modalId).classList.remove('hidden');
+    document.getElementById(modalId)?.classList.remove('hidden');
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    document.getElementById(modalId)?.classList.add('hidden');
 }
 
-// Download File Generator (Creates realistic mock files for download)
+// Download File Generator with Delayed URL Revocation for Mobile/Slow Browsers
 function downloadDocument(fileName, fileType) {
     let content = `THAMANI ACADEMY - KAKIRI CAMPUS\nOfficial School Document: ${fileName}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified UNEB Compliant Document\n\n`;
     content += "=========================================================\n";
@@ -130,8 +181,11 @@ function downloadDocument(fileName, fileType) {
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
 }
 
 // RENDERERS
@@ -189,18 +243,28 @@ function renderStudentDirectory() {
 
 function handleStudentEnrollment(e) {
     e.preventDefault();
-    const name = document.getElementById('enroll-name').value;
-    const sClass = document.getElementById('enroll-class').value;
-    const stream = document.getElementById('enroll-stream').value;
-    const lin = document.getElementById('enroll-lin').value;
-    const contact = document.getElementById('enroll-contact').value;
+    const nameEl = document.getElementById('enroll-name');
+    const classEl = document.getElementById('enroll-class');
+    const streamEl = document.getElementById('enroll-stream');
+    const linEl = document.getElementById('enroll-lin');
+    const contactEl = document.getElementById('enroll-contact');
 
-    const newStudent = { id: Date.now(), name, class: sClass, stream, lin, contact };
+    if (!nameEl || !classEl || !streamEl || !linEl || !contactEl) return;
+
+    const newStudent = { 
+        id: Date.now(), 
+        name: nameEl.value, 
+        class: classEl.value, 
+        stream: streamEl.value, 
+        lin: linEl.value, 
+        contact: contactEl.value 
+    };
+    
     state.students.unshift(newStudent);
     saveState();
     e.target.reset();
     renderStudentDirectory();
-    alert(`Student ${name} successfully enrolled in ${sClass} Stream ${stream}!`);
+    alert(`Student ${newStudent.name} successfully enrolled in ${newStudent.class} Stream ${newStudent.stream}!`);
 }
 
 function deleteStudent(id) {
@@ -267,7 +331,6 @@ function renderSyllabusTracker() {
     const key = `${sClass}-${stream}-${subject}`;
     let topics = state.syllabi[key];
 
-    // Fallback topics if combination doesn't exist yet
     if (!topics) {
         topics = [
             { id: "t1", topic: "Introductory Principles & Core Concepts", completed: true },
@@ -281,7 +344,6 @@ function renderSyllabusTracker() {
     const completedCount = topics.filter(t => t.completed).length;
     const percentage = Math.round((completedCount / topics.length) * 100);
 
-    // Render Progress Summary
     const summaryBox = document.getElementById('syllabus-summary-box');
     if (summaryBox) {
         const attachedDoc = state.attachedSyllabusDocs.find(d => d.subject === subject && d.class === sClass && d.stream === stream);
@@ -305,7 +367,6 @@ function renderSyllabusTracker() {
         `;
     }
 
-    // Render Topic Checklist
     const checklist = document.getElementById('syllabus-topics-checklist');
     if (checklist) {
         checklist.innerHTML = topics.map((t, idx) => `
@@ -338,11 +399,17 @@ function toggleSyllabusTopic(key, topicId) {
 
 function handleUploadSyllabus(e) {
     e.preventDefault();
-    const subject = document.getElementById('syl-subject').value;
-    const sClass = document.getElementById('syl-class').value;
-    const stream = document.getElementById('syl-stream').value;
+    const subjectEl = document.getElementById('syl-subject');
+    const classEl = document.getElementById('syl-class');
+    const streamEl = document.getElementById('syl-stream');
     const fileInput = document.getElementById('syl-file');
-    const fileName = fileInput.files[0] ? fileInput.files[0].name : `${subject}_Syllabus_${sClass}.pdf`;
+
+    if (!subjectEl || !classEl || !streamEl) return;
+
+    const subject = subjectEl.value;
+    const sClass = classEl.value;
+    const stream = streamEl.value;
+    const fileName = fileInput && fileInput.files[0] ? fileInput.files[0].name : `${subject}_Syllabus_${sClass}.pdf`;
 
     state.attachedSyllabusDocs.push({
         subject, class: sClass, stream, fileName, uploadedBy: "Department Head"
@@ -411,17 +478,24 @@ function renderDisciplineLogs() {
 
 function handleAddDiscipline(e) {
     e.preventDefault();
-    const name = document.getElementById('disc-name').value;
-    const sClass = document.getElementById('disc-class').value;
-    const stream = document.getElementById('disc-stream').value;
-    const category = document.getElementById('disc-category').value;
-    const note = document.getElementById('disc-note').value;
-    const action = document.getElementById('disc-action').value;
+    const nameEl = document.getElementById('disc-name');
+    const classEl = document.getElementById('disc-class');
+    const streamEl = document.getElementById('disc-stream');
+    const catEl = document.getElementById('disc-category');
+    const noteEl = document.getElementById('disc-note');
+    const actionEl = document.getElementById('disc-action');
+
+    if (!nameEl || !classEl || !streamEl || !catEl || !noteEl || !actionEl) return;
 
     const newLog = {
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
-        name, class: sClass, stream, category, note, action
+        name: nameEl.value,
+        class: classEl.value,
+        stream: streamEl.value,
+        category: catEl.value,
+        note: noteEl.value,
+        action: actionEl.value
     };
 
     state.disciplineLogs.unshift(newLog);
@@ -429,7 +503,7 @@ function handleAddDiscipline(e) {
     closeModal('modal-add-discipline');
     e.target.reset();
     renderDisciplineLogs();
-    alert(`Behavioral record for ${name} logged successfully!`);
+    alert(`Behavioral record for ${newLog.name} logged successfully!`);
 }
 
 // 7. Admin Control Panel
@@ -458,14 +532,20 @@ function renderAdminTimetables() {
 
 function handleUploadTimetable(e) {
     e.preventDefault();
-    const title = document.getElementById('tt-title').value;
-    const sClass = document.getElementById('tt-class').value;
-    const stream = document.getElementById('tt-stream').value;
+    const titleEl = document.getElementById('tt-title');
+    const classEl = document.getElementById('tt-class');
+    const streamEl = document.getElementById('tt-stream');
     const fileInput = document.getElementById('tt-file');
+
+    if (!titleEl || !classEl || !streamEl) return;
+
+    const title = titleEl.value;
+    const sClass = classEl.value;
+    const stream = streamEl.value;
 
     let format = 'pdf';
     let fileName = `${title.replace(/\s+/g, '_')}.pdf`;
-    if (fileInput.files[0]) {
+    if (fileInput && fileInput.files[0]) {
         fileName = fileInput.files[0].name;
         if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) format = 'xlsx';
         if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) format = 'docx';
@@ -510,10 +590,15 @@ function renderAdminCirculars() {
 
 function handlePublishCircular(e) {
     e.preventDefault();
-    const title = document.getElementById('circ-title').value;
-    const body = document.getElementById('circ-body').value;
+    const titleEl = document.getElementById('circ-title');
+    const bodyEl = document.getElementById('circ-body');
     const fileInput = document.getElementById('circ-file');
-    const attachment = fileInput.files[0] ? fileInput.files[0].name : `Circular_${Date.now()}.pdf`;
+
+    if (!titleEl || !bodyEl) return;
+
+    const title = titleEl.value;
+    const body = bodyEl.value;
+    const attachment = fileInput && fileInput.files[0] ? fileInput.files[0].name : `Circular_${Date.now()}.pdf`;
 
     const newCirc = {
         id: Date.now(),
