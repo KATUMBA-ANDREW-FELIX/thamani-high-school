@@ -120,7 +120,7 @@ async function registerAlumni(event, form) {
     }
 
     try {
-        const response = await fetch('http://localhost/backend/register_alumni.php', {
+        const response = await fetch('backend/register_alumni.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

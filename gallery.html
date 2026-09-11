@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THAMANI ACADEMY - Kakiri | Excellence in Every Endeavor</title>
+    <link rel="icon" type="image/ico" href="favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: {
+                green: '#1A472A', maroon: '#800000', gold: '#D4AF37',
+                lightGreen: '#E8F5E9', darkGreen: '#0F2D1A', lightMaroon: '#FDF2F2'
+            }}}}
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tab-btn.active { background-color: #1A472A; color: #ffffff; }
+        .nav-link-active { background-color: #1A472A; color: #ffffff !important; }
+        #page-loader {
+            position: fixed; inset: 0; background: #1A472A;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
+        }
+        #page-loader.hidden { opacity: 0; visibility: hidden; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
+
+    <!-- Page Loader -->
+    <div id="page-loader">
+        <div class="text-center">
+            <img src="thamani-logo.png" alt="Thamani Academy"
+                 class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
+            <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+    </div>
+
+    <!-- Top Announcement Bar -->
+    <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
+        <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
+            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center">
+                    <a href="home.html" class="flex-shrink-0 flex items-center gap-3">
+                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col">
+                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Kakiri - Uganda</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="hidden lg:flex items-center space-x-2">
+                    <a href="home.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Home</a>
+<a href="enrollment.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Enrollment</a>                    <a href="library.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
+                    <a href="gallery.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
+                    <a href="calendar.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
+                    <a href="alumni.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-3">
+                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
+                    </a>
+                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
+                    </a>
+                </div>
+                <div class="lg:hidden flex items-center">
+                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <a href="enrollment.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
+            <a href="library.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
+            <a href="gallery.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
+            <a href="calendar.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
+            <a href="alumni.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
+                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+<main class="flex-grow">
+    <section id="page-gallery" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-10">
+            <h1 class="text-4xl font-bold text-brand-green">Sports & Cultural Gallery</h1>
+            <p class="text-gray-600 text-lg">Highlights of academic competitions, music galas, athletics, and school celebrations.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <img src="public/assets/aigc/images/thamani-academy-gallery_1788694607_000.png" class="w-full h-64 object-cover" alt="Cultural Gala">
+                <div class="p-6">
+                    <span class="text-xs font-bold text-brand-maroon uppercase tracking-wider">Cultural Gala 2026</span>
+                    <h3 class="font-bold text-brand-green text-xl mt-1">Annual Cultural Gala</h3>
+                    <p class="text-gray-600 text-sm mt-2">Celebrating traditional Ugandan heritage through music, traditional dance, and folklore.</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <img src="public/assets/aigc/images/thamani-academy-gallery_1788694607_001.png" class="w-full h-64 object-cover" alt="Science Fair">
+                <div class="p-6">
+                    <span class="text-xs font-bold text-brand-green uppercase tracking-wider">Innovation & STEM</span>
+                    <h3 class="font-bold text-brand-green text-xl mt-1">National Science & Innovation Fair</h3>
+                    <p class="text-gray-600 text-sm mt-2">Students presenting solar renewable energy projects and robotics prototypes.</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">
+                <img src="public/assets/aigc/images/thamani-academy-gallery_1788694607_002.png" class="w-full h-64 object-cover" alt="Inter-House Athletics">
+                <div class="p-6">
+                    <span class="text-xs font-bold text-brand-gold uppercase tracking-wider">Sports & Athletics</span>
+                    <h3 class="font-bold text-brand-green text-xl mt-1">Inter-House Athletics Competitions</h3>
+                    <p class="text-gray-600 text-sm mt-2">Annual track and field championships held at Thamani Academy Stadium Grounds.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+    <!-- FOOTER -->
+    <footer class="bg-brand-green text-white pt-16 pb-10 mt-auto border-t-4 border-brand-gold">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
+                        <span>Thamani Academy</span>
+                    </h3>
+                    <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
+                    <div class="flex space-x-5 text-brand-gold">
+                        <i data-lucide="facebook" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                        <i data-lucide="twitter" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                        <i data-lucide="instagram" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Quick Links</h3>
+                    <ul class="space-y-3 text-gray-300 text-sm">
+                        <li><a href="enrollment.html" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
+                        <li><a href="library.html" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
+                        <li><a href="calendar.html" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
+                        <li><a href="alumni.html" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
+                        <li><a href="teacher-login.html" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Contact Us</h3>
+                    <ul class="space-y-4 text-gray-300 text-sm">
+                        <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center">
+                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>Standalone Web App</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+        window.addEventListener('load', () => {
+            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Login - THAMANI ACADEMY - Kakiri</title>
+    <link rel="icon" type="image/ico" href="favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: {
+                green: '#1A472A', maroon: '#800000', gold: '#D4AF37',
+                lightGreen: '#E8F5E9', darkGreen: '#0F2D1A', lightMaroon: '#FDF2F2'
+            }}}}
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tab-btn.active { background-color: #1A472A; color: #ffffff; }
+        .nav-link-active { background-color: #1A472A; color: #ffffff !important; }
+
+        #page-loader {
+            position: fixed; inset: 0; background: #1A472A;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
+        }
+        #page-loader.hidden { opacity: 0; visibility: hidden; }
+
+        .login-bg {
+            background-image: linear-gradient(rgba(15,45,26,.88), rgba(26,71,42,.88)),
+                              url('public/assets/aigc/images/thamani-academy-hero_1788694592_000.png');
+            background-size: cover;
+            background-position: center;
+            transition: background-image .5s ease;
+        }
+        .login-bg.admin-mode {
+            background-image: linear-gradient(rgba(15,45,26,.9), rgba(128,0,0,.75)),
+                              url('public/assets/aigc/images/thamani-academy-hero_1788694592_000.png');
+        }
+
+        /* Role toggle segmented control */
+        .role-toggle {
+            display: flex;
+            background: #F3F4F6;
+            border-radius: 12px;
+            padding: 4px;
+            position: relative;
+            border: 1px solid #E5E7EB;
+        }
+        .role-toggle button {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 9px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #6B7280;
+            transition: all .25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            z-index: 2;
+        }
+        .role-toggle button.active {
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,.15);
+        }
+        .role-toggle button[data-role="teacher"].active { background: #800000; }
+        .role-toggle button[data-role="admin"].active { background: #D4AF37; color: #1A472A; }
+
+        /* Mode-driven accent colors (CSS variables) */
+        .login-card { --accent: #800000; --accent-ring: rgba(128,0,0,.25); }
+        .login-card[data-mode="admin"] { --accent: #D4AF37; --accent-ring: rgba(212,175,55,.35); }
+
+        .accent-border-top { border-top-color: var(--accent) !important; }
+        .accent-bg-tint { background-color: var(--accent-ring) !important; }
+        .accent-text { color: var(--accent) !important; }
+        .accent-bg { background-color: var(--accent) !important; }
+        .accent-focus:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px var(--accent-ring) !important;
+        }
+
+        /* Admin button text should be dark on gold */
+        .login-card[data-mode="admin"] .accent-bg { color: #1A472A; }
+
+        /* Smooth field transition */
+        .field-fade { transition: opacity .3s ease, max-height .3s ease, margin .3s ease; overflow: hidden; }
+        .field-fade.hidden-field { opacity: 0; max-height: 0 !important; margin: 0 !important; padding: 0 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
+
+    <!-- Page Loader -->
+    <div id="page-loader">
+        <div class="text-center">
+            <img src="thamani-logo.png" alt="Thamani Academy"
+                 class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
+            <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+    </div>
+
+    <!-- Top Announcement Bar -->
+    <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
+        <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
+            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center">
+                    <a href="home.html" class="flex-shrink-0 flex items-center gap-3">
+                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col">
+                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Kakiri - Uganda</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="hidden lg:flex items-center space-x-2">
+                    <a href="enrollment.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
+                    <a href="library.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
+                    <a href="gallery.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
+                    <a href="calendar.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
+                    <a href="alumni.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-3">
+                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
+                    </a>
+                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
+                    </a>
+                </div>
+                <div class="lg:hidden flex items-center">
+                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <a href="enrollment.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
+            <a href="library.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
+            <a href="gallery.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
+            <a href="calendar.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
+            <a href="alumni.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
+                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- LOGIN MAIN -->
+    <main id="login-main" class="flex-grow login-bg flex items-center justify-center py-16 px-4">
+        <div class="w-full max-w-md">
+
+            <!-- Login Card -->
+            <div id="login-card" data-mode="teacher"
+                 class="login-card bg-white rounded-2xl shadow-2xl border-t-4 accent-border-top overflow-hidden transition-colors duration-300">
+
+                <!-- Card Header -->
+                <div class="bg-white px-8 pt-8 pb-6 text-center border-b border-gray-100">
+                    <div id="login-icon-wrap" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 accent-bg-tint accent-text transition-colors duration-300">
+                        <i id="login-icon" data-lucide="graduation-cap" class="w-10 h-10"></i>
+                    </div>
+                    <span id="login-badge" class="accent-bg text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors duration-300">Staff Access Only</span>
+                    <h1 id="login-title" class="text-2xl font-bold text-brand-green mt-3 transition-all duration-300">Portal Login</h1>
+                    <p id="login-subtitle" class="text-gray-500 text-sm mt-1 transition-all duration-300">Sign in to access your teacher workstation.</p>
+                </div>
+
+                <!-- Role Toggle + Form -->
+                <form id="login-form" onsubmit="handleLogin(event);" class="p-8 space-y-5">
+
+                    <!-- Role Toggle -->
+                    <div class="role-toggle" role="tablist" aria-label="Select login role">
+                        <button type="button" data-role="teacher" class="active" onclick="setLoginRole('teacher');" aria-selected="true">
+                            <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher
+                        </button>
+                        <button type="button" data-role="admin" onclick="setLoginRole('admin');" aria-selected="false">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i> Admin
+                        </button>
+                    </div>
+
+                    <!-- Error message -->
+                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                        <span id="login-error-msg">Invalid credentials. Please try again.</span>
+                    </div>
+
+                    <!-- ID / Email -->
+                    <div>
+                        <label id="label-id" class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID / Email Address</label>
+                        <div class="relative">
+                            <i id="icon-id" data-lucide="user" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="login-id" required autocomplete="username"
+                                   placeholder="e.g. TSC-2026-014 or name@thamaniacademy.ac.ug"
+                                   class="accent-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Password</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="password" id="login-password" required autocomplete="current-password"
+                                   placeholder="Enter your password"
+                                   class="accent-focus w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg text-sm outline-none transition-all">
+                            <button type="button" onclick="togglePassword('login-password', this);"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Admin-only: Security PIN -->
+                    <div id="field-admin-pin" class="field-fade hidden-field">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Security PIN (Admin only)</label>
+                        <div class="relative">
+                            <i data-lucide="key-round" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="login-pin" maxlength="6" inputmode="numeric"
+                                   placeholder="6-digit PIN"
+                                   class="accent-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm tracking-widest outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Remember / Forgot -->
+                    <div class="flex items-center justify-between text-xs">
+                        <label class="flex items-center gap-2 cursor-pointer text-gray-600">
+                            <input type="checkbox" id="login-remember" class="rounded border-gray-300 focus:ring-0">
+                            <span class="font-medium">Remember me</span>
+                        </label>
+                        <a href="#" id="login-forgot" onclick="handleForgot(event);"
+                           class="font-bold accent-text hover:underline transition-colors">Forgot password?</a>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" id="login-submit"
+                            class="accent-bg w-full py-3.5 font-bold rounded-lg transition-all text-sm shadow hover:shadow-lg flex items-center justify-center gap-2 text-white">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> <span id="login-submit-text">Sign In to Teacher Portal</span>
+                    </button>
+
+                    <!-- Demo hint (remove before production) -->
+                    <div id="login-demo-hint" class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 text-[11px] text-gray-500 leading-relaxed">
+                        <span class="font-bold text-gray-700">Demo credentials:</span>
+                        <span id="demo-hint-text">use <code class="bg-white px-1 rounded border">teacher</code> / <code class="bg-white px-1 rounded border">teacher123</code></span>
+                    </div>
+
+                    <!-- Role switch helper link -->
+                    <div class="pt-4 border-t border-gray-100 text-center text-xs text-gray-500">
+                        <span id="switch-hint-text">Are you an administrator?</span>
+                        <button type="button" onclick="setLoginRole('admin');"
+                                id="switch-hint-btn"
+                                class="font-bold text-brand-green hover:text-brand-maroon transition-colors ml-1">
+                            Switch to Admin Login →
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+
+            <!-- Context Card (below form, changes per mode) -->
+            <div class="mt-6 bg-white/95 backdrop-blur rounded-2xl shadow-lg border border-gray-100 p-5 flex items-start gap-3">
+                <i id="context-icon" data-lucide="info" class="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5"></i>
+                <div class="text-xs text-gray-600 leading-relaxed">
+                    <p id="context-title" class="font-bold text-brand-green mb-1">Need help signing in?</p>
+                    <p id="context-body">Contact the ICT Department on <span class="font-semibold text-brand-maroon">+256 414 123 456</span> or email <span class="font-semibold text-brand-maroon">ict@thamaniacademy.ac.ug</span>.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-brand-green text-white pt-16 pb-10 mt-auto border-t-4 border-brand-gold">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
+                        <span>Thamani Academy</span>
+                    </h3>
+                    <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
+                    <div class="flex space-x-5 text-brand-gold">
+                        <i data-lucide="facebook" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                        <i data-lucide="twitter" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                        <i data-lucide="instagram" class="w-6 h-6 cursor-pointer hover:text-white transition-colors"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Quick Links</h3>
+                    <ul class="space-y-3 text-gray-300 text-sm">
+                        <li><a href="enrollment.html" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
+                        <li><a href="library.html" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
+                        <li><a href="calendar.html" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
+                        <li><a href="alumni.html" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
+                        <li><a href="teacher-login.html" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Contact Us</h3>
+                    <ul class="space-y-4 text-gray-300 text-sm">
+                        <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center">
+                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>Standalone Web App</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+
+        window.addEventListener('load', () => {
+            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
+        });
+
+        // -------- Role switching --------
+        const ROLE_CONFIG = {
+            teacher: {
+                idLabel: 'Staff ID / Email Address',
+                idPlaceholder: 'e.g. TSC-2026-014 or name@thamaniacademy.ac.ug',
+                idIcon: 'user',
+                title: 'Portal Login',
+                subtitle: 'Sign in to access your teacher workstation.',
+                badge: 'Staff Access Only',
+                headerIcon: 'graduation-cap',
+                submitText: 'Sign In to Teacher Portal',
+                switchHint: 'Are you an administrator?',
+                switchBtn: 'Switch to Admin Login →',
+                switchTarget: 'admin',
+                contextIcon: 'info',
+                contextTitle: 'Need help signing in?',
+                contextBody: 'Contact the ICT Department on <span class="font-semibold text-brand-maroon">+256 414 123 456</span> or email <span class="font-semibold text-brand-maroon">ict@thamaniacademy.ac.ug</span>.',
+                demoHint: 'use <code class="bg-white px-1 rounded border">teacher</code> / <code class="bg-white px-1 rounded border">teacher123</code>',
+                redirect: 'teacher.html',
+                validId: 'teacher',
+                validPwd: 'teacher123',
+                forgotMsg: 'Please contact the ICT Department to reset your password.'
+            },
+            admin: {
+                idLabel: 'Admin ID / Email Address',
+                idPlaceholder: 'e.g. ADM-2026-001 or admin@thamaniacademy.ac.ug',
+                idIcon: 'user-cog',
+                title: 'Admin Login',
+                subtitle: 'Sign in to access the admin control panel.',
+                badge: 'Restricted Access',
+                headerIcon: 'shield-check',
+                submitText: 'Sign In to Admin Panel',
+                switchHint: 'Are you a teacher?',
+                switchBtn: 'Switch to Teacher Login →',
+                switchTarget: 'teacher',
+                contextIcon: 'shield-alert',
+                contextTitle: 'Security Notice',
+                contextBody: 'All admin activities are logged and monitored. Unauthorized access is strictly prohibited and may result in disciplinary action.',
+                demoHint: 'use <code class="bg-white px-1 rounded border">admin</code> / <code class="bg-white px-1 rounded border">admin123</code>',
+                redirect: 'admin.html',
+                validId: 'admin',
+                validPwd: 'admin123',
+                forgotMsg: 'Please contact the System Administrator to reset your admin password.'
+            }
+        };
+
+        let currentRole = 'teacher';
+
+        function setLoginRole(role) {
+            currentRole = role;
+            const cfg = ROLE_CONFIG[role];
+
+            // Card data-mode drives accent via CSS vars
+            document.getElementById('login-card').setAttribute('data-mode', role);
+
+            // Main background tint
+            const main = document.getElementById('login-main');
+            main.classList.toggle('admin-mode', role === 'admin');
+
+            // Toggle buttons
+            document.querySelectorAll('.role-toggle button').forEach(btn => {
+                const isActive = btn.dataset.role === role;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            // Header
+            document.getElementById('login-icon').setAttribute('data-lucide', cfg.headerIcon);
+            document.getElementById('login-title').textContent = cfg.title;
+            document.getElementById('login-subtitle').textContent = cfg.subtitle;
+            document.getElementById('login-badge').textContent = cfg.badge;
+
+            // ID field
+            document.getElementById('label-id').textContent = cfg.idLabel;
+            document.getElementById('login-id').setAttribute('placeholder', cfg.idPlaceholder);
+            document.getElementById('icon-id').setAttribute('data-lucide', cfg.idIcon);
+
+            // Admin-only PIN field
+            const pinField = document.getElementById('field-admin-pin');
+            pinField.classList.toggle('hidden-field', role !== 'admin');
+            document.getElementById('login-pin').required = (role === 'admin');
+
+            // Submit button
+            document.getElementById('login-submit-text').textContent = cfg.submitText;
+
+            // Demo hint
+            document.getElementById('demo-hint-text').innerHTML = cfg.demoHint;
+
+            // Switch hint link
+            document.getElementById('switch-hint-text').textContent = cfg.switchHint;
+            document.getElementById('switch-hint-btn').textContent = cfg.switchBtn;
+            document.getElementById('switch-hint-btn').onclick = () => setLoginRole(cfg.switchTarget);
+
+            // Context card
+            document.getElementById('context-icon').setAttribute('data-lucide', cfg.contextIcon);
+            document.getElementById('context-title').textContent = cfg.contextTitle;
+            document.getElementById('context-body').innerHTML = cfg.contextBody;
+
+            // Reset error
+            document.getElementById('login-error').classList.add('hidden');
+
+            // Rebuild icons
+            lucide.createIcons();
+        }
+
+        // -------- Password toggle --------
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const isPwd = input.type === 'password';
+            input.type = isPwd ? 'text' : 'password';
+            btn.innerHTML = `<i data-lucide="${isPwd ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+            lucide.createIcons();
+        }
+
+        // -------- Forgot password --------
+        function handleForgot(e) {
+            e.preventDefault();
+            alert(ROLE_CONFIG[currentRole].forgotMsg);
+        }
+
+        // -------- Submit / demo auth (replace with PHP later) --------
+        function handleLogin(e) {
+            e.preventDefault();
+            const cfg = ROLE_CONFIG[currentRole];
+            const id = document.getElementById('login-id').value.trim();
+            const pwd = document.getElementById('login-password').value.trim();
+            const errBox = document.getElementById('login-error');
+            const errMsg = document.getElementById('login-error-msg');
+
+            if (id === cfg.validId && pwd === cfg.validPwd) {
+                errBox.classList.add('hidden');
+                document.getElementById('page-loader').classList.remove('hidden');
+                setTimeout(() => { window.location.href = cfg.redirect; }, 700);
+            } else {
+                errMsg.textContent = `Invalid ${currentRole === 'admin' ? 'Admin' : 'Staff'} ID or password. Please try again.`;
+                errBox.classList.remove('hidden');
+                lucide.createIcons();
+            }
+        }
+
+        // Initialize default mode
+        setLoginRole('teacher');
+    </script>
+</body>
+</html>

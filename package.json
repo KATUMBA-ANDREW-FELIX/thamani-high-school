@@ -1,12 +1,13 @@
 {
   "name": "thamani-academy",
+  "private": true,
   "version": "1.0.0",
-  "description": "Thamani High School (TAK) Web Platform",
+  "description": "THAMANI ACADEMY Standalone HTML5, CSS3, and JavaScript Web Application",
   "scripts": {
-    "build": "cd app && npm install && npm run build",
-    "dev": "cd app && npm run dev"
+    "start": "npx -y http-server -p 8080",
+    "dev": "npx -y http-server -p 8080"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
 }
