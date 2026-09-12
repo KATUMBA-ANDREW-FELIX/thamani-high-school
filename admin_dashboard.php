@@ -9,11 +9,11 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 require_once 'conn.php';
 
 // ---------- Stat counters ----------
-function safeCount(mysqli $conn, string $sql): int {
+function safeCount($conn, string $sql): int {
     $res = mysqli_query($conn, $sql);
     if (!$res) return 0;
-    $row = mysqli_fetch_row($res);
-    return (int)($row[0] ?? 0);
+    $row = mysqli_fetch_assoc($res);
+    return $row ? (int)reset($row) : 0;
 }
 
 $totalStudents  = safeCount($conn, "SELECT COUNT(*) FROM students");
