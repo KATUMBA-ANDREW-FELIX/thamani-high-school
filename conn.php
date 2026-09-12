@@ -1,121 +1,171 @@
 <?php
-// THAMANI HIGH SCHOOL - Database Connection Engine & SQLite Polyfill
+// THAMANI HIGH SCHOOL - Database Connection Engine & Multi-Driver Polyfill (PostgreSQL & SQLite)
 error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "themani";
+$host = getenv('DB_HOST') ?: "localhost";
+$user = getenv('DB_USERNAME') ?: "root";
+$pass = getenv('DB_PASSWORD') ?: "";
+$dbname = getenv('DB_DATABASE') ?: "themani";
 
-// If native mysqli extension exists, use it:
-if (function_exists('mysqli_connect')) {
-    $conn = @mysqli_connect($host, $user, $pass, $dbname);
-    if (!$conn) {
-        error_log("Database Connection Notice: MySQL at {$host} not accessible.");
-    }
-} else {
-    // Polyfill mysqli using PDO SQLite so standalone PHP CLI binary runs seamlessly
-    if (!class_exists('ThamaniPolyfillResult')) {
-        class ThamaniPolyfillResult {
-            public $rows = [];
-            public $currentIndex = 0;
-            public $num_rows = 0;
-            public function fetch_assoc() {
-                if ($this->currentIndex < count($this->rows)) {
-                    return $this->rows[$this->currentIndex++];
-                }
-                return null;
+// Global connection object
+global $conn;
+$conn = null;
+
+// Polyfill mysqli using PDO (PostgreSQL / SQLite) so application runs seamlessly across environments
+if (!class_exists('ThamaniPolyfillResult')) {
+    class ThamaniPolyfillResult {
+        public $rows = [];
+        public $currentIndex = 0;
+        public $num_rows = 0;
+
+        public function fetch_assoc() {
+            if ($this->currentIndex < count($this->rows)) {
+                return $this->rows[$this->currentIndex++];
             }
-            public function fetch_row() {
-                if ($this->currentIndex < count($this->rows)) {
-                    return array_values($this->rows[$this->currentIndex++]);
-                }
-                return null;
+            return null;
+        }
+
+        public function fetch_row() {
+            if ($this->currentIndex < count($this->rows)) {
+                return array_values($this->rows[$this->currentIndex++]);
             }
-            public function fetch_array() {
-                if ($this->currentIndex < count($this->rows)) {
-                    $row = $this->rows[$this->currentIndex++];
-                    return array_merge(array_values($row), $row);
-                }
-                return null;
+            return null;
+        }
+
+        public function fetch_array() {
+            if ($this->currentIndex < count($this->rows)) {
+                $row = $this->rows[$this->currentIndex++];
+                return array_merge(array_values($row), $row);
             }
+            return null;
         }
     }
+}
 
-    if (!class_exists('ThamaniPolyfillStmt')) {
-        class ThamaniPolyfillStmt {
-            public $pdo;
-            public $sql;
-            public $params = [];
-            public $resultRows = [];
-            public $affectedRows = 0;
-            public $lastInsertId = 0;
-            public $errorMsg = '';
+if (!class_exists('ThamaniPolyfillStmt')) {
+    class ThamaniPolyfillStmt {
+        public $pdo;
+        public $driver;
+        public $sql;
+        public $params = [];
+        public $resultRows = [];
+        public $affectedRows = 0;
+        public $lastInsertId = 0;
+        public $errorMsg = '';
 
-            public function __construct($pdo, $sql) {
-                $this->pdo = $pdo;
-                // Convert MySQL specific SQL syntax to SQLite standard if needed
-                $this->sql = str_ireplace('NOW()', "datetime('now')", $sql);
+        public function __construct($pdo, $sql, $driver = 'sqlite') {
+            $this->pdo = $pdo;
+            $this->driver = $driver;
+            if ($driver === 'pgsql') {
+                $this->sql = str_ireplace("datetime('now')", "CURRENT_TIMESTAMP", $sql);
+                $this->sql = str_ireplace("NOW()", "CURRENT_TIMESTAMP", $this->sql);
+            } else {
+                $this->sql = str_ireplace("NOW()", "datetime('now')", $sql);
             }
+        }
 
-            public function bind_param($types, ...$vars) {
-                $this->params = $vars;
-                return true;
-            }
+        public function bind_param($types, ...$vars) {
+            $this->params = $vars;
+            return true;
+        }
 
-            public function execute() {
-                try {
-                    $stmt = $this->pdo->prepare($this->sql);
-                    $res = $stmt->execute($this->params);
-                    if ($res) {
-                        $trimmed = strtoupper(trim($this->sql));
-                        if (str_starts_with($trimmed, 'SELECT')) {
-                            $this->resultRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                        } else {
-                            $this->affectedRows = $stmt->rowCount();
-                            $this->lastInsertId = $this->pdo->lastInsertId();
+        public function execute() {
+            try {
+                $stmt = $this->pdo->prepare($this->sql);
+                $res = $stmt->execute($this->params);
+                if ($res) {
+                    $trimmed = strtoupper(trim($this->sql));
+                    if (str_starts_with($trimmed, 'SELECT')) {
+                        $this->resultRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    } else {
+                        $this->affectedRows = $stmt->rowCount();
+                        try {
+                            $this->lastInsertId = (int)$this->pdo->lastInsertId();
+                        } catch (Exception $e) {
+                            $this->lastInsertId = 0;
                         }
-                        return true;
                     }
-                } catch (Exception $e) {
-                    $this->errorMsg = $e->getMessage();
+                    return true;
                 }
-                return false;
+            } catch (Exception $e) {
+                $this->errorMsg = $e->getMessage();
+                error_log("[ThamaniPolyfillStmt Execute Error] " . $e->getMessage() . " | SQL: " . $this->sql);
             }
+            return false;
+        }
 
-            public function get_result() {
-                $res = new ThamaniPolyfillResult();
-                $res->rows = $this->resultRows;
-                return $res;
-            }
+        public function get_result() {
+            $res = new ThamaniPolyfillResult();
+            $res->rows = $this->resultRows;
+            $res->num_rows = count($this->resultRows);
+            return $res;
+        }
 
-            public function store_result() {
-                return true;
-            }
+        public function store_result() {
+            return true;
+        }
 
-            public function num_rows() {
-                return count($this->resultRows);
-            }
+        public function num_rows() {
+            return count($this->resultRows);
+        }
 
-            public function close() {
-                return true;
-            }
+        public function close() {
+            return true;
         }
     }
+}
 
-    if (!class_exists('ThamaniPolyfillConn')) {
-        class ThamaniPolyfillConn {
-            public $pdo;
-            public $insert_id = 0;
-            public $error = '';
-            public function __construct() {
+if (!class_exists('ThamaniPolyfillConn')) {
+    class ThamaniPolyfillConn {
+        public $pdo;
+        public $driver = 'sqlite';
+        public $insert_id = 0;
+        public $error = '';
+
+        public function __construct() {
+            $pgHost = getenv('POSTGRES_HOST') ?: (getenv('DB_HOST') ?: '');
+            $pgPort = getenv('POSTGRES_PORT') ?: (getenv('DB_PORT') ?: '5432');
+            $pgDb   = getenv('POSTGRES_DB')   ?: (getenv('DB_DATABASE') ?: 'thamani_postgress');
+            $pgUser = getenv('POSTGRES_USER') ?: (getenv('DB_USERNAME') ?: 'postgres');
+            $pgPass = getenv('POSTGRES_PASSWORD') ?: (getenv('DB_PASSWORD') ?: '');
+
+            $connectedPg = false;
+            if (extension_loaded('pdo_pgsql') && ($pgHost !== '' || getenv('POSTGRES_DB') || getenv('DB_CONNECTION') === 'pgsql')) {
+                try {
+                    $dsn = "pgsql:host={$pgHost};port={$pgPort};dbname={$pgDb}";
+                    $this->pdo = new PDO($dsn, $pgUser, $pgPass, [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                    ]);
+                    $this->driver = 'pgsql';
+                    $connectedPg = true;
+                } catch (Exception $e) {
+                    error_log("[ThamaniPolyfillConn] PostgreSQL connection attempt failed: " . $e->getMessage());
+                }
+            }
+
+            if (!$connectedPg) {
                 $dbPath = __DIR__ . '/thamani_database.sqlite';
                 $this->pdo = new PDO('sqlite:' . $dbPath);
                 $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $this->initTables();
+                $this->driver = 'sqlite';
             }
 
-            private function initTables() {
+            $this->initTables();
+        }
+
+        private function initTables() {
+            if ($this->driver === 'pgsql') {
+                $schemaFile = __DIR__ . '/schema_pg.sql';
+                if (file_exists($schemaFile)) {
+                    $sql = file_get_contents($schemaFile);
+                    try {
+                        $this->pdo->exec($sql);
+                    } catch (Exception $e) {
+                        error_log("[ThamaniPolyfillConn] Schema init warning: " . $e->getMessage());
+                    }
+                }
+            } else {
                 $this->pdo->exec("
                     CREATE TABLE IF NOT EXISTS students (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -223,7 +273,7 @@ if (function_exists('mysqli_connect')) {
                     );
                 ");
 
-                // Check if default admin exists
+                // Check default admin
                 $stmtAdmin = $this->pdo->query("SELECT COUNT(*) FROM admins");
                 if ($stmtAdmin->fetchColumn() == 0) {
                     $adminHash = password_hash('Admin@2026', PASSWORD_BCRYPT);
@@ -231,136 +281,128 @@ if (function_exists('mysqli_connect')) {
                     $insAdmin->execute([$adminHash]);
                 }
 
-                // Auto-migrate missing columns for existing SQLite databases
-                try { @$this->pdo->exec("ALTER TABLE teachers ADD COLUMN created_at DATETIME"); } catch (\Throwable $e) {}
-                try { @$this->pdo->exec("ALTER TABLE admins ADD COLUMN created_at DATETIME"); } catch (\Throwable $e) {}
-
-                // Check if default teacher exists
+                // Check default teacher
                 $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers");
                 if ($stmtTeacher->fetchColumn() == 0) {
                     $teacherHash = password_hash('Admin@2026', PASSWORD_BCRYPT);
                     $insTeacher = $this->pdo->prepare("INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active) VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', ?, 0, 1)");
                     $insTeacher->execute([$teacherHash]);
                 }
-
-                // Seed sample gallery photos if empty
-                $stmtGal = $this->pdo->query("SELECT COUNT(*) FROM gallery_photos");
-                if ($stmtGal->fetchColumn() == 0) {
-                    $insGal = $this->pdo->prepare("INSERT INTO gallery_photos (title, caption, category, file_name, stored_name, file_path, file_size, mime_type, uploaded_by, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
-                    $insGal->execute(['School Main Campus', 'Overview of Thamani High School Kakiri Main Campus.', 'campus', 'school.JPG', 'school.JPG', 'school.JPG', 11538752, 'image/jpeg']);
-                    $insGal->execute(['Athletics Competition', 'Students competing in track and field event.', 'sports', 'athletics.jpeg', 'athletics.jpeg', 'athletics.jpeg', 425798, 'image/jpeg']);
-                    $insGal->execute(['Football Championship', 'Inter-house football tournament final match.', 'sports', 'football.jpeg', 'football.jpeg', 'football.jpeg', 491767, 'image/jpeg']);
-                    $insGal->execute(['Netball Tournament', 'Girls netball team in action during regional finals.', 'sports', 'netball.jpeg', 'netball.jpeg', 'netball.jpeg', 430995, 'image/jpeg']);
-                    $insGal->execute(['Lawn Tennis Court', 'Tennis practice during afternoon co-curricular activities.', 'sports', 'tennis.jpeg', 'tennis.jpeg', 'tennis.jpeg', 402872, 'image/jpeg']);
-                    $insGal->execute(['Volleyball Finals', 'School volleyball team celebrating victory.', 'sports', 'volleyball.jpeg', 'volleyball.jpeg', 'volleyball.jpeg', 473643, 'image/jpeg']);
-                }
-
-                // Seed sample calendar document if empty
-                $stmtCal = $this->pdo->query("SELECT COUNT(*) FROM calendar_documents");
-                if ($stmtCal->fetchColumn() == 0) {
-                    $insCal = $this->pdo->prepare("INSERT INTO calendar_documents (title, doc_type, description, file_name, stored_name, file_path, file_size, mime_type, uploaded_by, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
-                    $insCal->execute(['Term III 2026 Academic Calendar & Fee Structure', 'calendar', 'Official term schedules, visitation dates, national examination dates, and tuition breakdown for Term III 2026.', 'Term_III_2026_School_Circular.pdf', 'Term_III_2026_School_Circular.pdf', 'Term_III_2026_School_Circular.pdf', 749, 'application/pdf']);
-                }
             }
+        }
 
-            public function prepare($sql) {
-                return new ThamaniPolyfillStmt($this->pdo, $sql);
-            }
+        public function prepare($sql) {
+            return new ThamaniPolyfillStmt($this->pdo, $sql, $this->driver);
+        }
 
-            public function __get($name) {
-                if ($name === 'insert_id' && $this->pdo) {
+        public function __get($name) {
+            if ($name === 'insert_id' && $this->pdo) {
+                try {
                     return (int)$this->pdo->lastInsertId();
+                } catch (Exception $e) {
+                    return 0;
                 }
-                return null;
             }
+            return null;
         }
     }
+}
 
-    global $conn;
-    if (!$conn) {
-        $conn = new ThamaniPolyfillConn();
+if (!$conn) {
+    $conn = new ThamaniPolyfillConn();
+}
+
+if (!function_exists('mysqli_connect')) {
+    function mysqli_connect($h = null, $u = null, $p = null, $db = null) {
+        global $conn;
+        return $conn;
     }
-
-    if (!function_exists('mysqli_connect')) {
-        function mysqli_connect($h = null, $u = null, $p = null, $db = null) {
-            global $conn;
-            return $conn;
-        }
-        function mysqli_connect_error() { return null; }
-        function mysqli_connect_errno() { return 0; }
-        function mysqli_error($c) { return $c->error ?? ''; }
-        function mysqli_insert_id($c) {
-            if ($c instanceof ThamaniPolyfillConn && $c->pdo) {
-                return (int)$c->pdo->lastInsertId();
-            }
-            return 0;
-        }
-        function mysqli_prepare($c, $sql) {
-            return $c ? $c->prepare($sql) : false;
-        }
-        function mysqli_stmt_bind_param($stmt, $types, ...$vars) {
-            return $stmt ? $stmt->bind_param($types, ...$vars) : false;
-        }
-        function mysqli_stmt_execute($stmt) {
-            return $stmt ? $stmt->execute() : false;
-        }
-        function mysqli_stmt_store_result($stmt) {
-            return $stmt ? $stmt->store_result() : false;
-        }
-        function mysqli_stmt_num_rows($stmt) {
-            return $stmt ? $stmt->num_rows() : 0;
-        }
-        function mysqli_stmt_get_result($stmt) {
-            return $stmt ? $stmt->get_result() : false;
-        }
-        function mysqli_stmt_close($stmt) {
-            return $stmt ? $stmt->close() : true;
-        }
-        function mysqli_stmt_error($stmt) {
-            return $stmt ? ($stmt->errorMsg ?? '') : '';
-        }
-        function mysqli_fetch_assoc($res) {
-            if ($res instanceof ThamaniPolyfillResult) {
-                return $res->fetch_assoc();
-            }
-            return null;
-        }
-        function mysqli_fetch_row($res) {
-            if ($res instanceof ThamaniPolyfillResult) {
-                return $res->fetch_row();
-            }
-            return null;
-        }
-        function mysqli_fetch_array($res) {
-            if ($res instanceof ThamaniPolyfillResult) {
-                return $res->fetch_array();
-            }
-            return null;
-        }
-        function mysqli_num_rows($res) {
-            if ($res instanceof ThamaniPolyfillResult) {
-                return count($res->rows);
-            }
-            return 0;
-        }
-        function mysqli_query($c, $sql) {
-            if (!$c) return false;
+    function mysqli_connect_error() { return null; }
+    function mysqli_connect_errno() { return 0; }
+    function mysqli_error($c) { return $c->error ?? ''; }
+    function mysqli_insert_id($c) {
+        if ($c instanceof ThamaniPolyfillConn && $c->pdo) {
             try {
-                $stmt = $c->pdo->query(str_ireplace('NOW()', "datetime('now')", $sql));
-                if (str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
-                    $res = new ThamaniPolyfillResult();
-                    $res->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                    $res->num_rows = count($res->rows);
-                    return $res;
-                }
-                return true;
+                return (int)$c->pdo->lastInsertId();
             } catch (Exception $e) {
-                return false;
+                return 0;
             }
         }
-        function mysqli_real_escape_string($c, $str) { return addslashes($str); }
-        function mysqli_set_charset($c, $charset) { return true; }
-        function mysqli_close($c) { return true; }
+        return 0;
     }
+    function mysqli_prepare($c, $sql) {
+        return $c ? $c->prepare($sql) : false;
+    }
+    function mysqli_stmt_bind_param($stmt, $types, ...$vars) {
+        return $stmt ? $stmt->bind_param($types, ...$vars) : false;
+    }
+    function mysqli_stmt_execute($stmt) {
+        return $stmt ? $stmt->execute() : false;
+    }
+    function mysqli_stmt_store_result($stmt) {
+        return $stmt ? $stmt->store_result() : false;
+    }
+    function mysqli_stmt_num_rows($stmt) {
+        return $stmt ? $stmt->num_rows() : 0;
+    }
+    function mysqli_stmt_get_result($stmt) {
+        return $stmt ? $stmt->get_result() : false;
+    }
+    function mysqli_stmt_close($stmt) {
+        return $stmt ? $stmt->close() : true;
+    }
+    function mysqli_stmt_error($stmt) {
+        return $stmt ? ($stmt->errorMsg ?? '') : '';
+    }
+    function mysqli_fetch_assoc($res) {
+        if ($res instanceof ThamaniPolyfillResult) {
+            return $res->fetch_assoc();
+        }
+        return null;
+    }
+    function mysqli_fetch_row($res) {
+        if ($res instanceof ThamaniPolyfillResult) {
+            return $res->fetch_row();
+        }
+        return null;
+    }
+    function mysqli_fetch_array($res) {
+        if ($res instanceof ThamaniPolyfillResult) {
+            return $res->fetch_array();
+        }
+        return null;
+    }
+    function mysqli_num_rows($res) {
+        if ($res instanceof ThamaniPolyfillResult) {
+            return count($res->rows);
+        }
+        return 0;
+    }
+    function mysqli_query($c, $sql) {
+        if (!$c) return false;
+        try {
+            $adjustedSql = $sql;
+            if (isset($c->driver) && $c->driver === 'pgsql') {
+                $adjustedSql = str_ireplace("datetime('now')", "CURRENT_TIMESTAMP", $adjustedSql);
+                $adjustedSql = str_ireplace("NOW()", "CURRENT_TIMESTAMP", $adjustedSql);
+            } else {
+                $adjustedSql = str_ireplace("NOW()", "datetime('now')", $adjustedSql);
+            }
+            $stmt = $c->pdo->query($adjustedSql);
+            if (str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
+                $res = new ThamaniPolyfillResult();
+                $res->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $res->num_rows = count($res->rows);
+                return $res;
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("[mysqli_query Error] " . $e->getMessage() . " | SQL: " . $sql);
+            return false;
+        }
+    }
+    function mysqli_real_escape_string($c, $str) { return addslashes($str); }
+    function mysqli_set_charset($c, $charset) { return true; }
+    function mysqli_close($c) { return true; }
 }
 ?>

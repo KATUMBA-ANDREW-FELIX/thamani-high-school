@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thamani_app
+    restart: always
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    environment:
+      - DB_CONNECTION=pgsql
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-thamani_postgress}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ThamaniPostgres2026!}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-thamaniacademy}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-555989584672519}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-dcmq5dQZfmysvewtwrAZTsCeI3w}
+      - CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`)"
+      - "traefik.http.routers.thamani.entrypoints=web,websecure"
+      - "traefik.http.routers.thamani.tls=true"
+      - "traefik.http.routers.thamani.tls.certresolver=myresolver"
+      - "traefik.http.services.thamani.loadbalancer.server.port=80"
+    networks:
+      - thamani_net
+
+  db:
+    image: postgres:15-alpine
+    container_name: thamani_postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-thamani_postgress}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ThamaniPostgres2026!}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema_pg.sql:/docker-entrypoint-initdb.d/schema_pg.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-thamani_postgress}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - thamani_net
+
+networks:
+  thamani_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local

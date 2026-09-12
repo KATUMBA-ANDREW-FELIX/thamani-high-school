@@ -97,16 +97,27 @@ if (!empty($errors)) {
     exit;
 }
 
-// ---------- Move file ----------
-$randomName = 'img_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-$destPath   = $uploadDir . $randomName;
-$relPath    = $urlPrefix . $randomName;
+require_once 'cloudinary_helper.php';
 
-if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-    error_log('[Admin Gallery Upload Move] Failed → ' . $destPath);
-    $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Failed to store the image.'];
-    header('Location: ' . $redirectTo);
-    exit;
+// ---------- Move / Upload file ----------
+$cRes = cloudinary_upload($file['tmp_name'], $file['name'], 'image');
+
+if ($cRes['success']) {
+    $relPath    = $cRes['secure_url'];
+    $randomName = $cRes['public_id'] ?? ('img_' . date('Ymd_His') . '.' . $ext);
+    $destPath   = null;
+} else {
+    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+    $randomName = 'img_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+    $destPath   = $uploadDir . $randomName;
+    $relPath    = $urlPrefix . $randomName;
+
+    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+        error_log('[Admin Gallery Upload Move] Failed → ' . $destPath);
+        $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Failed to store the image.'];
+        header('Location: ' . $redirectTo);
+        exit;
+    }
 }
 
 // ---------- Insert into DB ----------

@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once 'conn.php';
+require_once 'cloudinary_helper.php';
 
 $type       = trim($_POST['type']        ?? '');
 $id         = (int)($_POST['id']         ?? 0);
@@ -130,12 +131,16 @@ switch ($type) {
             $setFlash('error', 'You do not have permission to delete this document.');
         }
 
-        // Delete physical file if present
-        if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
-            @unlink(__DIR__ . '/' . $item['file_path']);
-        }
-        if (!empty($item['stored_name']) && file_exists(__DIR__ . '/calendar_docs/' . $item['stored_name'])) {
-            @unlink(__DIR__ . '/calendar_docs/' . $item['stored_name']);
+        // Delete physical file or Cloudinary resource if present
+        if (!empty($item['file_path']) && (str_starts_with($item['file_path'], 'http://') || str_starts_with($item['file_path'], 'https://'))) {
+            cloudinary_delete($item['stored_name'], 'raw');
+        } else {
+            if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
+                @unlink(__DIR__ . '/' . $item['file_path']);
+            }
+            if (!empty($item['stored_name']) && file_exists(__DIR__ . '/calendar_docs/' . $item['stored_name'])) {
+                @unlink(__DIR__ . '/calendar_docs/' . $item['stored_name']);
+            }
         }
 
         $del = mysqli_prepare($conn, "DELETE FROM calendar_documents WHERE id = ?");
@@ -169,12 +174,16 @@ switch ($type) {
             $setFlash('error', 'You do not have permission to delete this photo.');
         }
 
-        // Delete physical file if present
-        if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
-            @unlink(__DIR__ . '/' . $item['file_path']);
-        }
-        if (!empty($item['stored_name']) && file_exists(__DIR__ . '/gallery_images/' . $item['stored_name'])) {
-            @unlink(__DIR__ . '/gallery_images/' . $item['stored_name']);
+        // Delete physical file or Cloudinary resource if present
+        if (!empty($item['file_path']) && (str_starts_with($item['file_path'], 'http://') || str_starts_with($item['file_path'], 'https://'))) {
+            cloudinary_delete($item['stored_name'], 'image');
+        } else {
+            if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
+                @unlink(__DIR__ . '/' . $item['file_path']);
+            }
+            if (!empty($item['stored_name']) && file_exists(__DIR__ . '/gallery_images/' . $item['stored_name'])) {
+                @unlink(__DIR__ . '/gallery_images/' . $item['stored_name']);
+            }
         }
 
         $del = mysqli_prepare($conn, "DELETE FROM gallery_photos WHERE id = ?");
@@ -208,12 +217,16 @@ switch ($type) {
             $setFlash('error', 'You do not have permission to delete this library resource.');
         }
 
-        // Delete physical file if present
-        if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
-            @unlink(__DIR__ . '/' . $item['file_path']);
-        }
-        if (!empty($item['stored_name']) && file_exists(__DIR__ . '/library/' . $item['stored_name'])) {
-            @unlink(__DIR__ . '/library/' . $item['stored_name']);
+        // Delete physical file or Cloudinary resource if present
+        if (!empty($item['file_path']) && (str_starts_with($item['file_path'], 'http://') || str_starts_with($item['file_path'], 'https://'))) {
+            cloudinary_delete($item['stored_name'], 'raw');
+        } else {
+            if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
+                @unlink(__DIR__ . '/' . $item['file_path']);
+            }
+            if (!empty($item['stored_name']) && file_exists(__DIR__ . '/library/' . $item['stored_name'])) {
+                @unlink(__DIR__ . '/library/' . $item['stored_name']);
+            }
         }
 
         $del = mysqli_prepare($conn, "DELETE FROM library_resources WHERE id = ?");

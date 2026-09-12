@@ -133,19 +133,30 @@ if (!empty($errors)) {
     exit;
 }
 
-// ---------- Move the file ----------
-$randomName = 'lib_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-$destPath   = $uploadDir . $randomName;
-$relPath    = $uploadUrlPrefix . $randomName;
+require_once 'cloudinary_helper.php';
 
-if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-    error_log('[Library Upload Move] Failed to move to ' . $destPath);
-    $_SESSION['library_flash'] = [
-        'type'    => 'error',
-        'message' => 'Failed to store the uploaded file. Please try again.',
-    ];
-    header('Location: library.php');
-    exit;
+// ---------- Move / Upload file ----------
+$cRes = cloudinary_upload($file['tmp_name'], $file['name'], 'raw');
+
+if ($cRes['success']) {
+    $relPath    = $cRes['secure_url'];
+    $randomName = $cRes['public_id'] ?? ('lib_' . date('Ymd_His') . '.' . $ext);
+    $destPath   = null;
+} else {
+    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+    $randomName = 'lib_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+    $destPath   = $uploadDir . $randomName;
+    $relPath    = $uploadUrlPrefix . $randomName;
+
+    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+        error_log('[Library Upload Move] Failed to move to ' . $destPath);
+        $_SESSION['library_flash'] = [
+            'type'    => 'error',
+            'message' => 'Failed to store the uploaded file. Please try again.',
+        ];
+        header('Location: library.php');
+        exit;
+    }
 }
 
 // ---------- Insert into DB ----------
