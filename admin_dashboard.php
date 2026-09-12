@@ -118,7 +118,7 @@ if (!empty($_SESSION['admin_flash'])) {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
                 <div class="flex items-center">
-                    <a href="admin_dashboard.php" class="flex-shrink-0 flex items-center gap-3 group">
+                    <a href="admin_dashboard.php" class="-ml-3 flex-shrink-0 flex items-center gap-3 group">
                         <img class="h-12 w-auto transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-black tracking-tight text-gray-900">Thamani High School</span>
@@ -129,15 +129,15 @@ if (!empty($_SESSION['admin_flash'])) {
                         </div>
                     </a>
                 </div>
-                <div class="hidden lg:flex items-center gap-2">
-                    <a href="admin_dashboard.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white bg-gray-900 shadow-sm">Dashboard</a>
-                    <a href="enrollment_view.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Enrollment</a>
-                    <a href="alumni_view.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Alumni</a>
-                    <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Teachers</button>
-                    <button type="button" onclick="openModal('modal-upload-gallery');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Gallery</button>
-                    <button type="button" onclick="openModal('modal-upload-calendar');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Calendar & Fees</button>
+                <div class="hidden lg:flex items-center gap-3 ml-auto">
+                    <a href="admin_dashboard.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white hover:border-gray-900">Dashboard</a>
+                    <a href="enrollment_view.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Enrollment</a>
+                    <a href="alumni_view.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Alumni</a>
+                    <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Teachers</button>
+                    <button type="button" onclick="openModal('modal-upload-gallery');" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Gallery</button>
+                    <button type="button" onclick="openModal('modal-upload-calendar');" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Calendar & Fees</button>
                 </div>
-                <div class="hidden md:flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-3 flex-shrink-0">
                     <div class="hidden xl:flex flex-col text-right mr-2">
                         <span class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Administrator</span>
                         <span class="text-xs font-bold text-gray-900"><?= htmlspecialchars($admin['name']) ?></span>
@@ -158,11 +158,11 @@ if (!empty($_SESSION['admin_flash'])) {
             </div>
         </div>
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-3 pb-5 space-y-2">
-            <a href="admin_dashboard.php" class="block px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gray-900">Dashboard</a>
-            <a href="enrollment_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Enrollment</a>
-            <a href="alumni_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Alumni</a>
-            <button type="button" onclick="openModal('modal-upload-gallery');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Gallery</button>
-            <button type="button" onclick="openModal('modal-upload-calendar');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Calendar & Fees</button>
+            <a href="admin_dashboard.php" class="block px-4 py-2.5 rounded-xl text-sm font-bold text-gray-900 bg-white border border-gray-300 hover:bg-gray-900 hover:text-white">Dashboard</a>
+            <a href="enrollment_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-900 hover:text-white">Enrollment</a>
+            <a href="alumni_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-900 hover:text-white">Alumni</a>
+            <button type="button" onclick="openModal('modal-upload-gallery');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-900 hover:text-white">Gallery</button>
+            <button type="button" onclick="openModal('modal-upload-calendar');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-900 hover:text-white">Calendar & Fees</button>
             <div class="pt-3 border-t border-gray-100 flex flex-col gap-2">
                 <a href="admin_logout.php" class="w-full py-2.5 rounded-xl font-bold text-gray-900 bg-brand-gold text-center">Logout</a>
             </div>
