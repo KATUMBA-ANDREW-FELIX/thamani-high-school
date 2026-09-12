@@ -332,12 +332,13 @@ $totalAll    = (int)$totalAllRow['c'];
                             <th class="p-4">Year of Completion</th>
                             <th class="p-4">Profession / Institution</th>
                             <th class="p-4">Email</th>
+                            <?php if ($isAdmin): ?><th class="p-4 text-right">Actions</th><?php endif; ?>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <?php if (empty($alumni)): ?>
                             <tr>
-                                <td colspan="5" class="p-10 text-center">
+                                <td colspan="<?= $isAdmin ? 6 : 5 ?>" class="p-10 text-center">
                                     <i data-lucide="users-round" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
                                     <p class="text-gray-500 font-semibold mb-1">No alumni records found</p>
                                     <p class="text-gray-400 text-xs">
@@ -364,6 +365,18 @@ $totalAll    = (int)$totalAllRow['c'];
                                             <?= htmlspecialchars($a['email'], ENT_QUOTES) ?>
                                         </a>
                                     </td>
+                                    <?php if ($isAdmin): ?>
+                                        <td class="p-4 text-right whitespace-nowrap">
+                                            <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete alumni record for <?= htmlspecialchars(addslashes($a['name'])) ?>?');">
+                                                <input type="hidden" name="type" value="alumni">
+                                                <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
+                                                <input type="hidden" name="redirect_to" value="alumni_view.php">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

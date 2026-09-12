@@ -10,7 +10,9 @@
 session_start();
 
 // Teacher session check (lightweight — do NOT force login on this page)
-$isTeacher = !empty($_SESSION['teacher_id']);
+$isAdmin       = !empty($_SESSION['admin_id']);
+$isTeacher     = !empty($_SESSION['teacher_id']);
+$currentUserId = (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0);
 
 require_once 'conn.php';
 
@@ -27,7 +29,7 @@ $subjects = [];
 $dbError = '';
 
 $sql = "SELECT id, title, author, subject, category, class_level,
-               file_name, file_path, file_size, uploaded_at
+               file_name, file_path, file_size, uploaded_at, uploaded_by
         FROM library_resources
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
@@ -59,6 +61,7 @@ if ($res === false) {
             'size'        => formatFileSize((int)$row['file_size']),
             'downloadUrl' => $row['file_path'],
             'icon'        => $icon,
+            'uploadedBy'  => (int)($row['uploaded_by'] ?? 0),
         ];
     }
 
@@ -74,15 +77,13 @@ if ($res === false) {
 // ---------- Encode for JS ----------
 $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
-
-
-
-
 // ---------- Inject data as a global JS var ----------
 $dataPayload = json_encode([
-    'books'     => $books,
-    'subjects'  => $subjects,
-    'isTeacher' => $isTeacher,
+    'books'         => $books,
+    'subjects'      => $subjects,
+    'isTeacher'     => $isTeacher,
+    'isAdmin'       => $isAdmin,
+    'currentUserId' => $currentUserId,
 ], $jsonFlags);
 
 $dataScript = '<script>window.__LIBRARY_DATA = ' . $dataPayload . ';</script>';

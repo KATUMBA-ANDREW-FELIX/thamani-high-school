@@ -31,7 +31,7 @@ if ($isAdmin) {
 $documents = [];
 $dbError   = '';
 
-$sql = "SELECT id, title, doc_type, description, file_name, file_path, file_size, mime_type, uploaded_at
+$sql = "SELECT id, title, doc_type, description, file_name, file_path, file_size, mime_type, uploaded_at, uploaded_by
         FROM calendar_documents
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
@@ -81,6 +81,7 @@ $docsPayload = json_encode(array_map(function($d) {
         'url'         => $d['file_path'],
         'size'        => formatFileSize((int)$d['file_size']),
         'uploaded'    => date('d M Y', strtotime($d['uploaded_at'])),
+        'uploadedBy'  => (int)($d['uploaded_by'] ?? 0),
     ];
 }, $documents), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 ?>
@@ -378,6 +379,8 @@ $docsPayload = json_encode(array_map(function($d) {
 
     <script>
         const DOCUMENTS = <?= $docsPayload ?: '[]' ?>;
+        const IS_ADMIN = <?= $isAdmin ? 'true' : 'false' ?>;
+        const CURRENT_USER_ID = <?= (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0) ?>;
 
         const TYPE_LABELS = {
             all:       { label: 'All Documents', icon: 'layout-grid' },
@@ -437,6 +440,8 @@ $docsPayload = json_encode(array_map(function($d) {
                                  (ext === 'DOCX' || ext === 'DOC') ? 'bg-blue-50 text-blue-700' :
                                  'bg-gray-100 text-gray-600';
 
+                const canDelete = IS_ADMIN || (CURRENT_USER_ID > 0 && d.uploadedBy === CURRENT_USER_ID);
+
                 return `
                     <div class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col">
                         <div class="flex items-start justify-between mb-4">
@@ -463,6 +468,16 @@ $docsPayload = json_encode(array_map(function($d) {
                                class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-all active:scale-95">
                                 <i data-lucide="download" class="w-5 h-5"></i> Download
                             </a>
+                            ${canDelete ? `
+                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete document &quot;${d.title.replace(/'/g, "\\'")}&quot;?');">
+                                    <input type="hidden" name="type" value="calendar">
+                                    <input type="hidden" name="id" value="${d.id}">
+                                    <input type="hidden" name="redirect_to" value="calendar.php">
+                                    <button type="submit" class="px-3.5 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all active:scale-95 shadow-sm flex items-center justify-center" title="Delete document">
+                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                    </button>
+                                </form>
+                            ` : ''}
                         </div>
                     </div>`;
             }).join('');

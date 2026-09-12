@@ -36,7 +36,7 @@ $ra = mysqli_query($conn, "SELECT id, name, year, profession, phone, email FROM 
 if ($ra) while ($r = mysqli_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = mysqli_query($conn, "SELECT staff_id, full_name, email, department, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = mysqli_query($conn, "SELECT id, staff_id, full_name, email, department, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = mysqli_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -431,6 +431,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                     <th class="p-3.5">Department</th>
                                     <th class="p-3.5">Status</th>
                                     <th class="p-3.5">Registered</th>
+                                    <th class="p-3.5 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -447,10 +448,20 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 </span>
                                             </td>
                                             <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($t['created_at'])) ?></td>
+                                            <td class="p-3.5 text-right whitespace-nowrap">
+                                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete teacher record for <?= htmlspecialchars(addslashes($t['full_name'])) ?>?');">
+                                                    <input type="hidden" name="type" value="teacher">
+                                                    <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="6" class="p-8 text-center text-gray-500 text-sm">No teachers registered yet.</td></tr>
+                                    <tr><td colspan="7" class="p-8 text-center text-gray-500 text-sm">No teachers registered yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -534,6 +545,14 @@ if (!empty($_SESSION['admin_flash'])) {
                                                         class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm">
                                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i> Full Profile
                                                 </button>
+                                                <form action="delete_item.php" method="post" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete student record for <?= htmlspecialchars(addslashes($s['full_name'])) ?>?');">
+                                                    <input type="hidden" name="type" value="student">
+                                                    <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -575,6 +594,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                     <th class="p-3.5">Profession / Field</th>
                                     <th class="p-3.5">Phone Number</th>
                                     <th class="p-3.5">Email Address</th>
+                                    <th class="p-3.5 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -588,10 +608,20 @@ if (!empty($_SESSION['admin_flash'])) {
                                             <td class="p-3.5 text-gray-700 search-target"><?= htmlspecialchars($a['profession']) ?></td>
                                             <td class="p-3.5 text-xs text-gray-600 font-mono search-target"><?= htmlspecialchars($a['phone'] ?: '—') ?></td>
                                             <td class="p-3.5"><a href="mailto:<?= htmlspecialchars($a['email']) ?>" class="text-amber-700 font-medium hover:underline search-target"><?= htmlspecialchars($a['email']) ?></a></td>
+                                            <td class="p-3.5 text-right whitespace-nowrap">
+                                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete alumni record for <?= htmlspecialchars(addslashes($a['name'])) ?>?');">
+                                                    <input type="hidden" name="type" value="alumni">
+                                                    <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="5" class="p-8 text-center text-gray-500 text-sm">No alumni members registered yet.</td></tr>
+                                    <tr><td colspan="6" class="p-8 text-center text-gray-500 text-sm">No alumni members registered yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -635,11 +665,19 @@ if (!empty($_SESSION['admin_flash'])) {
                                             <td class="p-3.5"><span class="text-xs font-bold uppercase px-2.5 py-1 rounded bg-gray-100 text-gray-700"><?= htmlspecialchars($c['doc_type']) ?></span></td>
                                             <td class="p-3.5 text-xs text-gray-500 font-mono"><?= $szFmt ?></td>
                                             <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($c['uploaded_at'])) ?></td>
-                                            <td class="p-3.5 text-right">
+                                            <td class="p-3.5 text-right whitespace-nowrap">
                                                 <a href="<?= htmlspecialchars($c['file_path']) ?>" target="_blank"
                                                    class="inline-flex items-center gap-1 px-3.5 py-1.5 bg-gray-900 text-white font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors">
                                                     <i data-lucide="download" class="w-3.5 h-3.5 text-amber-400"></i> Open File
                                                 </a>
+                                                <form action="delete_item.php" method="post" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete document <?= htmlspecialchars(addslashes($c['title'])) ?>?');">
+                                                    <input type="hidden" name="type" value="calendar">
+                                                    <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -674,9 +712,19 @@ if (!empty($_SESSION['admin_flash'])) {
                                          class="w-full h-44 object-cover bg-gray-100" loading="lazy">
                                     <div class="p-3.5">
                                         <div class="text-sm font-bold text-gray-900 truncate"><?= htmlspecialchars($g['title']) ?></div>
-                                        <div class="text-xs text-gray-500 mt-1 flex justify-between items-center">
+                                        <div class="text-xs text-gray-500 mt-1 flex justify-between items-center mb-2">
                                             <span class="uppercase font-extrabold text-amber-700"><?= htmlspecialchars($g['category']) ?></span>
                                             <span><?= date('d M Y', strtotime($g['uploaded_at'])) ?></span>
+                                        </div>
+                                        <div class="pt-2 border-t border-gray-100 flex justify-end">
+                                            <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete photo <?= htmlspecialchars(addslashes($g['title'])) ?>?');">
+                                                <input type="hidden" name="type" value="gallery">
+                                                <input type="hidden" name="id" value="<?= (int)$g['id'] ?>">
+                                                <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-600 text-white font-bold rounded-lg text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -924,9 +972,18 @@ if (!empty($_SESSION['admin_flash'])) {
                     <input type="hidden" name="redirect_to" value="admin_dashboard.php">
                     <input type="hidden" name="student_id" id="status-student-id-3" value="">
                     <input type="hidden" name="new_status" value="Rejected">
-                    <button type="submit" class="px-4 py-2.5 bg-red-600 text-white font-extrabold rounded-xl text-xs hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                    <button type="submit" class="px-4 py-2.5 bg-orange-600 text-white font-extrabold rounded-xl text-xs hover:bg-orange-700 transition-colors flex items-center gap-1.5 shadow-sm"
                             onclick="return confirm('Are you sure you want to mark this application as Rejected?');">
                         <i data-lucide="x-circle" class="w-4 h-4"></i> Reject Application
+                    </button>
+                </form>
+
+                <form method="post" action="delete_item.php" class="inline" onsubmit="return confirm('Are you sure you want to PERMANENTLY DELETE this student record?');">
+                    <input type="hidden" name="type" value="student">
+                    <input type="hidden" name="id" id="delete-student-id-modal" value="">
+                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                    <button type="submit" class="px-4 py-2.5 bg-red-700 text-white font-extrabold rounded-xl text-xs hover:bg-red-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Record
                     </button>
                 </form>
             </div>
@@ -1106,6 +1163,8 @@ if (!empty($_SESSION['admin_flash'])) {
             document.getElementById('status-student-id').value   = s.id;
             document.getElementById('status-student-id-2').value = s.id;
             document.getElementById('status-student-id-3').value = s.id;
+            const delEl = document.getElementById('delete-student-id-modal');
+            if (delEl) delEl.value = s.id;
 
             const statusClass =
                 s.status === 'Enrolled' ? 'bg-green-100 text-green-800' :

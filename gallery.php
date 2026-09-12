@@ -31,7 +31,7 @@ if ($isAdmin) {
 $photos = [];
 $dbError = '';
 
-$sql = "SELECT id, title, caption, category, file_path, uploaded_at
+$sql = "SELECT id, title, caption, category, file_path, uploaded_at, uploaded_by
         FROM gallery_photos
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
@@ -65,12 +65,13 @@ if (!empty($_SESSION['gallery_flash'])) {
 
 $photosPayload = json_encode(array_map(function($p) {
     return [
-        'id'       => (int)$p['id'],
-        'title'    => $p['title'],
-        'caption'  => $p['caption'] ?? '',
-        'category' => $p['category'],
-        'url'      => $p['file_path'],
-        'uploaded' => date('d M Y', strtotime($p['uploaded_at'])),
+        'id'          => (int)$p['id'],
+        'title'       => $p['title'],
+        'caption'     => $p['caption'] ?? '',
+        'category'    => $p['category'],
+        'url'         => $p['file_path'],
+        'uploaded'    => date('d M Y', strtotime($p['uploaded_at'])),
+        'uploadedBy'  => (int)($p['uploaded_by'] ?? 0),
     ];
 }, $photos), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 ?>
@@ -338,6 +339,8 @@ $photosPayload = json_encode(array_map(function($p) {
 
     <script>
         const PHOTOS = <?= $photosPayload ?: '[]' ?>;
+        const IS_ADMIN = <?= $isAdmin ? 'true' : 'false' ?>;
+        const CURRENT_USER_ID = <?= (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0) ?>;
 
         const CATEGORY_LABELS = {
             all:      { label: 'All Photos', icon: 'layout-grid' },
@@ -383,9 +386,22 @@ $photosPayload = json_encode(array_map(function($p) {
             }
             empty.classList.add('hidden');
 
-            grid.innerHTML = list.map(p => `
+            grid.innerHTML = list.map(p => {
+                const canDelete = IS_ADMIN || (CURRENT_USER_ID > 0 && p.uploadedBy === CURRENT_USER_ID);
+
+                return `
                 <div onclick='openLightbox(${JSON.stringify(p).replace(/'/g, "&#39;")})'
-                     class="group cursor-pointer bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all">
+                     class="group cursor-pointer bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all relative">
+                    ${canDelete ? `
+                        <form action="delete_item.php" method="post" class="absolute top-2 right-2 z-20" onclick="event.stopPropagation();" onsubmit="return confirm('Are you sure you want to delete photo &quot;${p.title.replace(/'/g, "\\'")}&quot;?');">
+                            <input type="hidden" name="type" value="gallery">
+                            <input type="hidden" name="id" value="${p.id}">
+                            <input type="hidden" name="redirect_to" value="gallery.php">
+                            <button type="submit" class="p-2 bg-red-600/90 text-white rounded-full hover:bg-red-700 transition-colors shadow flex items-center justify-center" title="Delete photo">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    ` : ''}
                     <div class="relative aspect-square overflow-hidden bg-gray-100">
                         <img src="${p.url}" alt="${p.title.replace(/"/g, '&quot;')}"
                              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy">
@@ -397,7 +413,8 @@ $photosPayload = json_encode(array_map(function($p) {
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             lucide.createIcons();
         }
 

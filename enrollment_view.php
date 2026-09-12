@@ -393,6 +393,16 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                                                 class="inline-flex items-center gap-1 px-3 py-1.5 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors">
                                             <i data-lucide="eye" class="w-3 h-3"></i> View
                                         </button>
+                                        <?php if ($isAdmin): ?>
+                                            <form action="delete_item.php" method="post" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete student record for <?= htmlspecialchars(addslashes($s['full_name'])) ?>?');">
+                                                <input type="hidden" name="type" value="student">
+                                                <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
+                                                <input type="hidden" name="redirect_to" value="enrollment_view.php">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -450,6 +460,14 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                     <button type="submit" class="px-4 py-2.5 bg-brand-maroon text-white font-bold rounded-lg text-xs hover:bg-red-900 transition-colors flex items-center gap-1.5"
                             onclick="return confirm('Mark this student as Rejected?');">
                         <i data-lucide="x-circle" class="w-4 h-4"></i> Reject
+                    </button>
+                </form>
+                <form method="post" action="delete_item.php" class="inline" onsubmit="return confirm('Are you sure you want to PERMANENTLY DELETE this student record?');">
+                    <input type="hidden" name="type" value="student">
+                    <input type="hidden" name="id" id="delete-student-id-modal" value="">
+                    <input type="hidden" name="redirect_to" value="enrollment_view.php">
+                    <button type="submit" class="px-4 py-2.5 bg-red-700 text-white font-bold rounded-lg text-xs hover:bg-red-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Record
                     </button>
                 </form>
             </div>
@@ -600,7 +618,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
             `;
 
             // Populate hidden status form fields
-            ['status-student-id','status-student-id-2','status-student-id-3'].forEach(id => {
+            ['status-student-id','status-student-id-2','status-student-id-3','delete-student-id-modal'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = s.id;
             });

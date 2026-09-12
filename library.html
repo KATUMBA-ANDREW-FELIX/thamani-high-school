@@ -372,8 +372,10 @@
         const ALL_RESOURCES = Array.isArray(_DATA.books) ? _DATA.books : [];
         const AVAILABLE_SUBJECTS = Array.isArray(_DATA.subjects) ? _DATA.subjects : [];
         const IS_TEACHER = !!_DATA.isTeacher;
+        const IS_ADMIN = !!_DATA.isAdmin;
+        const CURRENT_USER_ID = Number(_DATA.currentUserId || 0);
 
-        if (IS_TEACHER) {
+        if (IS_TEACHER || IS_ADMIN) {
             document.getElementById('btn-upload-book')?.classList.remove('hidden');
             document.getElementById('nav-dashboard-link')?.classList.remove('hidden');
             document.getElementById('nav-portal-btn-1')?.classList.add('hidden');
@@ -480,6 +482,8 @@
                             ? 'bg-purple-50 text-purple-700'
                             : 'bg-gray-100 text-gray-500';
 
+                const canDelete = IS_ADMIN || (CURRENT_USER_ID > 0 && r.uploadedBy === CURRENT_USER_ID);
+
                 return `
                     <div class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col">
                         <div class="flex items-start justify-between mb-4">
@@ -505,6 +509,16 @@
                                 <i data-lucide="download" class="w-5 h-5"></i>
                                 <span>Download</span>
                             </a>
+                            ${canDelete ? `
+                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete resource &quot;${r.title.replace(/'/g, "\\'")}&quot;?');">
+                                    <input type="hidden" name="type" value="library">
+                                    <input type="hidden" name="id" value="${r.id}">
+                                    <input type="hidden" name="redirect_to" value="library.php">
+                                    <button type="submit" class="px-3.5 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all active:scale-95 shadow-sm flex items-center justify-center" title="Delete resource">
+                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                    </button>
+                                </form>
+                            ` : ''}
                         </div>
                     </div>`;
             }).join('');
