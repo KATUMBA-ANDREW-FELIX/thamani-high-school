@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PHP / SQLite runtime artifacts
+php.tar.gz
+php
+*.sqlite
+thamani-academy.youware.app/
+

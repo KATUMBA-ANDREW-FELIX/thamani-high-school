@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Admin Upload: Gallery Photo
+ * Thamani High School - Admin Upload: Gallery Photo
  * ----------------------------------------------
  * - Admin only
  * - Validates + stores image in /gallery_images/

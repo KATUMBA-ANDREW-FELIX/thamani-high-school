@@ -12,7 +12,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - THAMANI ACADEMY - Kakiri</title>
+    <title>Teacher Dashboard - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -40,7 +40,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     <!-- Page Loader -->
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -49,8 +49,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     <!-- Top Announcement Bar -->
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
         </div>
     </div>
@@ -61,16 +61,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
                     <a href="teacher_dashboard.php" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
+                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
-                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
                             <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Teacher Portal</span>
                         </div>
                     </a>
                 </div>
 
-                <!-- Desktop Nav: Alumni only -->
+                <!-- Desktop Nav: Student Roster & Alumni -->
                 <div class="hidden lg:flex items-center space-x-2">
+                    <a href="students_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Student Roster</a>
                     <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                 </div>
 
@@ -96,9 +97,10 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             </div>
         </div>
 
-        <!-- Mobile Menu: Alumni + Password + Logout -->
+        <!-- Mobile Menu: Student Roster + Alumni + Password + Logout -->
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
-            <a href="alumni_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-brand-green">Alumni Registry</a>
+            <a href="students_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Student Roster</a>
+            <a href="alumni_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni Registry</a>
             <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
                 <a href="teacher-change-password.php?voluntary=1" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-lightGreen text-center">Change Password</a>
                 <a href="teacher_logout.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>
@@ -119,10 +121,20 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 · Last login: <?= date('d M Y, g:ia', $_SESSION['teacher_logged_in_at']) ?>
             </div>
 
-            <!-- Quick Access: Alumni Registry -->
+            <!-- Quick Access: Student Roster & Alumni Registry -->
             <div class="mb-8 flex flex-wrap gap-4">
+                <a href="students_view.php"
+                   class="min-w-[260px] max-w-sm bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-brand-green/30 transition-all group flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand-green/10 text-brand-green group-hover:bg-brand-green group-hover:text-white transition-colors">
+                        <i data-lucide="user-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-brand-green group-hover:text-brand-maroon transition-colors">Enrolled Students</div>
+                        <div class="text-xs text-gray-500 mt-0.5">View live backend student list</div>
+                    </div>
+                </a>
                 <a href="alumni_view.php"
-                   class="min-w-[280px] max-w-sm bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-brand-green/30 transition-all group flex items-center gap-4">
+                   class="min-w-[260px] max-w-sm bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-brand-green/30 transition-all group flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand-maroon/10 text-brand-maroon group-hover:bg-brand-maroon group-hover:text-white transition-colors">
                         <i data-lucide="users" class="w-6 h-6"></i>
                     </div>
@@ -355,7 +367,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <div>
                     <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
-                        <span>Thamani Academy</span>
+                        <span>Thamani High School</span>
                     </h3>
                     <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
                     <div class="flex space-x-5 text-brand-gold">
@@ -378,12 +390,12 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <ul class="space-y-4 text-gray-300 text-sm">
                         <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
                         <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
-                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamani.ac.ug</span></li>
                     </ul>
                 </div>
             </div>
             <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center">
-                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>© 2026 Thamani High School. All rights reserved.</span>
                 <span>Signed in as <?= htmlspecialchars($teacher['staff_id']) ?></span>
             </div>
         </div>

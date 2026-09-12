@@ -22,6 +22,7 @@ $totalBooks     = safeCount($conn, "SELECT COUNT(*) FROM library_resources WHERE
 $totalPhotos    = safeCount($conn, "SELECT COUNT(*) FROM gallery_photos WHERE is_active = 1");
 $totalCalendar  = safeCount($conn, "SELECT COUNT(*) FROM calendar_documents WHERE is_active = 1");
 $pendingStudents= safeCount($conn, "SELECT COUNT(*) FROM students WHERE status = 'Pending'");
+$totalTeachers  = safeCount($conn, "SELECT COUNT(*) FROM teachers");
 
 // ---------- Recent activity ----------
 $recentStudents = [];
@@ -57,7 +58,7 @@ if (!empty($_SESSION['admin_flash'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - THAMANI ACADEMY - Kakiri</title>
+    <title>Admin Dashboard - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -84,7 +85,7 @@ if (!empty($_SESSION['admin_flash'])) {
 
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -93,8 +94,8 @@ if (!empty($_SESSION['admin_flash'])) {
     <!-- Top Announcement Bar -->
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Admin Session</span>
         </div>
     </div>
@@ -105,9 +106,9 @@ if (!empty($_SESSION['admin_flash'])) {
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
                     <a href="admin_dashboard.php" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
+                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
-                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
                             <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Admin Control Panel</span>
                         </div>
                     </a>
@@ -116,6 +117,7 @@ if (!empty($_SESSION['admin_flash'])) {
                     <a href="admin_dashboard.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-maroon">Home</a>
                     <a href="enrollment_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
                     <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Teachers</button>
                     <button type="button" onclick="openModal('modal-upload-gallery');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</button>
                     <button type="button" onclick="openModal('modal-upload-calendar');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</button>
                 </div>
@@ -123,6 +125,9 @@ if (!empty($_SESSION['admin_flash'])) {
                     <span class="text-sm text-gray-600 hidden lg:inline">
                         Signed in as <strong class="text-brand-maroon"><?= htmlspecialchars($admin['name']) ?></strong>
                     </span>
+                    <button type="button" onclick="openModal('modal-admin-change-password');" class="px-3 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="key-round" class="w-4 h-4 text-brand-maroon"></i> Password
+                    </button>
                     <a href="admin_logout.php"
                        class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1.5">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
@@ -159,10 +164,13 @@ if (!empty($_SESSION['admin_flash'])) {
                     <p class="text-xs text-gray-300 mt-2">Admin ID: <strong><?= htmlspecialchars($admin['admin_id']) ?></strong> · Last login: <?= date('d M Y, g:ia', $_SESSION['admin_logged_in_at']) ?></p>
                 </div>
                 <div class="flex gap-3 flex-wrap">
-                    <button onclick="openModal('modal-upload-calendar');" class="px-5 py-2.5 bg-brand-gold text-brand-green font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-yellow-400">
+                    <button onclick="openModal('modal-add-teacher');" class="px-4 py-2.5 bg-purple-700 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-purple-800">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Add Teacher
+                    </button>
+                    <button onclick="openModal('modal-upload-calendar');" class="px-4 py-2.5 bg-brand-gold text-brand-green font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-yellow-400">
                         <i data-lucide="calendar-plus" class="w-4 h-4"></i> Upload Calendar/Fees
                     </button>
-                    <button onclick="openModal('modal-upload-gallery');" class="px-5 py-2.5 bg-white text-brand-maroon font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-gray-100">
+                    <button onclick="openModal('modal-upload-gallery');" class="px-4 py-2.5 bg-white text-brand-maroon font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-gray-100">
                         <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Gallery Photo
                     </button>
                 </div>
@@ -171,60 +179,74 @@ if (!empty($_SESSION['admin_flash'])) {
             <?= $flashHtml ?>
 
             <!-- Overview Stat Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 rounded-xl bg-brand-green/10 text-brand-green flex items-center justify-center">
-                            <i data-lucide="users" class="w-6 h-6"></i>
+                        <div class="w-10 h-10 rounded-xl bg-brand-green/10 text-brand-green flex items-center justify-center">
+                            <i data-lucide="users" class="w-5 h-5"></i>
                         </div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">Students</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Students</span>
                     </div>
-                    <div class="text-3xl font-bold text-brand-green"><?= $totalStudents ?></div>
-                    <div class="text-xs text-gray-500 mt-1">
+                    <div class="text-2xl font-bold text-brand-green"><?= $totalStudents ?></div>
+                    <div class="text-[11px] text-gray-500 mt-1">
                         <?= $pendingStudents ?> pending ·
                         <a href="enrollment.php" class="font-bold text-brand-maroon hover:underline">View</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 rounded-xl bg-brand-maroon/10 text-brand-maroon flex items-center justify-center">
-                            <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                            <i data-lucide="user-cog" class="w-5 h-5"></i>
                         </div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">Alumni</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Teachers</span>
                     </div>
-                    <div class="text-3xl font-bold text-brand-maroon"><?= $totalAlumni ?></div>
-                    <div class="text-xs text-gray-500 mt-1">
+                    <div class="text-2xl font-bold text-purple-700"><?= $totalTeachers ?></div>
+                    <div class="text-[11px] text-gray-500 mt-1">
+                        Staff ·
+                        <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="font-bold text-brand-maroon hover:underline">Manage</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-maroon/10 text-brand-maroon flex items-center justify-center">
+                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Alumni</span>
+                    </div>
+                    <div class="text-2xl font-bold text-brand-maroon"><?= $totalAlumni ?></div>
+                    <div class="text-[11px] text-gray-500 mt-1">
                         Registered ·
                         <a href="alumni_view.php" class="font-bold text-brand-maroon hover:underline">View</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-green flex items-center justify-center">
-                            <i data-lucide="book-open" class="w-6 h-6"></i>
+                        <div class="w-10 h-10 rounded-xl bg-brand-gold/20 text-brand-green flex items-center justify-center">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
                         </div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">Library</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Library</span>
                     </div>
-                    <div class="text-3xl font-bold text-brand-green"><?= $totalBooks ?></div>
-                    <div class="text-xs text-gray-500 mt-1">
+                    <div class="text-2xl font-bold text-brand-green"><?= $totalBooks ?></div>
+                    <div class="text-[11px] text-gray-500 mt-1">
                         Resources ·
                         <a href="library.php" class="font-bold text-brand-maroon hover:underline">View</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                            <i data-lucide="image" class="w-6 h-6"></i>
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                            <i data-lucide="image" class="w-5 h-5"></i>
                         </div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">Gallery</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Gallery</span>
                     </div>
-                    <div class="text-3xl font-bold text-blue-700"><?= $totalPhotos ?></div>
-                    <div class="text-xs text-gray-500 mt-1">
+                    <div class="text-2xl font-bold text-blue-700"><?= $totalPhotos ?></div>
+                    <div class="text-[11px] text-gray-500 mt-1">
                         Photos ·
-                        <button type="button" onclick="openModal('modal-upload-gallery');" class="font-bold text-brand-maroon hover:underline">View</button>
+                        <button type="button" onclick="switchAdminTab('tab-admin-gallery');" class="font-bold text-brand-maroon hover:underline">View</button>
                     </div>
                 </div>
             </div>
@@ -234,11 +256,14 @@ if (!empty($_SESSION['admin_flash'])) {
                 <button onclick="switchAdminTab('tab-admin-overview');" id="btn-tab-admin-overview" class="tab-btn active px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
                 </button>
+                <button onclick="switchAdminTab('tab-admin-teachers');" id="btn-tab-admin-teachers" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                    <i data-lucide="user-cog" class="w-4 h-4"></i> Teachers & Staff
+                </button>
                 <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
-                    <i data-lucide="user-plus" class="w-4 h-4"></i> Recent Enrollments
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Enrollments
                 </button>
                 <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
-                    <i data-lucide="graduation-cap" class="w-4 h-4"></i> Recent Alumni
+                    <i data-lucide="graduation-cap" class="w-4 h-4"></i> Alumni
                 </button>
                 <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Calendar & Fees
@@ -309,27 +334,88 @@ if (!empty($_SESSION['admin_flash'])) {
                     <h3 class="text-lg font-bold text-brand-green mb-4 flex items-center gap-2">
                         <i data-lucide="zap" class="w-5 h-5"></i> Quick Actions
                     </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <button onclick="openModal('modal-add-teacher');" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group text-left">
+                            <i data-lucide="user-plus" class="w-8 h-8 text-purple-700 mb-3"></i>
+                            <div class="font-bold text-gray-800 group-hover:text-purple-700">Add New Teacher</div>
+                            <div class="text-xs text-gray-500 mt-1">Default password: Admin@2026</div>
+                        </button>
+                        <button onclick="openModal('modal-admin-change-password');" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group text-left">
+                            <i data-lucide="key-round" class="w-8 h-8 text-brand-maroon mb-3"></i>
+                            <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Change Password</div>
+                            <div class="text-xs text-gray-500 mt-1">Update admin credentials</div>
+                        </button>
                         <button onclick="openModal('modal-upload-calendar');" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group text-left">
-                            <i data-lucide="calendar-plus" class="w-8 h-8 text-brand-maroon mb-3"></i>
-                            <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Upload Calendar / Fees</div>
+                            <i data-lucide="calendar-plus" class="w-8 h-8 text-brand-gold mb-3"></i>
+                            <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Upload Calendar/Fees</div>
                             <div class="text-xs text-gray-500 mt-1">Publish document</div>
                         </button>
                         <button onclick="openModal('modal-upload-gallery');" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group text-left">
-                            <i data-lucide="image-plus" class="w-8 h-8 text-brand-maroon mb-3"></i>
+                            <i data-lucide="image-plus" class="w-8 h-8 text-blue-600 mb-3"></i>
                             <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Add Gallery Photo</div>
-                            <div class="text-xs text-gray-500 mt-1">Upload image</div>
+                            <div class="text-xs text-gray-500 mt-1">Upload photo</div>
                         </button>
                         <a href="enrollment.php" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group">
                             <i data-lucide="user-check" class="w-8 h-8 text-brand-green mb-3"></i>
                             <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Review Enrollments</div>
                             <div class="text-xs text-gray-500 mt-1"><?= $pendingStudents ?> pending</div>
                         </a>
-                        <a href="library.php" class="p-5 rounded-xl border border-gray-100 hover:border-brand-maroon/30 hover:shadow-md transition-all group">
-                            <i data-lucide="book-open" class="w-8 h-8 text-brand-green mb-3"></i>
-                            <div class="font-bold text-gray-800 group-hover:text-brand-maroon">Manage Library</div>
-                            <div class="text-xs text-gray-500 mt-1"><?= $totalBooks ?> resources</div>
-                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: TEACHERS & STAFF -->
+            <div id="tab-admin-teachers" class="admin-tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-brand-green flex items-center gap-2">
+                                <i data-lucide="user-cog" class="w-5 h-5"></i> Teachers & Academic Staff Roster
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">New teachers default password is <code class="bg-amber-100 text-brand-maroon px-1.5 py-0.5 rounded font-mono font-bold">Admin@2026</code>. They can log in to view attendance and classes.</p>
+                        </div>
+                        <button onclick="openModal('modal-add-teacher');" class="px-4 py-2 bg-brand-maroon text-white font-bold rounded-lg text-xs hover:bg-red-900 shadow flex items-center gap-1.5">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Add New Teacher
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                                    <th class="p-3.5">Staff ID</th>
+                                    <th class="p-3.5">Full Name</th>
+                                    <th class="p-3.5">Email</th>
+                                    <th class="p-3.5">Department</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5">Registered</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <?php
+                                $teachRes = mysqli_query($conn, "SELECT staff_id, full_name, email, department, is_active, created_at FROM teachers ORDER BY created_at DESC");
+                                if ($teachRes && mysqli_num_rows($teachRes) > 0):
+                                    while ($t = mysqli_fetch_assoc($teachRes)):
+                                ?>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-3.5 font-mono text-xs font-bold text-brand-maroon"><?= htmlspecialchars($t['staff_id']) ?></td>
+                                        <td class="p-3.5 font-bold text-brand-green"><?= htmlspecialchars($t['full_name']) ?></td>
+                                        <td class="p-3.5 text-xs text-gray-600"><?= htmlspecialchars($t['email']) ?></td>
+                                        <td class="p-3.5 text-xs font-semibold text-gray-700"><?= htmlspecialchars($t['department'] ?: 'Academic') ?></td>
+                                        <td class="p-3.5">
+                                            <span class="text-xs font-bold px-2 py-1 rounded <?= (int)$t['is_active'] === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
+                                                <?= (int)$t['is_active'] === 1 ? 'Active' : 'Disabled' ?>
+                                            </span>
+                                        </td>
+                                        <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($t['created_at'])) ?></td>
+                                    </tr>
+                                <?php
+                                    endwhile;
+                                else:
+                                ?>
+                                    <tr><td colspan="7" class="p-8 text-center text-gray-500 text-sm">No teachers registered yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -624,6 +710,81 @@ if (!empty($_SESSION['admin_flash'])) {
         </div>
     </div>
 
+    <!-- MODAL: ADD NEW TEACHER -->
+    <div id="modal-add-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-brand-maroon flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-6 h-6"></i> Add New Teacher / Staff
+                </h3>
+                <button onclick="closeModal('modal-add-teacher');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg text-xs mb-4">
+                ℹ️ Default login password for new teachers is <strong class="font-mono text-brand-maroon text-sm">Admin@2026</strong>.
+            </div>
+            <form action="admin_add_teacher.php" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher ID <span class="text-brand-maroon">*</span></label>
+                    <input type="text" name="teacher_id" required value="TSC-2026-<?= sprintf('%03d', rand(2, 999)) ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-brand-maroon">*</span></label>
+                    <input type="text" name="full_name" required placeholder="e.g. Mr. Okello Joseph" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-brand-maroon">*</span></label>
+                    <input type="email" name="email" required placeholder="e.g. okello@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Subject Taught</label>
+                    <input type="text" name="subject" placeholder="e.g. Mathematics & Physics" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number</label>
+                    <input type="tel" name="phone" placeholder="e.g. +256 700 000 000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 text-sm flex items-center justify-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Add Teacher
+                    </button>
+                    <button type="button" onclick="closeModal('modal-add-teacher');" class="w-32 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADMIN CHANGE PASSWORD -->
+    <div id="modal-admin-change-password" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-brand-maroon flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-6 h-6"></i> Change Admin Password
+                </h3>
+                <button onclick="closeModal('modal-admin-change-password');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form action="admin_change_password.php" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Current Password <span class="text-brand-maroon">*</span></label>
+                    <input type="password" name="current_password" required placeholder="Enter current password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">New Password <span class="text-brand-maroon">*</span></label>
+                    <input type="password" name="new_password" required minlength="6" placeholder="Enter new password (min 6 chars)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Confirm New Password <span class="text-brand-maroon">*</span></label>
+                    <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm new password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 text-sm flex items-center justify-center gap-2">
+                        <i data-lucide="lock" class="w-4 h-4"></i> Update Password
+                    </button>
+                    <button type="button" onclick="closeModal('modal-admin-change-password');" class="w-32 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- FOOTER -->
     <footer class="bg-brand-green text-white pt-16 pb-10 mt-auto border-t-4 border-brand-gold">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -631,7 +792,7 @@ if (!empty($_SESSION['admin_flash'])) {
                 <div>
                     <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
-                        <span>Thamani Academy</span>
+                        <span>Thamani High School</span>
                     </h3>
                     <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
                     <div class="flex space-x-5 text-brand-gold">
@@ -655,12 +816,12 @@ if (!empty($_SESSION['admin_flash'])) {
                     <ul class="space-y-4 text-gray-300 text-sm">
                         <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
                         <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
-                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamani.ac.ug</span></li>
                     </ul>
                 </div>
             </div>
             <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center">
-                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>© 2026 Thamani High School. All rights reserved.</span>
                 <span>Admin · <?= htmlspecialchars($admin['admin_id']) ?></span>
             </div>
         </div>

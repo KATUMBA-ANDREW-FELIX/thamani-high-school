@@ -2,7 +2,7 @@
   "name": "thamani-academy",
   "private": true,
   "version": "1.0.0",
-  "description": "THAMANI ACADEMY Standalone HTML5, CSS3, and JavaScript Web Application",
+  "description": "THAMANI HIGH SCHOOL Standalone HTML5, CSS3, and JavaScript Web Application",
   "scripts": {
     "start": "npx -y http-server -p 8080",
     "dev": "npx -y http-server -p 8080"

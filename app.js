@@ -1,4 +1,4 @@
-// THAMANI ACADEMY - Application State & Operations Engine
+// THAMANI HIGH SCHOOL - Application State & Operations Engine
 
 // State Initialization with localStorage Persistence & Safe Fallback Protection
 const defaultState = {
@@ -16,7 +16,7 @@ const defaultState = {
     ],
     circulars: [
         { id: 1, title: "End of Term III UNEB Examination Requirements & Fees", body: "Parents and guardians are reminded that all candidate clearance cards must be collected from the Bursar's office before 15th October 2026.", date: "2026-09-09", attachment: "UNEB_Requirements_2026.pdf" },
-        { id: 2, title: "Annual Cultural Festival & Parents Visitation Day", body: "Thamani Academy will host the 2026 Cultural Gala on 18th October. Traditional music, dance, and regional cuisine will be showcased.", date: "2026-09-04", attachment: "Cultural_Festival_Program.docx" }
+        { id: 2, title: "Annual Cultural Festival & Parents Visitation Day", body: "Thamani High School will host the 2026 Cultural Gala on 18th October. Traditional music, dance, and regional cuisine will be showcased.", date: "2026-09-04", attachment: "Cultural_Festival_Program.docx" }
     ],
     disciplineLogs: [
         { id: 1, date: "2026-09-08", name: "Ssemwanga Timothy", class: "Senior 3", stream: "South", category: "Lateness", note: "Late for 7:00 AM Morning Prep by 45 minutes", action: "Verbal warning & 30 min campus cleanup" },
@@ -146,7 +146,7 @@ async function registerAlumni(event, form) {
             throw new Error(data.error || `Could not save alumni record (HTTP ${response.status})`);
         }
 
-        alert('Thank you for registering with the Thamani Academy Alumni Network!');
+        alert('Thank you for registering with the Thamani High School Alumni Network!');
         form.reset();
     } catch (error) {
         alert(`Registration failed: ${error.message}`);
@@ -164,10 +164,10 @@ function closeModal(modalId) {
 
 // Download File Generator with Delayed URL Revocation for Mobile/Slow Browsers
 function downloadDocument(fileName, fileType) {
-    let content = `THAMANI ACADEMY - KAKIRI CAMPUS\nOfficial School Document: ${fileName}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified UNEB Compliant Document\n\n`;
+    let content = `THAMANI HIGH SCHOOL - KAKIRI CAMPUS\nOfficial School Document: ${fileName}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified UNEB Compliant Document\n\n`;
     content += "=========================================================\n";
-    content += "This is an official document from Thamani Academy Uganda.\n";
-    content += "For enquiries, contact info@thamaniacademy.ac.ug\n";
+    content += "This is an official document from Thamani High School Uganda.\n";
+    content += "For enquiries, contact info@thamani.ac.ug\n";
     content += "=========================================================\n";
 
     let mimeType = "application/pdf";

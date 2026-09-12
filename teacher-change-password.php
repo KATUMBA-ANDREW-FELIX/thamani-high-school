@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Teacher Password Change
+ * Thamani High School - Teacher Password Change
  * ------------------------------------------
  * - First login forces this page (must_change_password = 1)
  * - Also reachable voluntarily via teacher_dashboard.php
@@ -102,7 +102,7 @@ $headingText = $isForced
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle) ?> - THAMANI ACADEMY - Kakiri</title>
+    <title><?= htmlspecialchars($pageTitle) ?> - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -128,7 +128,7 @@ $headingText = $isForced
 
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -136,8 +136,8 @@ $headingText = $isForced
 
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
         </div>
     </div>

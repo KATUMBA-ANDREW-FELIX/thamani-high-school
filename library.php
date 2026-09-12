@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Digital Library (public view)
+ * Thamani High School - Digital Library (public view)
  * ------------------------------------------------
  * - Fetches all active library resources from the database
  * - Passes them as JSON to library.html for rendering

@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Unified Login Handler (Teacher + Admin)
+ * Thamani High School - Unified Login Handler (Teacher + Admin)
  * ----------------------------------------------------------
  * - Role toggle in the HTML sends either 'teacher' or 'admin'
  * - Authenticates against the right table

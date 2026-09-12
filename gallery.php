@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Gallery (Public View)
+ * Thamani High School - Gallery (Public View)
  * ----------------------------------------
  * - Displays all uploaded photos
  * - Admin can upload new photos from this page
@@ -79,7 +79,7 @@ $photosPayload = json_encode(array_map(function($p) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gallery - THAMANI ACADEMY - Kakiri</title>
+    <title>Gallery - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -108,7 +108,7 @@ $photosPayload = json_encode(array_map(function($p) {
 
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -116,8 +116,8 @@ $photosPayload = json_encode(array_map(function($p) {
 
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
         </div>
     </div>
@@ -128,7 +128,7 @@ $photosPayload = json_encode(array_map(function($p) {
                 <a href="<?= $backLink ?>" class="flex items-center gap-3">
                     <img class="h-12 w-auto" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
                     <div class="flex flex-col">
-                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
                         <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : ($isTeacher ? 'Teacher Portal' : 'Kakiri - Uganda') ?></span>
                     </div>
                 </a>
@@ -200,7 +200,7 @@ $photosPayload = json_encode(array_map(function($p) {
                 <div class="text-center mb-12">
                     <span class="inline-block px-4 py-1.5 rounded-full bg-brand-lightGreen text-brand-green font-bold text-xs uppercase tracking-wider mb-4">Vibrant Campus Life</span>
                     <h1 class="text-4xl font-bold text-brand-green mb-4">School Gallery</h1>
-                    <p class="text-gray-600 max-w-2xl mx-auto">A visual journey through the cultural heritage, sporting excellence, and daily life at Thamani Academy.</p>
+                    <p class="text-gray-600 max-w-2xl mx-auto">A visual journey through the cultural heritage, sporting excellence, and daily life at Thamani High School.</p>
 
                     <?php if ($isAdmin): ?>
                         <button onclick="openModal('modal-upload-gallery');" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 transition-all shadow-md hover:shadow-lg">
@@ -293,7 +293,7 @@ $photosPayload = json_encode(array_map(function($p) {
                 <div>
                     <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
-                        <span>Thamani Academy</span>
+                        <span>Thamani High School</span>
                     </h3>
                     <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
                     <div class="flex space-x-5 text-brand-gold">
@@ -317,12 +317,12 @@ $photosPayload = json_encode(array_map(function($p) {
                     <ul class="space-y-4 text-gray-300 text-sm">
                         <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
                         <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
-                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamani.ac.ug</span></li>
                     </ul>
                 </div>
             </div>
             <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center flex-wrap gap-2">
-                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>© 2026 Thamani High School. All rights reserved.</span>
                 <span><?= $viewerName ? 'Signed in as ' . htmlspecialchars($viewerName) : 'Public View' ?></span>
             </div>
         </div>

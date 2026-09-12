@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Admin Upload: Calendar / Fees Document
+ * Thamani High School - Admin Upload: Calendar / Fees Document
  * ---------------------------------------------------------
  * - Admin only
  * - Validates + stores document in /calendar_docs/

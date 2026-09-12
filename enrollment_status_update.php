@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Change Student Enrollment Status
+ * Thamani High School - Change Student Enrollment Status
  * ---------------------------------------------------
  * - Admin only
  * - Updates the `status` field on a student record

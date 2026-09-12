@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Enrollment Registry View
+ * Thamani High School - Enrollment Registry View
  * -------------------------------------------
  * - Admin + Teacher accessible
  * - Lists all enrolled students with filters + search
@@ -145,7 +145,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enrollment Registry - THAMANI ACADEMY - Kakiri</title>
+    <title>Enrollment Registry - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -170,7 +170,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
 
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -179,8 +179,8 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
     <!-- Top Bar -->
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]"><?= $isAdmin ? 'Admin' : 'Teacher' ?> Session</span>
         </div>
     </div>
@@ -192,7 +192,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                 <a href="<?= $backLink ?>" class="flex items-center gap-3">
                     <img class="h-12 w-auto" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
                     <div class="flex flex-col">
-                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
                         <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
                     </div>
                 </a>
@@ -239,7 +239,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
             <div>
                 <span class="bg-brand-maroon text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Student Records</span>
                 <h1 class="text-4xl font-bold text-brand-green mt-3">Enrollment Registry</h1>
-                <p class="text-gray-600 mt-1">All students who have applied to Thamani Academy, with full admission details.</p>
+                <p class="text-gray-600 mt-1">All students who have applied to Thamani High School, with full admission details.</p>
             </div>
         </div>
 
@@ -457,7 +457,7 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                 <div>
                     <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
-                        <span>Thamani Academy</span>
+                        <span>Thamani High School</span>
                     </h3>
                     <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
                     <div class="flex space-x-5 text-brand-gold">
@@ -482,12 +482,12 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                     <ul class="space-y-4 text-gray-300 text-sm">
                         <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
                         <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
-                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamani.ac.ug</span></li>
                     </ul>
                 </div>
             </div>
             <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center flex-wrap gap-2">
-                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>© 2026 Thamani High School. All rights reserved.</span>
                 <span><?= $isAdmin ? 'Admin' : 'Teacher' ?> · <?= htmlspecialchars($viewerId) ?></span>
             </div>
         </div>

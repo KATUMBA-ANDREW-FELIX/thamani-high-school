@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Student Enrollment Handler (mysqli)
+ * Thamani High School - Student Enrollment Handler (mysqli)
  * -----------------------------------------------------
  * - Validates all registration fields
  * - Detects duplicate LIN / UNEB index numbers

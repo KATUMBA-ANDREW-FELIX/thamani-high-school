@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Alumni Registry
+ * Thamani High School - Alumni Registry
  * ----------------------------------
  * - Accessible to Teachers AND Admins
  * - Lists all registered alumni from the database
@@ -118,7 +118,7 @@ $totalAll    = (int)$totalAllRow['c'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alumni Registry - THAMANI ACADEMY - Kakiri</title>
+    <title>Alumni Registry - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -144,7 +144,7 @@ $totalAll    = (int)$totalAllRow['c'];
 
     <div id="page-loader">
         <div class="text-center">
-            <img src="thamani-logo.png" alt="Thamani Academy"
+            <img src="thamani-logo.png" alt="Thamani High School"
                  class="h-20 w-auto mx-auto mb-4 animate-pulse" onerror="this.style.display='none'">
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
@@ -153,8 +153,8 @@ $totalAll    = (int)$totalAllRow['c'];
     <!-- Top Announcement Bar -->
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
+            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
             <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]"><?= $isAdmin ? 'Admin' : 'Teacher' ?> Session</span>
         </div>
     </div>
@@ -165,9 +165,9 @@ $totalAll    = (int)$totalAllRow['c'];
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
                     <a href="<?= $backLink ?>" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
+                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
-                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
+                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
                             <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
                         </div>
                     </a>
@@ -227,7 +227,7 @@ $totalAll    = (int)$totalAllRow['c'];
             <div>
                 <span class="bg-brand-maroon text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"><?= $isAdmin ? 'Admin Access' : 'Teacher Access' ?></span>
                 <h1 class="text-4xl font-bold text-brand-green mt-3">Alumni Registry</h1>
-                <p class="text-gray-600 mt-1">All former students who have registered with the Thamani Academy Alumni Network.</p>
+                <p class="text-gray-600 mt-1">All former students who have registered with the Thamani High School Alumni Network.</p>
             </div>
             <a href="alumni.php" class="px-5 py-2.5 bg-brand-green text-white font-bold rounded-lg hover:bg-brand-darkGreen transition-colors text-sm shadow flex items-center gap-2">
                 <i data-lucide="user-plus" class="w-4 h-4"></i> New Registration
@@ -373,7 +373,7 @@ $totalAll    = (int)$totalAllRow['c'];
                 <div>
                     <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
                         <img src="thamani-logo.png" class="h-10 w-auto" alt="Logo" onerror="this.src='favicon.svg'">
-                        <span>Thamani Academy</span>
+                        <span>Thamani High School</span>
                     </h3>
                     <p class="text-gray-300 text-sm leading-relaxed mb-6">Empowering the next generation of Ugandan leaders through excellence in education, culture, and character building.</p>
                     <div class="flex space-x-5 text-brand-gold">
@@ -401,12 +401,12 @@ $totalAll    = (int)$totalAllRow['c'];
                     <ul class="space-y-4 text-gray-300 text-sm">
                         <li class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i><span>Plot 45, Education Road, Kampala, Uganda</span></li>
                         <li class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-gold"></i><span>+256 414 123 456</span></li>
-                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamaniacademy.ac.ug</span></li>
+                        <li class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i><span>info@thamani.ac.ug</span></li>
                     </ul>
                 </div>
             </div>
             <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center flex-wrap gap-2">
-                <span>© 2026 Thamani Academy. All rights reserved.</span>
+                <span>© 2026 Thamani High School. All rights reserved.</span>
                 <span>Signed in as <?= htmlspecialchars($viewerId) ?> · <?= $isAdmin ? 'Admin' : 'Teacher' ?></span>
             </div>
         </div>

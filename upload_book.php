@@ -1,6 +1,6 @@
 <?php
 /**
- * Thamani Academy - Library Resource Upload Handler
+ * Thamani High School - Library Resource Upload Handler
  * --------------------------------------------------
  * - Requires teacher login
  * - Validates file type, size, and metadata
