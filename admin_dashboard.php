@@ -869,14 +869,14 @@ if (!empty($_SESSION['admin_flash'])) {
         function switchAdminTab(tabId) {
             document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-brand-maroon', 'text-white');
+                btn.classList.remove('active');
                 btn.classList.add('text-gray-700');
             });
 
             document.getElementById(tabId)?.classList.remove('hidden');
             const btn = document.getElementById('btn-' + tabId);
             if (btn) {
-                btn.classList.add('active', 'bg-brand-maroon', 'text-white');
+                btn.classList.add('active');
                 btn.classList.remove('text-gray-700');
             }
             lucide.createIcons();

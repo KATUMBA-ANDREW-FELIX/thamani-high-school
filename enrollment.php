@@ -15,7 +15,7 @@ session_start();
 $errors  = [];
 $success = false;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---------- 1. Collect + trim inputs ----------
     $full_name             = trim($_POST['full_name']             ?? '');

@@ -17,12 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/conn.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
-
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true);
 if (!is_array($input)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Request body must be valid JSON']);
-    exit;
+    $input = $_POST;
 }
 
 $name = trim($input['name'] ?? '');
@@ -38,12 +36,21 @@ if ($name === '' || $profession === '' || $phone === '') {
 }
 
 try {
-    $stmt = $mysqli->prepare("INSERT INTO alumni (name, year, profession, phone, email) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $name, $year, $profession, $phone, $email);
-    $stmt->execute();
-
-    echo json_encode(['success' => true, 'id' => $mysqli->insert_id]);
-    $stmt->close();
+    $stmt = mysqli_prepare($conn, "INSERT INTO alumni (name, year, profession, phone, email) VALUES (?, ?, ?, ?, ?)");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "sssss", $name, $year, $profession, $phone, $email);
+        if (mysqli_stmt_execute($stmt)) {
+            $insertId = mysqli_insert_id($conn);
+            mysqli_stmt_close($stmt);
+            echo json_encode(['success' => true, 'id' => $insertId]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Could not save alumni record']);
+        }
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database prepare failed']);
+    }
 } catch (Exception $e) {
     http_response_code(500);
     error_log($e->getMessage());

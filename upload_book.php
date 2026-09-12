@@ -10,15 +10,15 @@
 
 session_start();
 
-// Teacher-only
-if (empty($_SESSION['teacher_id'])) {
+// Teacher or Admin
+if (empty($_SESSION['teacher_id']) && empty($_SESSION['admin_id'])) {
     header('Location: teacher-login.php');
     exit;
 }
 
 require_once 'conn.php';
 
-$teacherId = (int)$_SESSION['teacher_id'];
+$teacherId = (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id']);
 
 // ---------- Config ----------
 $uploadDir       = __DIR__ . '/library/';

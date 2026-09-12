@@ -29,3 +29,11 @@ php
 *.sqlite
 thamani-academy.youware.app/
 
+# Upload folders
+calendar_docs/*
+!calendar_docs/.gitkeep
+gallery_images/*
+!gallery_images/.gitkeep
+library/*
+!library/.gitkeep
+

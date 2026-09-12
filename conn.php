@@ -19,9 +19,23 @@ if (function_exists('mysqli_connect')) {
         class ThamaniPolyfillResult {
             public $rows = [];
             public $currentIndex = 0;
+            public $num_rows = 0;
             public function fetch_assoc() {
                 if ($this->currentIndex < count($this->rows)) {
                     return $this->rows[$this->currentIndex++];
+                }
+                return null;
+            }
+            public function fetch_row() {
+                if ($this->currentIndex < count($this->rows)) {
+                    return array_values($this->rows[$this->currentIndex++]);
+                }
+                return null;
+            }
+            public function fetch_array() {
+                if ($this->currentIndex < count($this->rows)) {
+                    $row = $this->rows[$this->currentIndex++];
+                    return array_merge(array_values($row), $row);
                 }
                 return null;
             }
@@ -189,6 +203,24 @@ if (function_exists('mysqli_connect')) {
                         is_active INTEGER DEFAULT 1,
                         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS library_resources (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT,
+                        author TEXT,
+                        subject TEXT,
+                        category TEXT,
+                        class_level TEXT,
+                        description TEXT,
+                        file_name TEXT,
+                        stored_name TEXT,
+                        file_path TEXT,
+                        file_size INTEGER,
+                        mime_type TEXT,
+                        uploaded_by INTEGER,
+                        is_active INTEGER DEFAULT 1,
+                        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
 
                 // Check if default admin exists
@@ -234,6 +266,13 @@ if (function_exists('mysqli_connect')) {
             public function prepare($sql) {
                 return new ThamaniPolyfillStmt($this->pdo, $sql);
             }
+
+            public function __get($name) {
+                if ($name === 'insert_id' && $this->pdo) {
+                    return (int)$this->pdo->lastInsertId();
+                }
+                return null;
+            }
         }
     }
 
@@ -250,6 +289,12 @@ if (function_exists('mysqli_connect')) {
         function mysqli_connect_error() { return null; }
         function mysqli_connect_errno() { return 0; }
         function mysqli_error($c) { return $c->error ?? ''; }
+        function mysqli_insert_id($c) {
+            if ($c instanceof ThamaniPolyfillConn && $c->pdo) {
+                return (int)$c->pdo->lastInsertId();
+            }
+            return 0;
+        }
         function mysqli_prepare($c, $sql) {
             return $c ? $c->prepare($sql) : false;
         }
@@ -280,6 +325,24 @@ if (function_exists('mysqli_connect')) {
             }
             return null;
         }
+        function mysqli_fetch_row($res) {
+            if ($res instanceof ThamaniPolyfillResult) {
+                return $res->fetch_row();
+            }
+            return null;
+        }
+        function mysqli_fetch_array($res) {
+            if ($res instanceof ThamaniPolyfillResult) {
+                return $res->fetch_array();
+            }
+            return null;
+        }
+        function mysqli_num_rows($res) {
+            if ($res instanceof ThamaniPolyfillResult) {
+                return count($res->rows);
+            }
+            return 0;
+        }
         function mysqli_query($c, $sql) {
             if (!$c) return false;
             try {
@@ -287,6 +350,7 @@ if (function_exists('mysqli_connect')) {
                 if (str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
                     $res = new ThamaniPolyfillResult();
                     $res->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $res->num_rows = count($res->rows);
                     return $res;
                 }
                 return true;
