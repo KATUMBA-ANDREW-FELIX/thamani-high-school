@@ -16,76 +16,50 @@
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .tab-btn.active { background-color: #1A472A; color: #ffffff; }
         .nav-link-active { background-color: #1A472A; color: #ffffff !important; }
-
         #page-loader {
             position: fixed; inset: 0; background: #1A472A;
             display: flex; align-items: center; justify-content: center;
             z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
         }
         #page-loader.hidden { opacity: 0; visibility: hidden; }
-
         .login-bg {
             background-image: linear-gradient(rgba(15,45,26,.88), rgba(26,71,42,.88)),
                               url('public/assets/aigc/images/thamani-academy-hero_1788694592_000.png');
-            background-size: cover;
-            background-position: center;
+            background-size: cover; background-position: center;
             transition: background-image .5s ease;
         }
         .login-bg.admin-mode {
             background-image: linear-gradient(rgba(15,45,26,.9), rgba(128,0,0,.75)),
                               url('public/assets/aigc/images/thamani-academy-hero_1788694592_000.png');
         }
-
-        /* Role toggle segmented control */
         .role-toggle {
-            display: flex;
-            background: #F3F4F6;
-            border-radius: 12px;
-            padding: 4px;
-            position: relative;
-            border: 1px solid #E5E7EB;
+            display: flex; background: #F3F4F6; border-radius: 12px;
+            padding: 4px; position: relative; border: 1px solid #E5E7EB;
         }
         .role-toggle button {
-            flex: 1;
-            padding: 10px 16px;
-            border-radius: 9px;
-            font-weight: 700;
-            font-size: 13px;
-            color: #6B7280;
-            transition: all .25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            position: relative;
-            z-index: 2;
+            flex: 1; padding: 10px 16px; border-radius: 9px;
+            font-weight: 700; font-size: 13px; color: #6B7280;
+            transition: all .25s ease; display: flex; align-items: center;
+            justify-content: center; gap: 8px; position: relative; z-index: 2;
         }
-        .role-toggle button.active {
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,.15);
-        }
+        .role-toggle button.active { color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
         .role-toggle button[data-role="teacher"].active { background: #800000; }
-        .role-toggle button[data-role="admin"].active { background: #D4AF37; color: #1A472A; }
+        .role-toggle button[data-role="admin"].active   { background: #D4AF37; color: #1A472A; }
 
-        /* Mode-driven accent colors (CSS variables) */
         .login-card { --accent: #800000; --accent-ring: rgba(128,0,0,.25); }
         .login-card[data-mode="admin"] { --accent: #D4AF37; --accent-ring: rgba(212,175,55,.35); }
 
         .accent-border-top { border-top-color: var(--accent) !important; }
-        .accent-bg-tint { background-color: var(--accent-ring) !important; }
-        .accent-text { color: var(--accent) !important; }
-        .accent-bg { background-color: var(--accent) !important; }
+        .accent-bg-tint    { background-color: var(--accent-ring) !important; }
+        .accent-text       { color: var(--accent) !important; }
+        .accent-bg         { background-color: var(--accent) !important; }
         .accent-focus:focus {
             border-color: var(--accent) !important;
             box-shadow: 0 0 0 3px var(--accent-ring) !important;
         }
-
-        /* Admin button text should be dark on gold */
         .login-card[data-mode="admin"] .accent-bg { color: #1A472A; }
 
-        /* Smooth field transition */
         .field-fade { transition: opacity .3s ease, max-height .3s ease, margin .3s ease; overflow: hidden; }
         .field-fade.hidden-field { opacity: 0; max-height: 0 !important; margin: 0 !important; padding: 0 !important; }
     </style>
@@ -115,7 +89,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
-                    <a href="home.html" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="index.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
@@ -124,17 +98,19 @@
                     </a>
                 </div>
                 <div class="hidden lg:flex items-center space-x-2">
-                    <a href="enrollment.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
-                    <a href="library.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
-                    <a href="gallery.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
-                    <a href="calendar.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
-                    <a href="alumni.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="index.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Home</a>
+                    <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
+                    <a href="library.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
+                    <a href="gallery.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
+                    <a href="calendar.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
+                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="map.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Campus Map</a>
                 </div>
                 <div class="hidden md:flex items-center space-x-3">
-                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
                         <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
                     </a>
-                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
                         <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
                     </a>
                 </div>
@@ -146,14 +122,16 @@
             </div>
         </div>
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
-            <a href="enrollment.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
-            <a href="library.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
-            <a href="gallery.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
-            <a href="calendar.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
-            <a href="alumni.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <a href="index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Home</a>
+            <a href="enrollment.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
+            <a href="library.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
+            <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
+            <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
+            <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <a href="map.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Campus Map</a>
             <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
-                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
+                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
+                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
             </div>
         </div>
     </nav>
@@ -168,16 +146,20 @@
 
                 <!-- Card Header -->
                 <div class="bg-white px-8 pt-8 pb-6 text-center border-b border-gray-100">
-                    <div id="login-icon-wrap" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 accent-bg-tint accent-text transition-colors duration-300">
+                    <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 accent-bg-tint accent-text transition-colors duration-300">
                         <i id="login-icon" data-lucide="graduation-cap" class="w-10 h-10"></i>
                     </div>
                     <span id="login-badge" class="accent-bg text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors duration-300">Staff Access Only</span>
-                    <h1 id="login-title" class="text-2xl font-bold text-brand-green mt-3 transition-all duration-300">Portal Login</h1>
-                    <p id="login-subtitle" class="text-gray-500 text-sm mt-1 transition-all duration-300">Sign in to access your teacher workstation.</p>
+                    <h1 id="login-title" class="text-2xl font-bold text-brand-green mt-3">Portal Login</h1>
+                    <p id="login-subtitle" class="text-gray-500 text-sm mt-1">Sign in to access your teacher workstation.</p>
                 </div>
 
                 <!-- Role Toggle + Form -->
-                <form id="login-form" onsubmit="handleLogin(event);" class="p-8 space-y-5">
+<form id="login-form" action="teacher-login.php" method="post" class="p-8 space-y-5" onsubmit="document.getElementById('form-role').value = currentRole;">     
+    <input type="hidden" name="role" id="form-role" value="teacher">
+
+                    <!-- SERVER-SIDE ERROR PLACEHOLDER -->
+                    <!-- LOGIN_ERROR_HTML -->
 
                     <!-- Role Toggle -->
                     <div class="role-toggle" role="tablist" aria-label="Select login role">
@@ -189,19 +171,14 @@
                         </button>
                     </div>
 
-                    <!-- Error message -->
-                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2">
-                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                        <span id="login-error-msg">Invalid credentials. Please try again.</span>
-                    </div>
-
                     <!-- ID / Email -->
                     <div>
                         <label id="label-id" class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID / Email Address</label>
                         <div class="relative">
                             <i id="icon-id" data-lucide="user" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                            <input type="text" id="login-id" required autocomplete="username"
-                                   placeholder="e.g. TSC-2026-014 or name@thamaniacademy.ac.ug"
+                            <input type="text" name="login_id" id="login-id" required autocomplete="username"
+                                   value="<?= htmlspecialchars($prefilled_id ?? '', ENT_QUOTES) ?>"
+                                   placeholder="e.g. TSC-2026-001 or name@thamaniacademy.ac.ug"
                                    class="accent-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm outline-none transition-all">
                         </div>
                     </div>
@@ -211,7 +188,7 @@
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Password</label>
                         <div class="relative">
                             <i data-lucide="lock" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                            <input type="password" id="login-password" required autocomplete="current-password"
+                            <input type="password" name="login_password" id="login-password" required autocomplete="current-password"
                                    placeholder="Enter your password"
                                    class="accent-focus w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg text-sm outline-none transition-all">
                             <button type="button" onclick="togglePassword('login-password', this);"
@@ -226,7 +203,7 @@
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Security PIN (Admin only)</label>
                         <div class="relative">
                             <i data-lucide="key-round" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                            <input type="text" id="login-pin" maxlength="6" inputmode="numeric"
+                            <input type="text" name="admin_pin" id="login-pin" maxlength="6" inputmode="numeric"
                                    placeholder="6-digit PIN"
                                    class="accent-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm tracking-widest outline-none transition-all">
                         </div>
@@ -248,12 +225,6 @@
                         <i data-lucide="log-in" class="w-4 h-4"></i> <span id="login-submit-text">Sign In to Teacher Portal</span>
                     </button>
 
-                    <!-- Demo hint (remove before production) -->
-                    <div id="login-demo-hint" class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 text-[11px] text-gray-500 leading-relaxed">
-                        <span class="font-bold text-gray-700">Demo credentials:</span>
-                        <span id="demo-hint-text">use <code class="bg-white px-1 rounded border">teacher</code> / <code class="bg-white px-1 rounded border">teacher123</code></span>
-                    </div>
-
                     <!-- Role switch helper link -->
                     <div class="pt-4 border-t border-gray-100 text-center text-xs text-gray-500">
                         <span id="switch-hint-text">Are you an administrator?</span>
@@ -267,7 +238,7 @@
 
             </div>
 
-            <!-- Context Card (below form, changes per mode) -->
+            <!-- Context Card -->
             <div class="mt-6 bg-white/95 backdrop-blur rounded-2xl shadow-lg border border-gray-100 p-5 flex items-start gap-3">
                 <i id="context-icon" data-lucide="info" class="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5"></i>
                 <div class="text-xs text-gray-600 leading-relaxed">
@@ -298,11 +269,11 @@
                 <div>
                     <h3 class="text-2xl font-bold mb-4">Quick Links</h3>
                     <ul class="space-y-3 text-gray-300 text-sm">
-                        <li><a href="enrollment.html" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
-                        <li><a href="library.html" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
-                        <li><a href="calendar.html" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
-                        <li><a href="alumni.html" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
-                        <li><a href="teacher-login.html" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
+                        <li><a href="enrollment.php" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
+                        <li><a href="library.php" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
+                        <li><a href="calendar.php" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
+                        <li><a href="alumni.php" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
+                        <li><a href="teacher-login.php" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
                     </ul>
                 </div>
                 <div>
@@ -329,11 +300,10 @@
             setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
         });
 
-        // -------- Role switching --------
         const ROLE_CONFIG = {
             teacher: {
                 idLabel: 'Staff ID / Email Address',
-                idPlaceholder: 'e.g. TSC-2026-014 or name@thamaniacademy.ac.ug',
+                idPlaceholder: 'e.g. TSC-2026-001 or name@thamaniacademy.ac.ug',
                 idIcon: 'user',
                 title: 'Portal Login',
                 subtitle: 'Sign in to access your teacher workstation.',
@@ -346,10 +316,6 @@
                 contextIcon: 'info',
                 contextTitle: 'Need help signing in?',
                 contextBody: 'Contact the ICT Department on <span class="font-semibold text-brand-maroon">+256 414 123 456</span> or email <span class="font-semibold text-brand-maroon">ict@thamaniacademy.ac.ug</span>.',
-                demoHint: 'use <code class="bg-white px-1 rounded border">teacher</code> / <code class="bg-white px-1 rounded border">teacher123</code>',
-                redirect: 'teacher.html',
-                validId: 'teacher',
-                validPwd: 'teacher123',
                 forgotMsg: 'Please contact the ICT Department to reset your password.'
             },
             admin: {
@@ -367,10 +333,6 @@
                 contextIcon: 'shield-alert',
                 contextTitle: 'Security Notice',
                 contextBody: 'All admin activities are logged and monitored. Unauthorized access is strictly prohibited and may result in disciplinary action.',
-                demoHint: 'use <code class="bg-white px-1 rounded border">admin</code> / <code class="bg-white px-1 rounded border">admin123</code>',
-                redirect: 'admin.html',
-                validId: 'admin',
-                validPwd: 'admin123',
                 forgotMsg: 'Please contact the System Administrator to reset your admin password.'
             }
         };
@@ -381,60 +343,44 @@
             currentRole = role;
             const cfg = ROLE_CONFIG[role];
 
-            // Card data-mode drives accent via CSS vars
             document.getElementById('login-card').setAttribute('data-mode', role);
+            document.getElementById('form-role').value = role;
 
-            // Main background tint
             const main = document.getElementById('login-main');
             main.classList.toggle('admin-mode', role === 'admin');
 
-            // Toggle buttons
             document.querySelectorAll('.role-toggle button').forEach(btn => {
                 const isActive = btn.dataset.role === role;
                 btn.classList.toggle('active', isActive);
                 btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
 
-            // Header
             document.getElementById('login-icon').setAttribute('data-lucide', cfg.headerIcon);
             document.getElementById('login-title').textContent = cfg.title;
             document.getElementById('login-subtitle').textContent = cfg.subtitle;
             document.getElementById('login-badge').textContent = cfg.badge;
 
-            // ID field
             document.getElementById('label-id').textContent = cfg.idLabel;
             document.getElementById('login-id').setAttribute('placeholder', cfg.idPlaceholder);
             document.getElementById('icon-id').setAttribute('data-lucide', cfg.idIcon);
 
-            // Admin-only PIN field
             const pinField = document.getElementById('field-admin-pin');
             pinField.classList.toggle('hidden-field', role !== 'admin');
             document.getElementById('login-pin').required = (role === 'admin');
 
-            // Submit button
             document.getElementById('login-submit-text').textContent = cfg.submitText;
 
-            // Demo hint
-            document.getElementById('demo-hint-text').innerHTML = cfg.demoHint;
-
-            // Switch hint link
             document.getElementById('switch-hint-text').textContent = cfg.switchHint;
             document.getElementById('switch-hint-btn').textContent = cfg.switchBtn;
             document.getElementById('switch-hint-btn').onclick = () => setLoginRole(cfg.switchTarget);
 
-            // Context card
             document.getElementById('context-icon').setAttribute('data-lucide', cfg.contextIcon);
             document.getElementById('context-title').textContent = cfg.contextTitle;
             document.getElementById('context-body').innerHTML = cfg.contextBody;
 
-            // Reset error
-            document.getElementById('login-error').classList.add('hidden');
-
-            // Rebuild icons
             lucide.createIcons();
         }
 
-        // -------- Password toggle --------
         function togglePassword(inputId, btn) {
             const input = document.getElementById(inputId);
             const isPwd = input.type === 'password';
@@ -443,34 +389,13 @@
             lucide.createIcons();
         }
 
-        // -------- Forgot password --------
         function handleForgot(e) {
             e.preventDefault();
             alert(ROLE_CONFIG[currentRole].forgotMsg);
         }
 
-        // -------- Submit / demo auth (replace with PHP later) --------
-        function handleLogin(e) {
-            e.preventDefault();
-            const cfg = ROLE_CONFIG[currentRole];
-            const id = document.getElementById('login-id').value.trim();
-            const pwd = document.getElementById('login-password').value.trim();
-            const errBox = document.getElementById('login-error');
-            const errMsg = document.getElementById('login-error-msg');
-
-            if (id === cfg.validId && pwd === cfg.validPwd) {
-                errBox.classList.add('hidden');
-                document.getElementById('page-loader').classList.remove('hidden');
-                setTimeout(() => { window.location.href = cfg.redirect; }, 700);
-            } else {
-                errMsg.textContent = `Invalid ${currentRole === 'admin' ? 'Admin' : 'Staff'} ID or password. Please try again.`;
-                errBox.classList.remove('hidden');
-                lucide.createIcons();
-            }
-        }
-
-        // Initialize default mode
-        setLoginRole('teacher');
-    </script>
+// Initialize role from ?role=admin URL param, otherwise default to teacher
+const urlRole = new URLSearchParams(window.location.search).get('role');
+setLoginRole(urlRole === 'admin' ? 'admin' : 'teacher');    </script>
 </body>
 </html>

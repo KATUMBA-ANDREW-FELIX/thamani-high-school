@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THAMANI ACADEMY - Kakiri | Excellence in Every Endeavor</title>
+    <title>Student Enrollment - THAMANI ACADEMY - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -16,7 +16,6 @@
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .tab-btn.active { background-color: #1A472A; color: #ffffff; }
         .nav-link-active { background-color: #1A472A; color: #ffffff !important; }
         #page-loader {
             position: fixed; inset: 0; background: #1A472A;
@@ -24,6 +23,17 @@
             z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
         }
         #page-loader.hidden { opacity: 0; visibility: hidden; }
+        .section-title {
+            display: flex; align-items: center; gap: .5rem;
+            font-size: 1.125rem; font-weight: 700; color: #1A472A;
+            padding-bottom: .75rem; margin-bottom: 1.25rem;
+            border-bottom: 2px solid #E8F5E9;
+        }
+        .section-title .badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+            background: #1A472A; color: #fff; font-size: .75rem; font-weight: 700;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
@@ -51,7 +61,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
-                    <a href="home.html" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="home.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
@@ -60,17 +70,19 @@
                     </a>
                 </div>
                 <div class="hidden lg:flex items-center space-x-2">
-                    <a href="home.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Home</a>
-<a href="enrollment.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Enrollment</a>                    <a href="library.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
-                    <a href="gallery.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
-                    <a href="calendar.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
-                    <a href="alumni.html" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="home.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Home</a>
+                    <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Enrollment</a>
+                    <a href="library.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
+                    <a href="gallery.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
+                    <a href="calendar.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
+                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="map.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Campus Map</a>
                 </div>
                 <div class="hidden md:flex items-center space-x-3">
-                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
                         <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
                     </a>
-                    <a href="teacher-login.html" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
                         <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
                     </a>
                 </div>
@@ -82,93 +94,265 @@
             </div>
         </div>
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
-            <a href="enrollment.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
-            <a href="library.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
-            <a href="gallery.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
-            <a href="calendar.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
-            <a href="alumni.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <a href="home.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Home</a>
+            <a href="enrollment.php" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-brand-green">Enrollment</a>
+            <a href="library.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
+            <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
+            <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
+            <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <a href="map.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Campus Map</a>
             <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
-                <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
+                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
+                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
             </div>
         </div>
     </nav>
 
-<main class="flex-grow">
-    <section id="page-enrollment" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="mb-10">
-            <h1 class="text-4xl font-bold text-brand-green">Student Enrollment Portal</h1>
-            <p class="text-gray-600 text-lg">Search active student records or register new applicants into Thamani Academy streams.</p>
-        </div>
+    <!-- MAIN: ENROLLMENT -->
+    <main class="flex-grow">
+        <section id="page-enrollment" class="py-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Registration Form -->
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="text-2xl font-bold text-brand-green mb-6 flex items-center gap-2"><i data-lucide="user-plus" class="w-6 h-6 text-brand-maroon"></i> New Student Registration</h3>
-                <form id="form-enroll-student" onsubmit="handleStudentEnrollment(event);" class="space-y-4">
+            <!-- Header -->
+            <div class="mb-10 text-center">
+                <span class="inline-block px-4 py-1.5 rounded-full bg-brand-lightGreen text-brand-green font-bold text-xs uppercase tracking-wider mb-4">Admissions 2026</span>
+                <h1 class="text-4xl font-bold text-brand-green">Student Enrollment Form</h1>
+                <p class="text-gray-600 text-lg mt-3 max-w-2xl mx-auto">Fill in the details below to apply for admission to Thamani Academy. Fields marked with <span class="text-brand-maroon font-bold">*</span> are required.</p>
+            </div>
+
+            <!-- FLASH MESSAGES (injected by enrollment.php) -->
+            <!-- ENROLLMENT_FLASH_MESSAGES -->
+
+            <!-- Form Card -->
+            <div class="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-gray-100">
+
+                <form action="enrollment.php" method="post" class="space-y-10" novalidate>
+
+                    <!-- SECTION 1: STUDENT INFORMATION -->
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Student Name</label>
-                        <input type="text" id="enroll-name" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none" placeholder="e.g. Kato Brian">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Class Level</label>
-                            <select id="enroll-class" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
-                                <option value="Senior 1">Senior 1</option><option value="Senior 2">Senior 2</option>
-                                <option value="Senior 3">Senior 3</option><option value="Senior 4">Senior 4</option>
-                                <option value="Senior 5">Senior 5</option><option value="Senior 6">Senior 6</option>
-                            </select>
+                        <h2 class="section-title">
+                            <span class="badge">1</span>
+                            <i data-lucide="user" class="w-5 h-5"></i>
+                            Student Information
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Student Name <span class="text-brand-maroon">*</span></label>
+                                <input type="text" name="full_name" required maxlength="150"
+                                       value="<?= htmlspecialchars($_POST['full_name'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Kato Brian Mukasa"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Date of Birth <span class="text-brand-maroon">*</span></label>
+                                <input type="date" name="date_of_birth" required
+                                       value="<?= htmlspecialchars($_POST['date_of_birth'] ?? '', ENT_QUOTES) ?>"
+                                       max="<?= date('Y-m-d') ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Gender <span class="text-brand-maroon">*</span></label>
+                                <select name="gender" required class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                                    <option value="">— Select —</option>
+                                    <?php foreach (['Male','Female'] as $g): ?>
+                                        <option value="<?= $g ?>" <?= (($_POST['gender'] ?? '') === $g) ? 'selected' : '' ?>><?= $g ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nationality <span class="text-brand-maroon">*</span></label>
+                                <input type="text" name="nationality" required maxlength="60"
+                                       value="<?= htmlspecialchars($_POST['nationality'] ?? 'Ugandan', ENT_QUOTES) ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">LIN / UNEB Index Number <span class="text-brand-maroon">*</span></label>
+                                <input type="text" name="lin_number" required maxlength="30"
+                                       value="<?= htmlspecialchars($_POST['lin_number'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. U0034/501"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Previous / Current School <span class="text-brand-maroon">*</span></label>
+                                <input type="text" name="previous_school" required maxlength="150"
+                                       value="<?= htmlspecialchars($_POST['previous_school'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Kakiri Secondary School"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream</label>
-                            <select id="enroll-stream" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
-                                <option value="North">North</option><option value="South">South</option>
-                                <option value="East">East</option><option value="West">West</option>
-                            </select>
+                    </div>
+
+                    <!-- SECTION 2: CLASS PLACEMENT -->
+                    <div>
+                        <h2 class="section-title">
+                            <span class="badge">2</span>
+                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                            Class Placement
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Class Applying For <span class="text-brand-maroon">*</span></label>
+                                <select name="class_level" required class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                                    <option value="">— Select Class —</option>
+                                    <?php foreach (['Senior 1','Senior 2','Senior 3','Senior 4','Senior 5','Senior 6'] as $c): ?>
+                                        <option value="<?= $c ?>" <?= (($_POST['class_level'] ?? '') === $c) ? 'selected' : '' ?>><?= $c ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Preferred Stream <span class="text-brand-maroon">*</span></label>
+                                <select name="stream" required class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                                    <option value="">— Select Stream —</option>
+                                    <?php foreach (['North','South','East','West'] as $s): ?>
+                                        <option value="<?= $s ?>" <?= (($_POST['stream'] ?? '') === $s) ? 'selected' : '' ?>><?= $s ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- SECTION 3: PARENT / GUARDIAN -->
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">LIN / UNEB Index No.</label>
-                        <input type="text" id="enroll-lin" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none" placeholder="e.g. U0034/501">
+                        <h2 class="section-title">
+                            <span class="badge">3</span>
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                            Parent / Guardian Information
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Parent / Guardian Name <span class="text-brand-maroon">*</span></label>
+                                <input type="text" name="guardian_name" required maxlength="150"
+                                       value="<?= htmlspecialchars($_POST['guardian_name'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Mukasa David"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Relationship <span class="text-brand-maroon">*</span></label>
+                                <select name="guardian_relationship" required class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                                    <option value="">— Select —</option>
+                                    <?php foreach (['Father','Mother','Uncle','Aunt','Sibling','Guardian','Other'] as $r): ?>
+                                        <option value="<?= $r ?>" <?= (($_POST['guardian_relationship'] ?? '') === $r) ? 'selected' : '' ?>><?= $r ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number <span class="text-brand-maroon">*</span></label>
+                                <input type="tel" name="guardian_phone" required maxlength="20"
+                                       value="<?= htmlspecialchars($_POST['guardian_phone'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="+256 770 000 000"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                                <input type="email" name="guardian_email" maxlength="150"
+                                       value="<?= htmlspecialchars($_POST['guardian_email'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="parent@example.com"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Physical Address <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                                <input type="text" name="guardian_address" maxlength="255"
+                                       value="<?= htmlspecialchars($_POST['guardian_address'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Nansana, Wakiso District"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Occupation <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                                <input type="text" name="guardian_occupation" maxlength="100"
+                                       value="<?= htmlspecialchars($_POST['guardian_occupation'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Civil Servant"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- SECTION 4: EMERGENCY & MEDICAL -->
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Parent / Guardian Phone</label>
-                        <input type="text" id="enroll-contact" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none" placeholder="+256 770 000 000">
+                        <h2 class="section-title">
+                            <span class="badge">4</span>
+                            <i data-lucide="heart-pulse" class="w-5 h-5"></i>
+                            Emergency & Medical
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Emergency Contact Name</label>
+                                <input type="text" name="emergency_name" maxlength="150"
+                                       value="<?= htmlspecialchars($_POST['emergency_name'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="e.g. Namatovu Grace"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Emergency Contact Phone</label>
+                                <input type="tel" name="emergency_phone" maxlength="20"
+                                       value="<?= htmlspecialchars($_POST['emergency_phone'] ?? '', ENT_QUOTES) ?>"
+                                       placeholder="+256 770 000 000"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Medical Conditions / Allergies <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                                <textarea name="medical_notes" rows="3" maxlength="500"
+                                          placeholder="List any known medical conditions, allergies, or special needs..."
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none resize-none"><?= htmlspecialchars($_POST['medical_notes'] ?? '', ENT_QUOTES) ?></textarea>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" class="w-full py-3.5 bg-brand-green text-white font-bold rounded-lg hover:bg-brand-darkGreen transition-colors text-sm shadow">Complete Student Registration</button>
+
+                    <!-- DECLARATION -->
+                    <div class="bg-brand-lightGreen border border-brand-green/20 rounded-xl p-5">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="declaration" required value="1"
+                                   <?= !empty($_POST['declaration']) ? 'checked' : '' ?>
+                                   class="mt-1 rounded border-gray-300 text-brand-green focus:ring-brand-green">
+                            <span class="text-sm text-gray-700 leading-relaxed">
+                                I hereby declare that the information provided above is true and accurate to the best of my knowledge. I understand that any false statement may lead to the cancellation of this application. <span class="text-brand-maroon font-bold">*</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- SUBMIT -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button type="submit" name="submit"
+                                class="flex-1 py-4 bg-brand-green text-white font-bold rounded-lg hover:bg-brand-darkGreen transition-all text-sm shadow hover:shadow-lg flex items-center justify-center gap-2 active:scale-[0.99]">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            Submit Enrollment Application
+                        </button>
+                        <button type="reset"
+                                class="sm:w-40 py-4 border-2 border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                            Clear Form
+                        </button>
+                    </div>
+
                 </form>
             </div>
 
-            <!-- Student Directory Table -->
-            <div class="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                    <h3 class="text-2xl font-bold text-brand-green flex items-center gap-2"><i data-lucide="users" class="w-6 h-6 text-brand-green"></i> Enrolled Student Directory</h3>
-                    <div class="flex gap-2">
-                        <input type="text" id="filter-student-search" oninput="renderStudentDirectory();" placeholder="Search student or LIN..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
-                        <select id="filter-student-class" onchange="renderStudentDirectory();" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
-                            <option value="ALL">All Classes</option>
-                            <option value="Senior 1">Senior 1</option><option value="Senior 2">Senior 2</option>
-                            <option value="Senior 3">Senior 3</option><option value="Senior 4">Senior 4</option>
-                            <option value="Senior 5">Senior 5</option><option value="Senior 6">Senior 6</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
-                                <th class="p-3.5">Student Name</th><th class="p-3.5">Class & Stream</th>
-                                <th class="p-3.5">LIN / Index</th><th class="p-3.5">Guardian Contact</th>
-                                <th class="p-3.5 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="student-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
+            <!-- Help Card -->
+            <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-start gap-3">
+                <i data-lucide="info" class="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5"></i>
+                <div class="text-xs text-gray-600 leading-relaxed">
+                    <p class="font-bold text-brand-green mb-1">Need help with your application?</p>
+                    <p>Contact the Admissions Office on <span class="font-semibold text-brand-maroon">+256 414 123 456</span> or email <span class="font-semibold text-brand-maroon">admissions@thamaniacademy.ac.ug</span>.</p>
                 </div>
             </div>
-        </div>
-    </section>
-</main>
+
+        </section>
+    </main>
+
     <!-- FOOTER -->
     <footer class="bg-brand-green text-white pt-16 pb-10 mt-auto border-t-4 border-brand-gold">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -188,11 +372,11 @@
                 <div>
                     <h3 class="text-2xl font-bold mb-4">Quick Links</h3>
                     <ul class="space-y-3 text-gray-300 text-sm">
-                        <li><a href="enrollment.html" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
-                        <li><a href="library.html" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
-                        <li><a href="calendar.html" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
-                        <li><a href="alumni.html" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
-                        <li><a href="teacher-login.html" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
+                        <li><a href="enrollment.php" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
+                        <li><a href="library.php" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
+                        <li><a href="calendar.php" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
+                        <li><a href="alumni.php" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
+                        <li><a href="teacher-login.php" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
                     </ul>
                 </div>
                 <div>
