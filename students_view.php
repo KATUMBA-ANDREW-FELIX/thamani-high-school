@@ -39,17 +39,7 @@ if ($res) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enrolled Students - THAMANI HIGH SCHOOL</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { brand: {
-                slate: '#1F2937', charcoal: '#111827', gold: '#D4AF37',
-                darkGold: '#B8860B', lightGold: '#FEF3C7', lightGrey: '#F3F4F6',
-                green: '#1F2937', darkGreen: '#111827', lightGreen: '#F3F4F6',
-                maroon: '#800000'
-            }}}}
-        }
-    </script>
+    <link rel="stylesheet" href="css/tailwind.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">

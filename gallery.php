@@ -83,20 +83,9 @@ $photosPayload = json_encode(array_map(function($p) {
     <title>Gallery - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="icon" type="image/ico" href="favicon.ico" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { brand: {
-                slate: '#1F2937', charcoal: '#111827', gold: '#D4AF37',
-                darkGold: '#B8860B', lightGold: '#FEF3C7', lightGrey: '#F3F4F6',
-                green: '#1F2937', darkGreen: '#111827', lightGreen: '#F3F4F6',
-                maroon: '#800000', lightMaroon: '#FDF2F2'
-            }}}}
-        }
-    </script>
+    <link rel="stylesheet" href="css/tailwind.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .nav-link-active { background-color: #1F2937; color: #ffffff !important; }

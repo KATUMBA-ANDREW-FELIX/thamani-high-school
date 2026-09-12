@@ -5,9 +5,13 @@
   "description": "THAMANI HIGH SCHOOL Standalone HTML5, CSS3, and JavaScript Web Application",
   "scripts": {
     "start": "npx -y http-server -p 8080",
-    "dev": "npx -y http-server -p 8080"
+    "dev": "npx -y http-server -p 8080",
+    "build:css": "npx -y tailwindcss@3 -i ./css/input.css -o ./css/tailwind.min.css --minify"
   },
   "dependencies": {
     "http-server": "^14.1.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
   }
 }
