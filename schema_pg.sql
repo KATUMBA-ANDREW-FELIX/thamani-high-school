@@ -1,4 +1,4 @@
--- PostgreSQL Database Schema for Thamani High School
+-- PostgreSQL Database Schema for Thamani High School (Optimized with Indexes)
 -- Database Name: thamani_postgress
 
 -- Enable UUID extension if needed in future
@@ -115,6 +115,14 @@ CREATE TABLE IF NOT EXISTS library_resources (
     is_active INT DEFAULT 1,
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Database Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_level);
+CREATE INDEX IF NOT EXISTS idx_teachers_active ON teachers(is_active);
+CREATE INDEX IF NOT EXISTS idx_calendar_active ON calendar_documents(is_active, uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery_photos(is_active, uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_library_active ON library_resources(is_active, uploaded_at DESC);
 
 -- Initial Default System Data
 -- Default Admin Account (password: Admin@2026)
