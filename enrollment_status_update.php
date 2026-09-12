@@ -23,17 +23,26 @@ $newStatus = trim($_POST['new_status'] ?? '');
 
 $allowedStatuses = ['Pending', 'Enrolled', 'Rejected'];
 
+$redirectTo = $_POST['redirect_to'] ?? 'admin_dashboard.php';
+if (!in_array($redirectTo, ['admin_dashboard.php', 'enrollment_view.php'], true)) {
+    $redirectTo = 'admin_dashboard.php';
+}
+
+$setFlash = function($type, $msg) use ($redirectTo) {
+    $payload = ['type' => $type, 'message' => $msg];
+    $_SESSION['admin_flash']  = $payload;
+    $_SESSION['enroll_flash'] = $payload;
+    header('Location: ' . $redirectTo);
+    exit;
+};
+
 // ---------- Validate input ----------
 if ($studentId <= 0) {
-    $_SESSION['enroll_flash'] = ['type' => 'error', 'message' => 'Invalid student selected.'];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('error', 'Invalid student selected.');
 }
 
 if (!in_array($newStatus, $allowedStatuses, true)) {
-    $_SESSION['enroll_flash'] = ['type' => 'error', 'message' => 'Invalid status value.'];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('error', 'Invalid status value.');
 }
 
 // ---------- Confirm student exists ----------
@@ -41,9 +50,7 @@ $check = mysqli_prepare($conn, "SELECT id, full_name, status FROM students WHERE
 
 if ($check === false) {
     error_log('[Enrollment Status Check] ' . mysqli_error($conn));
-    $_SESSION['enroll_flash'] = ['type' => 'error', 'message' => 'System error. Please try again.'];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('error', 'System error. Please try again.');
 }
 
 mysqli_stmt_bind_param($check, "i", $studentId);
@@ -53,19 +60,12 @@ $student = $res ? mysqli_fetch_assoc($res) : null;
 mysqli_stmt_close($check);
 
 if (!$student) {
-    $_SESSION['enroll_flash'] = ['type' => 'error', 'message' => 'Student not found.'];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('error', 'Student not found.');
 }
 
 // ---------- Skip if no change ----------
 if ($student['status'] === $newStatus) {
-    $_SESSION['enroll_flash'] = [
-        'type'    => 'info',
-        'message' => "{$student['full_name']} is already marked as {$newStatus}.",
-    ];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('info', "{$student['full_name']} is already marked as {$newStatus}.");
 }
 
 // ---------- Update the status ----------
@@ -73,27 +73,16 @@ $upd = mysqli_prepare($conn, "UPDATE students SET status = ? WHERE id = ?");
 
 if ($upd === false) {
     error_log('[Enrollment Status Prepare] ' . mysqli_error($conn));
-    $_SESSION['enroll_flash'] = ['type' => 'error', 'message' => 'System error while updating.'];
-    header('Location: enrollment_view.php');
-    exit;
+    $setFlash('error', 'System error while updating.');
 }
 
 mysqli_stmt_bind_param($upd, "si", $newStatus, $studentId);
 
 if (mysqli_stmt_execute($upd)) {
     mysqli_stmt_close($upd);
-    $_SESSION['enroll_flash'] = [
-        'type'    => 'success',
-        'message' => "{$student['full_name']} has been marked as {$newStatus}.",
-    ];
+    $setFlash('success', "{$student['full_name']} has been marked as {$newStatus}.");
 } else {
     error_log('[Enrollment Status Execute] ' . mysqli_stmt_error($upd));
     mysqli_stmt_close($upd);
-    $_SESSION['enroll_flash'] = [
-        'type'    => 'error',
-        'message' => 'Could not update the student status.',
-    ];
+    $setFlash('error', 'Could not update the student status.');
 }
-
-header('Location: enrollment_view.php');
-exit;
