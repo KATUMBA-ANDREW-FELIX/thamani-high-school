@@ -8,7 +8,7 @@
  */
 
 session_start();
-require_once 'conn.php';
+$conn=require_once 'conn.php';
 
 $isAdmin   = !empty($_SESSION['admin_id']);
 $isTeacher = !empty($_SESSION['teacher_id']);

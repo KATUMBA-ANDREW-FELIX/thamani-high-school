@@ -6,7 +6,7 @@ $admin = current_admin();
 $hour  = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 
-require_once 'conn.php';
+$conn=require_once 'conn.php';
 
 // ---------- Stat counters ----------
 function safeCount($conn, string $sql): int {
