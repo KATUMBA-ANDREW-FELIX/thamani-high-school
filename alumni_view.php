@@ -1,18 +1,39 @@
 <?php
 /**
- * Thamani Academy - Alumni Registry (Teacher View)
- * -------------------------------------------------
- * - Teacher-only (requires session)
+ * Thamani Academy - Alumni Registry
+ * ----------------------------------
+ * - Accessible to Teachers AND Admins
  * - Lists all registered alumni from the database
  * - Search filter by name, email, profession, or year
  * - Read-only (registration happens on alumni.php)
  */
 
 require_once 'auth_teacher.php';
-require_teacher_login();
-require_password_changed();
+require_once 'auth_admin.php';
 
-$teacher = current_teacher();
+// Allow either a teacher OR an admin
+$isTeacher = !empty($_SESSION['teacher_id']);
+$isAdmin   = !empty($_SESSION['admin_id']);
+
+if (!$isTeacher && !$isAdmin) {
+    header('Location: teacher-login.php');
+    exit;
+}
+
+// Only teachers need to have changed their password
+if ($isTeacher) {
+    require_password_changed();
+}
+
+// Build viewer info for nav + footer
+$viewerName = $isAdmin
+    ? ($_SESSION['admin_name'] ?? 'Admin')
+    : ($_SESSION['teacher_name'] ?? 'Teacher');
+$viewerId = $isAdmin
+    ? ($_SESSION['admin_admin_id'] ?? 'ADM')
+    : ($_SESSION['teacher_staff_id'] ?? 'TCH');
+$backLink   = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
+$logoutLink = $isAdmin ? 'admin_logout.php'    : 'teacher_logout.php';
 
 // ---------- Search ----------
 $search = trim($_GET['q'] ?? '');
@@ -87,7 +108,7 @@ if ($stmt === false) {
     mysqli_stmt_close($stmt);
 }
 
-// Total count regardless of filter (for the header stat)
+// Total count regardless of filter
 $totalAllRes = mysqli_query($conn, "SELECT COUNT(*) AS c FROM alumni");
 $totalAllRow = $totalAllRes ? mysqli_fetch_assoc($totalAllRes) : ['c' => 0];
 $totalAll    = (int)$totalAllRow['c'];
@@ -134,7 +155,7 @@ $totalAll    = (int)$totalAllRow['c'];
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
             <span>📍 THAMANI ACADEMY - Kakiri Main Campus, Wakiso District, Uganda</span>
             <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamaniacademy.ac.ug</span>
-            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Term III 2026 Active</span>
+            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]"><?= $isAdmin ? 'Admin' : 'Teacher' ?> Session</span>
         </div>
     </div>
 
@@ -143,29 +164,36 @@ $totalAll    = (int)$totalAllRow['c'];
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
-                    <a href="teacher_dashboard.php" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="<?= $backLink ?>" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
-                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Teacher Portal</span>
+                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
                         </div>
                     </a>
                 </div>
 
-                <!-- Desktop Nav: Alumni only (marked active on this page) -->
+                <!-- Desktop Nav -->
                 <div class="hidden lg:flex items-center space-x-2">
-                    <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Alumni</a>
+                    <?php if ($isAdmin): ?>
+                        <a href="admin_dashboard.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Dashboard</a>
+                        <a href="enrollment_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
+                        <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Alumni</a>
+                    <?php else: ?>
+                        <a href="teacher_dashboard.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Dashboard</a>
+                        <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Alumni</a>
+                    <?php endif; ?>
                 </div>
 
                 <div class="hidden md:flex items-center space-x-3">
                     <span class="text-sm text-gray-600 hidden lg:inline">
-                        Signed in as <strong class="text-brand-green"><?= htmlspecialchars($teacher['name']) ?></strong>
+                        Signed in as <strong class="<?= $isAdmin ? 'text-brand-maroon' : 'text-brand-green' ?>"><?= htmlspecialchars($viewerName) ?></strong>
                     </span>
-                    <a href="teacher_dashboard.php"
+                    <a href="<?= $backLink ?>"
                        class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5">
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                     </a>
-                    <a href="teacher_logout.php"
+                    <a href="<?= $logoutLink ?>"
                        class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1.5">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                     </a>
@@ -179,12 +207,15 @@ $totalAll    = (int)$totalAllRow['c'];
             </div>
         </div>
 
-        <!-- Mobile Menu: Alumni + Dashboard + Logout -->
+        <!-- Mobile Menu -->
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <a href="<?= $backLink ?>" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Dashboard</a>
+            <?php if ($isAdmin): ?>
+                <a href="enrollment_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment Registry</a>
+            <?php endif; ?>
             <a href="alumni_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-brand-green">Alumni Registry</a>
             <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <a href="teacher_dashboard.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-lightGreen text-center">Dashboard</a>
-                <a href="teacher_logout.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>
+                <a href="<?= $logoutLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>
             </div>
         </div>
     </nav>
@@ -194,7 +225,7 @@ $totalAll    = (int)$totalAllRow['c'];
         <!-- Page Header -->
         <div class="mb-8 flex flex-wrap justify-between items-end gap-4">
             <div>
-                <span class="bg-brand-maroon text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Teacher Access</span>
+                <span class="bg-brand-maroon text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"><?= $isAdmin ? 'Admin Access' : 'Teacher Access' ?></span>
                 <h1 class="text-4xl font-bold text-brand-green mt-3">Alumni Registry</h1>
                 <p class="text-gray-600 mt-1">All former students who have registered with the Thamani Academy Alumni Network.</p>
             </div>
@@ -354,10 +385,15 @@ $totalAll    = (int)$totalAllRow['c'];
                 <div>
                     <h3 class="text-2xl font-bold mb-4">Quick Links</h3>
                     <ul class="space-y-3 text-gray-300 text-sm">
-                        <li><a href="teacher_dashboard.php" class="hover:text-brand-gold transition-colors">Teacher Dashboard</a></li>
+                        <li><a href="<?= $backLink ?>" class="hover:text-brand-gold transition-colors">Dashboard</a></li>
                         <li><a href="alumni_view.php" class="hover:text-brand-gold transition-colors">Alumni Registry</a></li>
-                        <li><a href="teacher-change-password.php?voluntary=1" class="hover:text-brand-gold transition-colors">Change Password</a></li>
-                        <li><a href="teacher_logout.php" class="hover:text-brand-gold transition-colors">Logout</a></li>
+                        <?php if ($isTeacher): ?>
+                            <li><a href="teacher-change-password.php?voluntary=1" class="hover:text-brand-gold transition-colors">Change Password</a></li>
+                        <?php endif; ?>
+                        <?php if ($isAdmin): ?>
+                            <li><a href="enrollment_view.php" class="hover:text-brand-gold transition-colors">Enrollment Registry</a></li>
+                        <?php endif; ?>
+                        <li><a href="<?= $logoutLink ?>" class="hover:text-brand-gold transition-colors">Logout</a></li>
                     </ul>
                 </div>
                 <div>
@@ -369,9 +405,9 @@ $totalAll    = (int)$totalAllRow['c'];
                     </ul>
                 </div>
             </div>
-            <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center">
+            <div class="pt-8 border-t border-brand-darkGreen text-center text-gray-400 text-sm flex justify-between items-center flex-wrap gap-2">
                 <span>© 2026 Thamani Academy. All rights reserved.</span>
-                <span>Signed in as <?= htmlspecialchars($teacher['staff_id']) ?></span>
+                <span>Signed in as <?= htmlspecialchars($viewerId) ?> · <?= $isAdmin ? 'Admin' : 'Teacher' ?></span>
             </div>
         </div>
     </footer>

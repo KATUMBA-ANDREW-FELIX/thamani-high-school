@@ -1,20 +1,16 @@
 <?php
 /**
- * Thamani Academy - Teacher Login Handler
- * ----------------------------------------
- * - Verifies staff ID/email + password against teachers table
- * - Uses password_verify (bcrypt) + mysqli prepared statements
- * - Sets session, then redirects to:
- *     - teacher-change-password.php  (if must_change_password = 1)
- *     - teacher_dashboard.php        (otherwise)
- * - Renders teacher-login.html with server-side error injection
- *
- * Requires: conn.php exposing a mysqli connection named $conn
+ * Thamani Academy - Unified Login Handler (Teacher + Admin)
+ * ----------------------------------------------------------
+ * - Role toggle in the HTML sends either 'teacher' or 'admin'
+ * - Authenticates against the right table
+ * - Sets separate session keys for each role
+ * - Redirects to the appropriate dashboard
  */
 
 session_start();
 
-// If already logged in, route them past the login page
+// ---------- Already logged in? Route them away ----------
 if (!empty($_SESSION['teacher_id'])) {
     if (!empty($_SESSION['must_change_password'])) {
         header('Location: teacher-change-password.php');
@@ -23,9 +19,13 @@ if (!empty($_SESSION['teacher_id'])) {
     }
     exit;
 }
+if (!empty($_SESSION['admin_id'])) {
+    header('Location: admin_dashboard.php');
+    exit;
+}
 
-$errors      = [];
-$active_role = 'teacher';
+$errors       = [];
+$active_role  = 'teacher';
 $prefilled_id = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,25 +35,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password     = $_POST['login_password'] ?? '';
     $prefilled_id = $identifier;
 
-    if ($active_role === 'admin') {
-        // Admin login is handled in the next phase — show a clear message
-        $errors[] = 'Admin login is not yet enabled. Please use the Teacher tab.';
-    } else {
-        // ---------- Validate presence ----------
-        if ($identifier === '') {
-            $errors[] = 'Please enter your Staff ID or Email address.';
-        } elseif (mb_strlen($identifier) > 150) {
-            $errors[] = 'Staff ID or Email is too long.';
-        }
+    // ---------- Shared presence validation ----------
+    if ($identifier === '') {
+        $errors[] = $active_role === 'admin'
+            ? 'Please enter your Admin ID or Email address.'
+            : 'Please enter your Staff ID or Email address.';
+    } elseif (mb_strlen($identifier) > 150) {
+        $errors[] = 'Identifier is too long.';
+    }
 
-        if ($password === '') {
-            $errors[] = 'Please enter your password.';
-        }
+    if ($password === '') {
+        $errors[] = 'Please enter your password.';
+    }
 
-        // ---------- Authenticate ----------
-        if (empty($errors)) {
-            require_once 'conn.php';
+    if (empty($errors)) {
+        require_once 'conn.php';
 
+        // ============================================================
+        // TEACHER LOGIN
+        // ============================================================
+        if ($active_role === 'teacher') {
             $sql = "SELECT id, staff_id, full_name, email, department,
                            password_hash, must_change_password, is_active
                     FROM teachers
@@ -79,18 +80,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (!password_verify($password, $teacher['password_hash'])) {
                     $errors[] = 'Invalid credentials. Please check your Staff ID and password.';
                 } else {
-                    // ---------- Success: set session ----------
                     session_regenerate_id(true);
 
-                    $_SESSION['teacher_id']              = (int)$teacher['id'];
-                    $_SESSION['teacher_staff_id']        = $teacher['staff_id'];
-                    $_SESSION['teacher_name']            = $teacher['full_name'];
-                    $_SESSION['teacher_email']           = $teacher['email'];
-                    $_SESSION['teacher_department']      = $teacher['department'];
-                    $_SESSION['must_change_password']    = (int)$teacher['must_change_password'];
-                    $_SESSION['teacher_logged_in_at']    = time();
+                    $_SESSION['teacher_id']           = (int)$teacher['id'];
+                    $_SESSION['teacher_staff_id']     = $teacher['staff_id'];
+                    $_SESSION['teacher_name']         = $teacher['full_name'];
+                    $_SESSION['teacher_email']        = $teacher['email'];
+                    $_SESSION['teacher_department']   = $teacher['department'];
+                    $_SESSION['must_change_password'] = (int)$teacher['must_change_password'];
+                    $_SESSION['teacher_logged_in_at'] = time();
 
-                    // Update last_login timestamp
                     $upd = mysqli_prepare($conn, "UPDATE teachers SET last_login = NOW() WHERE id = ?");
                     if ($upd) {
                         mysqli_stmt_bind_param($upd, "i", $teacher['id']);
@@ -98,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         mysqli_stmt_close($upd);
                     }
 
-                    // ---------- Route them ----------
                     if (!empty($_SESSION['must_change_password'])) {
                         header('Location: teacher-change-password.php');
                     } else {
@@ -108,10 +106,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        // ============================================================
+        // ADMIN LOGIN
+        // ============================================================
+        else {
+            $sql = "SELECT id, admin_id, full_name, email,
+                           password_hash, must_change_password, is_active
+                    FROM admins
+                    WHERE admin_id = ? OR email = ?
+                    LIMIT 1";
+
+            $stmt = mysqli_prepare($conn, $sql);
+
+            if ($stmt === false) {
+                error_log('[Admin Login Prepare] ' . mysqli_error($conn));
+                $errors[] = 'A system error occurred. Please try again later.';
+            } else {
+                mysqli_stmt_bind_param($stmt, "ss", $identifier, $identifier);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                $admin  = $result ? mysqli_fetch_assoc($result) : null;
+                mysqli_stmt_close($stmt);
+
+                if (!$admin) {
+                    $errors[] = 'Invalid credentials. Please check your Admin ID and password.';
+                } elseif ((int)$admin['is_active'] !== 1) {
+                    $errors[] = 'This admin account has been disabled.';
+                } elseif (!password_verify($password, $admin['password_hash'])) {
+                    $errors[] = 'Invalid credentials. Please check your Admin ID and password.';
+                } else {
+                    session_regenerate_id(true);
+
+                    $_SESSION['admin_id']                   = (int)$admin['id'];
+                    $_SESSION['admin_admin_id']             = $admin['admin_id'];
+                    $_SESSION['admin_name']                 = $admin['full_name'];
+                    $_SESSION['admin_email']                = $admin['email'];
+                    $_SESSION['admin_must_change_password'] = (int)$admin['must_change_password'];
+                    $_SESSION['admin_logged_in_at']         = time();
+
+                    $upd = mysqli_prepare($conn, "UPDATE admins SET last_login = NOW() WHERE id = ?");
+                    if ($upd) {
+                        mysqli_stmt_bind_param($upd, "i", $admin['id']);
+                        mysqli_stmt_execute($upd);
+                        mysqli_stmt_close($upd);
+                    }
+
+                    header('Location: admin_dashboard.php');
+                    exit;
+                }
+            }
+        }
     }
 }
 
-// ---------- Build server-side error HTML ----------
+// ---------- Build error HTML for the template ----------
 $errorHtml = '';
 if (!empty($errors)) {
     $items = '';

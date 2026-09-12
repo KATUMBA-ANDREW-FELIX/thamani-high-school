@@ -198,17 +198,6 @@
                         </div>
                     </div>
 
-                    <!-- Admin-only: Security PIN -->
-                    <div id="field-admin-pin" class="field-fade hidden-field">
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Security PIN (Admin only)</label>
-                        <div class="relative">
-                            <i data-lucide="key-round" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                            <input type="text" name="admin_pin" id="login-pin" maxlength="6" inputmode="numeric"
-                                   placeholder="6-digit PIN"
-                                   class="accent-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm tracking-widest outline-none transition-all">
-                        </div>
-                    </div>
-
                     <!-- Remember / Forgot -->
                     <div class="flex items-center justify-between text-xs">
                         <label class="flex items-center gap-2 cursor-pointer text-gray-600">
@@ -363,10 +352,6 @@
             document.getElementById('label-id').textContent = cfg.idLabel;
             document.getElementById('login-id').setAttribute('placeholder', cfg.idPlaceholder);
             document.getElementById('icon-id').setAttribute('data-lucide', cfg.idIcon);
-
-            const pinField = document.getElementById('field-admin-pin');
-            pinField.classList.toggle('hidden-field', role !== 'admin');
-            document.getElementById('login-pin').required = (role === 'admin');
 
             document.getElementById('login-submit-text').textContent = cfg.submitText;
 
