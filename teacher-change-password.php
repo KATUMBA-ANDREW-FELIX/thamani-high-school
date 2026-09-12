@@ -78,7 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: teacher_dashboard.php');
                     exit;
                 } else {
-                    $success = true;
+                    // Voluntary change → return to dashboard after saving
+                    header('Location: teacher_dashboard.php');
+                    exit;
                 }
             } else {
                 error_log('[Teacher Change Password] ' . mysqli_stmt_error($upd));

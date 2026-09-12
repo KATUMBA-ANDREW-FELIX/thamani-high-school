@@ -188,10 +188,11 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 </select>
                             </div>
                             <div class="pt-4">
-                                <button onclick="openModal('modal-upload-syllabus');" class="px-4 py-2.5 bg-brand-gold text-brand-green font-bold rounded-lg text-xs shadow hover:bg-yellow-400 flex items-center gap-1.5">
-                                    <i data-lucide="upload" class="w-4 h-4"></i> Upload Syllabus Document
-                                </button>
-                            </div>
+                              <a href="library.php" class="px-4 py-2.5 bg-brand-gold text-brand-green font-bold rounded-lg text-xs shadow hover:bg-yellow-400 flex items-center gap-1.5">
+    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Library Book
+</a>
+
+</div>
                         </div>
                     </div>
                     <div id="syllabus-summary-box" class="bg-brand-lightGreen p-6 rounded-2xl mb-8 flex justify-between items-center border border-brand-green/20"></div>

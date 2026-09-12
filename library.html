@@ -53,7 +53,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
-                    <a href="home.php" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="index.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani Academy Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani Academy</span>
@@ -62,20 +62,26 @@
                     </a>
                 </div>
                 <div class="hidden lg:flex items-center space-x-2">
+                    <a href="index.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Home</a>
                     <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
                     <a href="library.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Library</a>
                     <a href="gallery.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
                     <a href="calendar.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
                     <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="map.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Campus Map</a>
                 </div>
                 <div class="hidden md:flex items-center space-x-3">
-                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
-                        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
-                    </a>
-                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
-                        <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
-                    </a>
-                </div>
+                <a id="nav-dashboard-link" href="teacher_dashboard.php" class="hidden px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+</a>
+<a id="nav-portal-btn-1" href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+    <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
+</a>
+<a id="nav-portal-btn-2" href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
+    <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
+</a>
+
+</div>
                 <div class="lg:hidden flex items-center">
                     <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
                         <i data-lucide="menu" class="w-6 h-6"></i>
@@ -84,16 +90,21 @@
             </div>
         </div>
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <a href="index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Home</a>
             <a href="enrollment.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
             <a href="library.php" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-brand-green">Digital Library</a>
             <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
             <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
             <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
-            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
-                <a href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
-            </div>
-        </div>
+            <a href="map.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Campus Map</a>
+            
+        <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
+    <a id="mob-dashboard-link" href="teacher_dashboard.php" class="hidden w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-lightGreen text-center">Teacher Dashboard</a>
+    <a id="mob-portal-btn-1" href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Teacher Portal</a>
+    <a id="mob-portal-btn-2" href="teacher-login.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-gold text-center">Admin Panel</a>
+</div>
+
+</div>
     </nav>
 
     <!-- MAIN: DIGITAL LIBRARY -->
@@ -101,47 +112,46 @@
         <section id="page-library" class="min-h-screen bg-gray-50 py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
+                <!-- FLASH MESSAGES -->
+                <!-- LIBRARY_FLASH -->
+
                 <!-- Page Title -->
                 <div class="text-center mb-12">
                     <h1 class="text-4xl font-bold mb-4 text-brand-green">Digital Library</h1>
                     <p class="text-gray-600 max-w-2xl mx-auto">Access a comprehensive collection of Ugandan curriculum materials, past papers, and educational resources.</p>
+
+                     <button id="btn-upload-book" onclick="openUploadModal();" class="hidden mt-6 inline-flex items-center gap-2 px-6 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 transition-all shadow-md hover:shadow-lg">
+    <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+    Upload Book / Resource
+</button>
                 </div>
 
                 <!-- Search + Filters -->
                 <div class="flex flex-col md:flex-row gap-6 mb-8">
-                    <!-- Search -->
                     <div class="relative flex-1">
                         <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"></i>
                         <input type="text" id="library-search" oninput="renderLibraryResources();"
                                placeholder="Search for books, papers, or subjects..."
                                class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all">
                     </div>
-                    <!-- Subject Filters -->
                     <div id="subject-filters" class="flex overflow-x-auto pb-2 md:pb-0 gap-2 no-scrollbar"></div>
                 </div>
 
-                <!-- Type Filter Tabs (2 kinds of data) -->
-                <div id="type-filters" class="flex overflow-x-auto pb-2 gap-2 no-scrollbar mb-10 border-b border-gray-200">
-                    <!-- Populated by JS -->
-                </div>
+                <div id="type-filters" class="flex overflow-x-auto pb-2 gap-2 no-scrollbar mb-10 border-b border-gray-200"></div>
 
-                <!-- Resource Count -->
                 <div class="mb-6 flex items-center justify-between">
                     <p id="library-count" class="text-sm text-gray-500 font-medium"></p>
                     <span class="bg-brand-lightGreen text-brand-green font-bold px-4 py-1.5 rounded-full text-xs">Updated 2026 Curriculum</span>
                 </div>
 
-                <!-- Resource Grid -->
                 <div id="library-resources-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
-                <!-- Empty State -->
                 <div id="library-empty" class="hidden text-center py-20">
                     <i data-lucide="search-x" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
                     <h3 class="text-xl font-bold text-gray-700 mb-2">No resources found</h3>
                     <p class="text-gray-500 text-sm">Try adjusting your search or filter to find what you're looking for.</p>
                 </div>
 
-                <!-- NCDC Section -->
                 <div class="mt-20 p-8 rounded-3xl bg-white border-2 border-dashed border-gray-200 text-center">
                     <h2 class="text-2xl font-bold mb-4 text-brand-green">Need more resources?</h2>
                     <p class="text-gray-600 mb-8">Visit the National Curriculum Development Centre (NCDC) portal for official guidelines.</p>
@@ -156,6 +166,80 @@
         </section>
     </main>
 
+    <!-- UPLOAD MODAL (teacher only) -->
+  <div id="modal-upload-book" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-bold text-brand-green flex items-center gap-2">
+                <i data-lucide="upload-cloud" class="w-6 h-6 text-brand-maroon"></i>
+                Upload Library Resource
+            </h3>
+            <button onclick="closeUploadModal();" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <form action="upload_book.php" method="post" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Title <span class="text-brand-maroon">*</span></label>
+                <input type="text" name="title" required maxlength="255" placeholder="e.g. Biology Practical Guide: Local Flora" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Author <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                    <input type="text" name="author" maxlength="150" placeholder="e.g. Dr. Kiggundu John" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Subject <span class="text-brand-maroon">*</span></label>
+                    <input type="text" name="subject" required maxlength="100" list="subject-suggestions" placeholder="e.g. Biology" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                    <datalist id="subject-suggestions">
+                        <option value="Mathematics"><option value="Biology"><option value="Chemistry">
+                        <option value="Physics"><option value="History"><option value="Geography">
+                        <option value="Languages"><option value="English Language"><option value="Computer Science">
+                    </datalist>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Category <span class="text-brand-maroon">*</span></label>
+                    <select name="category" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                        <option value="textbook">Textbook / Guide</option>
+                        <option value="past-paper">Past Paper</option>
+                        <option value="revision">Revision Material</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Class Level</label>
+                    <select name="class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                        <option value="All Levels">All Levels</option>
+                        <option value="Senior 1">Senior 1</option>
+                        <option value="Senior 2">Senior 2</option>
+                        <option value="Senior 3">Senior 3</option>
+                        <option value="Senior 4">Senior 4</option>
+                        <option value="Senior 5">Senior 5</option>
+                        <option value="Senior 6">Senior 6</option>
+                        <option value="Senior 1-2">Senior 1-2</option>
+                        <option value="Senior 3-4">Senior 3-4</option>
+                        <option value="Senior 5-6">Senior 5-6</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Description <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                <textarea name="description" rows="2" maxlength="500" placeholder="Brief description of the resource..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none resize-none"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">File <span class="text-brand-maroon">*</span></label>
+                <input type="file" name="book_file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.epub,.zip" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-brand-green">
+                <p class="text-[11px] text-gray-500 mt-1">Allowed: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, EPUB, ZIP. Max: 25 MB.</p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 py-3 bg-brand-green text-white font-bold rounded-lg hover:bg-brand-darkGreen transition-colors text-sm shadow flex items-center justify-center gap-2">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Upload Resource
+                </button>
+                <button type="button" onclick="closeUploadModal();" class="sm:w-32 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition-colors text-sm">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
     <!-- FOOTER -->
     <footer class="bg-brand-green text-white pt-16 pb-10 mt-auto border-t-4 border-brand-gold">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -197,8 +281,9 @@
             </div>
         </div>
     </footer>
-
+        <!-- LIBRARY_DATA_SCRIPT -->
     <script src="app.js"></script>
+
     <script>
         lucide.createIcons();
 
@@ -207,161 +292,59 @@
         });
 
         // ============================================================
-        // LIBRARY DATA — 2 KINDS OF DUMMY DATA
-        // Replace these arrays with API responses when backend is ready.
+        // BOOKS DATA — injected by library.php from the database
         // ============================================================
+    const _DATA = window.__LIBRARY_DATA || {};
+const ALL_RESOURCES = Array.isArray(_DATA.books) ? _DATA.books : [];
+const AVAILABLE_SUBJECTS = Array.isArray(_DATA.subjects) ? _DATA.subjects : [];
+const IS_TEACHER = !!_DATA.isTeacher;
 
-        // KIND 1: Past Papers & Revision Materials
-        const DUMMY_PAST_PAPERS = [
-            {
-                id: 'pp-001',
-                kind: 'past-paper',
-                title: 'Uganda History: Pre-colonial Era',
-                subject: 'History',
-                level: 'Senior 1-2',
-                format: 'PDF',
-                size: '2.4 MB',
-                downloadUrl: '#',
-                icon: 'file-text'
-            },
-            {
-                id: 'pp-002',
-                kind: 'past-paper',
-                title: 'Mathematics: UNEB Past Papers 2025',
-                subject: 'Mathematics',
-                level: 'Senior 6',
-                format: 'ZIP',
-                size: '12.8 MB',
-                downloadUrl: '#',
-                icon: 'file-text'
-            },
-            {
-                id: 'pp-003',
-                kind: 'past-paper',
-                title: 'Physics: Electricity & Magnetism',
-                subject: 'Physics',
-                level: 'Senior 4',
-                format: 'PDF',
-                size: '3.5 MB',
-                downloadUrl: '#',
-                icon: 'file-text'
-            },
-            {
-                id: 'pp-004',
-                kind: 'past-paper',
-                title: 'Biology: UNEB Past Papers 2024',
-                subject: 'Biology',
-                level: 'Senior 4',
-                format: 'ZIP',
-                size: '18.2 MB',
-                downloadUrl: '#',
-                icon: 'file-text'
-            },
-            {
-                id: 'pp-005',
-                kind: 'past-paper',
-                title: 'Geography: Map Reading & Fieldwork',
-                subject: 'Geography',
-                level: 'Senior 3',
-                format: 'PDF',
-                size: '6.7 MB',
-                downloadUrl: '#',
-                icon: 'file-text'
-            }
-        ];
+if (IS_TEACHER) {
+    // Reveal the upload button in the page title
+    document.getElementById('btn-upload-book')?.classList.remove('hidden');
 
-        // KIND 2: Textbooks & Reference Guides
-        const DUMMY_TEXTBOOKS = [
-            {
-                id: 'tb-001',
-                kind: 'textbook',
-                title: 'Biology Practical Guide: Local Flora',
-                subject: 'Biology',
-                level: 'Senior 3-4',
-                format: 'PDF',
-                size: '5.1 MB',
-                downloadUrl: '#',
-                icon: 'book-open'
-            },
-            {
-                id: 'tb-002',
-                kind: 'textbook',
-                title: 'Luganda Literature: Selected Poems',
-                subject: 'Languages',
-                level: 'Senior 5',
-                format: 'PDF',
-                size: '1.8 MB',
-                downloadUrl: '#',
-                icon: 'book-open'
-            },
-            {
-                id: 'tb-003',
-                kind: 'textbook',
-                title: 'Geography of East Africa',
-                subject: 'Geography',
-                level: 'Senior 2',
-                format: 'PDF',
-                size: '4.2 MB',
-                downloadUrl: '#',
-                icon: 'book-open'
-            },
-            {
-                id: 'tb-004',
-                kind: 'textbook',
-                title: 'Chemistry: Organic Chemistry Notes',
-                subject: 'Chemistry',
-                level: 'Senior 5-6',
-                format: 'PDF',
-                size: '7.3 MB',
-                downloadUrl: '#',
-                icon: 'book-open'
-            },
-            {
-                id: 'tb-005',
-                kind: 'textbook',
-                title: 'English Language: Composition Guide',
-                subject: 'Languages',
-                level: 'Senior 1-4',
-                format: 'DOCX',
-                size: '1.2 MB',
-                downloadUrl: '#',
-                icon: 'book-open'
-            }
-        ];
+    // Swap nav: hide portal buttons, show dashboard
+    document.getElementById('nav-dashboard-link')?.classList.remove('hidden');
+    document.getElementById('nav-portal-btn-1')?.classList.add('hidden');
+    document.getElementById('nav-portal-btn-2')?.classList.add('hidden');
 
-        // Merged dataset — backend will return something like this
-        const ALL_RESOURCES = [...DUMMY_PAST_PAPERS, ...DUMMY_TEXTBOOKS];
-
-        // ============================================================
-        // STATE
-        // ============================================================
+    // Same for mobile
+    document.getElementById('mob-dashboard-link')?.classList.remove('hidden');
+    document.getElementById('mob-portal-btn-1')?.classList.add('hidden');
+    document.getElementById('mob-portal-btn-2')?.classList.add('hidden');
+}
         let activeKind = 'all';
         let activeSubject = 'All';
 
         const KIND_LABELS = {
-            all: { label: 'All Resources', icon: 'layout-grid' },
-            'past-paper': { label: 'Past Papers', icon: 'file-text' },
-            textbook: { label: 'Textbooks & Guides', icon: 'book-open' }
+            all:           { label: 'All Resources',       icon: 'layout-grid' },
+            'past-paper':  { label: 'Past Papers',         icon: 'file-text' },
+            'textbook':    { label: 'Textbooks & Guides',  icon: 'book-open' },
+            'revision':    { label: 'Revision Material',   icon: 'pencil-ruler' },
+            'other':       { label: 'Other Resources',     icon: 'file' }
         };
 
-        const SUBJECTS = ['All', 'Mathematics', 'Biology', 'History', 'Languages', 'Geography', 'Physics', 'Chemistry'];
-
         // ============================================================
-        // RENDER: TYPE FILTERS (2 kinds + All)
+        // RENDER: TYPE FILTERS
         // ============================================================
         function renderTypeFilters() {
             const wrap = document.getElementById('type-filters');
             if (!wrap) return;
-            wrap.innerHTML = Object.entries(KIND_LABELS).map(([key, cfg]) => {
-                const isActive = activeKind === key;
-                return `
-                    <button onclick="setKind('${key}')"
-                            class="filter-pill px-6 py-2 rounded-full font-medium whitespace-nowrap transition-colors flex items-center gap-2
-                                   ${isActive ? 'active text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-                            style="${isActive ? 'background-color:#1A472A;' : ''}">
-                        <i data-lucide="${cfg.icon}" class="w-4 h-4"></i> ${cfg.label}
-                    </button>`;
-            }).join('');
+
+            // Only show categories that actually have books
+            const present = new Set(ALL_RESOURCES.map(r => r.kind));
+
+            wrap.innerHTML = Object.entries(KIND_LABELS)
+                .filter(([key]) => key === 'all' || present.has(key))
+                .map(([key, cfg]) => {
+                    const isActive = activeKind === key;
+                    return `
+                        <button onclick="setKind('${key}')"
+                                class="filter-pill px-6 py-2 rounded-full font-medium whitespace-nowrap transition-colors flex items-center gap-2
+                                       ${isActive ? 'active text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}">
+                            <i data-lucide="${cfg.icon}" class="w-4 h-4"></i> ${cfg.label}
+                        </button>`;
+                }).join('');
             lucide.createIcons();
         }
 
@@ -371,10 +354,13 @@
         function renderSubjectFilters() {
             const wrap = document.getElementById('subject-filters');
             if (!wrap) return;
-            wrap.innerHTML = SUBJECTS.map(sub => {
+
+            const list = ['All', ...AVAILABLE_SUBJECTS];
+
+            wrap.innerHTML = list.map(sub => {
                 const isActive = activeSubject === sub;
                 return `
-                    <button onclick="setSubject('${sub}')"
+                    <button onclick="setSubject('${sub.replace(/'/g, "\\'")}')"
                             class="px-6 py-2 rounded-full font-medium whitespace-nowrap transition-colors
                                    ${isActive ? 'text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
                             style="${isActive ? 'background-color:#1A472A;' : ''}">
@@ -387,20 +373,21 @@
         // RENDER: RESOURCES GRID
         // ============================================================
         function renderLibraryResources() {
-            const grid = document.getElementById('library-resources-grid');
+            const grid  = document.getElementById('library-resources-grid');
             const empty = document.getElementById('library-empty');
             const count = document.getElementById('library-count');
             if (!grid) return;
 
             const q = (document.getElementById('library-search')?.value || '').toLowerCase().trim();
 
-            let list = ALL_RESOURCES.filter(r => {
+            const list = ALL_RESOURCES.filter(r => {
                 const matchesKind = activeKind === 'all' || r.kind === activeKind;
                 const matchesSubject = activeSubject === 'All' || r.subject === activeSubject;
                 const matchesSearch = !q ||
                     r.title.toLowerCase().includes(q) ||
                     r.subject.toLowerCase().includes(q) ||
-                    r.level.toLowerCase().includes(q);
+                    (r.level || '').toLowerCase().includes(q) ||
+                    (r.author || '').toLowerCase().includes(q);
                 return matchesKind && matchesSubject && matchesSearch;
             });
 
@@ -414,35 +401,35 @@
             empty.classList.add('hidden');
 
             grid.innerHTML = list.map(r => {
-                const isTextbook = r.kind === 'textbook';
-                const iconBg = isTextbook ? 'bg-brand-gold/15 group-hover:bg-brand-gold/25' : 'bg-brand-green/10 group-hover:bg-brand-green/20';
-                const iconColor = isTextbook ? 'text-brand-green' : 'text-brand-green';
+                const isBook = r.kind !== 'past-paper';
+                const iconBg = isBook ? 'bg-brand-gold/15 group-hover:bg-brand-gold/25' : 'bg-brand-green/10 group-hover:bg-brand-green/20';
                 const badgeClass = r.format === 'ZIP'
                     ? 'bg-brand-maroon/10 text-brand-maroon'
-                    : r.format === 'DOCX'
+                    : (r.format === 'DOCX' || r.format === 'DOC')
                         ? 'bg-blue-50 text-blue-700'
-                        : 'bg-gray-100 text-gray-500';
+                        : (r.format === 'EPUB')
+                            ? 'bg-purple-50 text-purple-700'
+                            : 'bg-gray-100 text-gray-500';
 
                 return `
                     <div class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col">
                         <div class="flex items-start justify-between mb-4">
                             <div class="p-3 rounded-xl ${iconBg} transition-colors">
-                                <i data-lucide="${r.icon}" class="w-8 h-8 ${iconColor}"></i>
+                                <i data-lucide="${r.icon}" class="w-8 h-8 text-brand-green"></i>
                             </div>
                             <span class="text-xs font-bold px-2 py-1 rounded ${badgeClass} uppercase">${r.format}</span>
                         </div>
-                        <h3 class="text-lg font-bold mb-2 text-gray-900 group-hover:text-brand-green transition-colors leading-snug">${r.title}</h3>
-                        <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
-                            <span class="flex items-center gap-1">
-                                <i data-lucide="globe" class="w-4 h-4"></i> ${r.level}
-                            </span>
+                        <h3 class="text-lg font-bold mb-1 text-gray-900 group-hover:text-brand-green transition-colors leading-snug">${r.title}</h3>
+                        ${r.author ? `<p class="text-xs text-gray-500 italic mb-2">by ${r.author}</p>` : ''}
+                        <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                            <span class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> ${r.level}</span>
                             <span>${r.size}</span>
                         </div>
-                        <button onclick="downloadResource('${r.id}');"
-                                class="mt-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-all active:scale-95 shadow-sm">
+                        <a href="${r.downloadUrl}" download
+                           class="mt-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-all active:scale-95 shadow-sm">
                             <i data-lucide="download" class="w-5 h-5"></i>
                             <span>Download Material</span>
-                        </button>
+                        </a>
                     </div>`;
             }).join('');
 
@@ -452,24 +439,11 @@
         // ============================================================
         // ACTIONS
         // ============================================================
-        function setKind(kind) {
-            activeKind = kind;
-            renderTypeFilters();
-            renderLibraryResources();
-        }
+        function setKind(kind)    { activeKind = kind;    renderTypeFilters();    renderLibraryResources(); }
+        function setSubject(sub)  { activeSubject = sub;  renderSubjectFilters(); renderLibraryResources(); }
 
-        function setSubject(sub) {
-            activeSubject = sub;
-            renderSubjectFilters();
-            renderLibraryResources();
-        }
-
-        function downloadResource(id) {
-            const resource = ALL_RESOURCES.find(r => r.id === id);
-            if (!resource) return;
-            // Frontend placeholder — backend will serve the actual file
-            alert(`Preparing download:\n\n"${resource.title}" (${resource.format}, ${resource.size})\n\nThis will trigger a real file download once the backend is connected.`);
-        }
+        function openUploadModal()  { document.getElementById('modal-upload-book')?.classList.remove('hidden'); }
+        function closeUploadModal() { document.getElementById('modal-upload-book')?.classList.add('hidden'); }
 
         // ============================================================
         // INIT
