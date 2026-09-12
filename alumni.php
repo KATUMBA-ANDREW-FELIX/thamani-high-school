@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
     $name       = trim($_POST['name']       ?? '');
     $year       = trim($_POST['year']       ?? '');
     $profession = trim($_POST['profession'] ?? '');
+    $phone      = trim($_POST['phone']      ?? '');
     $email      = trim($_POST['email']      ?? '');
 
     // ---------- 2. Validate ----------
@@ -81,22 +82,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
 
         // -- 3b. Insert the record if still no errors --
         if (empty($errors)) {
-            $insertSql  = "INSERT INTO alumni (name, year, profession, email)
-                           VALUES (?, ?, ?, ?)";
+            $insertSql  = "INSERT INTO alumni (name, year, profession, phone, email)
+                           VALUES (?, ?, ?, ?, ?)";
             $insertStmt = mysqli_prepare($conn, $insertSql);
 
             if ($insertStmt === false) {
                 error_log('[Alumni Insert Prepare Error] ' . mysqli_error($conn));
                 $errors[] = 'A system error occurred while saving your registration. Please try again later.';
             } else {
-                // "s" = string, "i" = integer
-                // Order must match placeholders: name(s), year(i), profession(s), email(s)
+                $phoneVal = $phone !== '' ? $phone : null;
                 mysqli_stmt_bind_param(
                     $insertStmt,
-                    "siss",
+                    "sisss",
                     $name,
                     $yearInt,
                     $profession,
+                    $phoneVal,
                     $email
                 );
 

@@ -140,12 +140,21 @@
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
-                        <input type="email" name="email" required maxlength="150"
-                               value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES) ?>"
-                               placeholder="alumni@example.com"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number (Optional)</label>
+                            <input type="text" name="phone" maxlength="50"
+                                   value="<?= htmlspecialchars($_POST['phone'] ?? '', ENT_QUOTES) ?>"
+                                   placeholder="+256 700 000 000"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
+                            <input type="email" name="email" required maxlength="150"
+                                   value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES) ?>"
+                                   placeholder="alumni@example.com"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                        </div>
                     </div>
                     <button type="submit" name="submit"
                             class="w-full py-4 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 transition-colors text-sm shadow">

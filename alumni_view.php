@@ -67,7 +67,7 @@ if ($year !== '' && ctype_digit($year)) {
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-$sql = "SELECT id, name, year, profession, email
+$sql = "SELECT id, name, year, profession, phone, email
         FROM alumni
         $whereSql
         ORDER BY id DESC";
@@ -92,13 +92,14 @@ if ($stmt === false) {
         }
     } else {
         // Fallback for servers without mysqlnd
-        mysqli_stmt_bind_result($stmt, $id, $name, $yoc, $prof, $em);
+        mysqli_stmt_bind_result($stmt, $id, $name, $yoc, $prof, $ph, $em);
         while (mysqli_stmt_fetch($stmt)) {
             $alumni[] = [
                 'id'         => $id,
                 'name'       => $name,
                 'year'       => $yoc,
                 'profession' => $prof,
+                'phone'      => $ph,
                 'email'      => $em,
             ];
         }
