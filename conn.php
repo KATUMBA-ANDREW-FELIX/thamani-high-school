@@ -155,6 +155,17 @@ if (!class_exists('ThamaniPolyfillConn')) {
         }
 
         private function initTables() {
+            static $initialized = false;
+            if ($initialized) return;
+            $initialized = true;
+
+            try {
+                $chk = $this->pdo->query("SELECT 1 FROM admins LIMIT 1");
+                if ($chk !== false) {
+                    return; // Database is already initialized
+                }
+            } catch (Exception $e) {}
+
             if ($this->driver === 'pgsql') {
                 $schemaFile = __DIR__ . '/schema_pg.sql';
                 if (file_exists($schemaFile)) {
@@ -326,8 +337,14 @@ if (!function_exists('mysqli_connect')) {
     }
     function mysqli_connect_error() { return null; }
     function mysqli_connect_errno() { return 0; }
-    function mysqli_error($c) { return $c->error ?? ''; }
-    function mysqli_insert_id($c) {
+    function mysqli_error($c = null) {
+        global $conn;
+        if (!($c instanceof ThamaniPolyfillConn)) $c = $conn;
+        return $c->error ?? '';
+    }
+    function mysqli_insert_id($c = null) {
+        global $conn;
+        if (!($c instanceof ThamaniPolyfillConn)) $c = $conn;
         if ($c instanceof ThamaniPolyfillConn && $c->pdo) {
             try {
                 return (int)$c->pdo->lastInsertId();
@@ -337,8 +354,14 @@ if (!function_exists('mysqli_connect')) {
         }
         return 0;
     }
-    function mysqli_prepare($c, $sql) {
-        return $c ? $c->prepare($sql) : false;
+    function mysqli_prepare($c, $sql = null) {
+        global $conn;
+        if (is_string($c) && $sql === null) {
+            $sql = $c;
+            $c = $conn;
+        }
+        if (!($c instanceof ThamaniPolyfillConn)) $c = $conn;
+        return ($c && $c instanceof ThamaniPolyfillConn) ? $c->prepare($sql) : false;
     }
     function mysqli_stmt_bind_param($stmt, $types, ...$vars) {
         return $stmt ? $stmt->bind_param($types, ...$vars) : false;
@@ -385,8 +408,23 @@ if (!function_exists('mysqli_connect')) {
         }
         return 0;
     }
-    function mysqli_query($c, $sql) {
-        if (!$c) return false;
+    function mysqli_query($c, $sql = null) {
+        global $conn;
+        if (is_string($c) && $sql === null) {
+            $sql = $c;
+            $c = $conn;
+        }
+        if (!($c instanceof ThamaniPolyfillConn) || !$c->pdo) {
+            $c = $conn;
+        }
+        if (!($c instanceof ThamaniPolyfillConn) || !$c->pdo) {
+            global $conn;
+            $conn = new ThamaniPolyfillConn();
+            $c = $conn;
+        }
+        if (!($c instanceof ThamaniPolyfillConn) || !$c->pdo) {
+            return false;
+        }
         try {
             $adjustedSql = $sql;
             if (isset($c->driver) && $c->driver === 'pgsql') {
@@ -396,7 +434,7 @@ if (!function_exists('mysqli_connect')) {
                 $adjustedSql = str_ireplace("NOW()", "datetime('now')", $adjustedSql);
             }
             $stmt = $c->pdo->query($adjustedSql);
-            if (str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
+            if ($stmt && str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
                 $res = new ThamaniPolyfillResult();
                 $res->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $res->num_rows = count($res->rows);
@@ -408,8 +446,15 @@ if (!function_exists('mysqli_connect')) {
             return false;
         }
     }
-    function mysqli_real_escape_string($c, $str) { return addslashes($str); }
-    function mysqli_set_charset($c, $charset) { return true; }
-    function mysqli_close($c) { return true; }
+    function mysqli_real_escape_string($c, $str = null) {
+        if ($str === null) {
+            $str = $c;
+        }
+        return addslashes($str);
+    }
+    function mysqli_set_charset($c, $charset = 'utf8') { return true; }
+    function mysqli_close($c = null) { return true; }
 }
+
+return $conn;
 ?>
