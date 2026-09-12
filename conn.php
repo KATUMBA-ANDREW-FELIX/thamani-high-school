@@ -273,21 +273,28 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     );
                 ");
 
-                // Check default admin
-                $stmtAdmin = $this->pdo->query("SELECT COUNT(*) FROM admins");
-                if ($stmtAdmin->fetchColumn() == 0) {
-                    $adminHash = password_hash('Admin@2026', PASSWORD_BCRYPT);
+            // Ensure default admin exists and has valid Admin@2026 hash
+            $validHash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
+            try {
+                $stmtAdmin = $this->pdo->query("SELECT COUNT(*) FROM admins WHERE email = 'admin@thamani.ac.ug' OR admin_id = 'ADM-2026-001'");
+                if ($stmtAdmin && $stmtAdmin->fetchColumn() == 0) {
                     $insAdmin = $this->pdo->prepare("INSERT INTO admins (admin_id, full_name, email, password_hash, must_change_password, is_active) VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', ?, 0, 1)");
-                    $insAdmin->execute([$adminHash]);
+                    $insAdmin->execute([$validHash]);
+                } else {
+                    $this->pdo->exec("UPDATE admins SET password_hash = '$validHash' WHERE email = 'admin@thamani.ac.ug' OR admin_id = 'ADM-2026-001'");
                 }
+            } catch (Exception $e) {}
 
-                // Check default teacher
-                $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers");
-                if ($stmtTeacher->fetchColumn() == 0) {
-                    $teacherHash = password_hash('Admin@2026', PASSWORD_BCRYPT);
+            // Ensure default teacher exists and has valid Admin@2026 hash
+            try {
+                $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
+                if ($stmtTeacher && $stmtTeacher->fetchColumn() == 0) {
                     $insTeacher = $this->pdo->prepare("INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active) VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', ?, 0, 1)");
-                    $insTeacher->execute([$teacherHash]);
+                    $insTeacher->execute([$validHash]);
+                } else {
+                    $this->pdo->exec("UPDATE teachers SET password_hash = '$validHash' WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
                 }
+            } catch (Exception $e) {}
             }
         }
 

@@ -119,10 +119,10 @@ CREATE TABLE IF NOT EXISTS library_resources (
 -- Initial Default System Data
 -- Default Admin Account (password: Admin@2026)
 INSERT INTO admins (admin_id, full_name, email, password_hash, must_change_password, is_active)
-VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', '$2y$10$wN9aL4jY17l2l6gA3wA./.v8w.L6g9t8V10k8T3k6e6.y6P.L', 0, 1)
-ON CONFLICT (email) DO NOTHING;
+VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
+ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
 
 -- Default Teacher Account (password: Admin@2026)
 INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active)
-VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', '$2y$10$wN9aL4jY17l2l6gA3wA./.v8w.L6g9t8V10k8T3k6e6.y6P.L', 0, 1)
-ON CONFLICT (email) DO NOTHING;
+VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
+ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
