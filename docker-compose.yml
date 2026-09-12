@@ -22,8 +22,7 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-dcmq5dQZfmysvewtwrAZTsCeI3w}
       - CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET:-}
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`)"
@@ -47,11 +46,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./schema_pg.sql:/docker-entrypoint-initdb.d/schema_pg.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-thamani_postgress}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - thamani_net
 
