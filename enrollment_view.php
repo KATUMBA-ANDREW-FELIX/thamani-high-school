@@ -496,9 +496,13 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
     <script src="app.js"></script>
     <script>
         lucide.createIcons();
-        window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
-        });
+        const hideLoader = () => document.getElementById('page-loader')?.classList.add('hidden');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideLoader);
+        } else {
+            hideLoader();
+        }
+        setTimeout(hideLoader, 100);
 
         // ============================================================
         // STUDENT DETAIL MODAL

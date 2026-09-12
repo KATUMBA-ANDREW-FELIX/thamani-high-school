@@ -271,9 +271,13 @@ $headingText = $isForced
 
     <script>
         lucide.createIcons();
-        window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
-        });
+        const hideLoader = () => document.getElementById('page-loader')?.classList.add('hidden');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideLoader);
+        } else {
+            hideLoader();
+        }
+        setTimeout(hideLoader, 100);
 
         function togglePwd(id, btn) {
             const el = document.getElementById(id);

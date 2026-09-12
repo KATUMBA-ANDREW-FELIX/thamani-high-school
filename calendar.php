@@ -512,9 +512,13 @@ $docsPayload = json_encode(array_map(function($d) {
         });
 
         lucide.createIcons();
-        window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
-        });
+        const hideLoader = () => document.getElementById('page-loader')?.classList.add('hidden');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideLoader);
+        } else {
+            hideLoader();
+        }
+        setTimeout(hideLoader, 100);
         renderFilters();
         renderDocuments();
     </script>

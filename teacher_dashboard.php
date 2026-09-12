@@ -404,9 +404,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     <script src="app.js"></script>
     <script>
         lucide.createIcons();
-        window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('page-loader')?.classList.add('hidden'), 400);
-        });
+        const hideLoader = () => document.getElementById('page-loader')?.classList.add('hidden');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideLoader);
+        } else {
+            hideLoader();
+        }
+        setTimeout(hideLoader, 100);
     </script>
 </body>
 </html>
