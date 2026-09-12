@@ -25,13 +25,15 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`)"
+      - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`) || Host(`www.thamaniacademy.work.gd`)"
       - "traefik.http.routers.thamani.entrypoints=web,websecure"
       - "traefik.http.routers.thamani.tls=true"
       - "traefik.http.routers.thamani.tls.certresolver=myresolver"
       - "traefik.http.services.thamani.loadbalancer.server.port=80"
+      - "traefik.docker.network=${PROXY_NETWORK:-proxy}"
     networks:
       - thamani_net
+      - proxy
 
   db:
     image: postgres:15-alpine
@@ -52,6 +54,9 @@ services:
 networks:
   thamani_net:
     driver: bridge
+  proxy:
+    name: ${PROXY_NETWORK:-proxy}
+    external: true
 
 volumes:
   pgdata:
