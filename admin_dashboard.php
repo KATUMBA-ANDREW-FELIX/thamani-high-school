@@ -64,24 +64,31 @@ if (!empty($_SESSION['admin_flash'])) {
     <script>
         tailwind.config = {
             theme: { extend: { colors: { brand: {
-                green: '#1A472A', maroon: '#800000', gold: '#D4AF37',
-                lightGreen: '#E8F5E9', darkGreen: '#0F2D1A', lightMaroon: '#FDF2F2'
+                slate: '#1F2937', charcoal: '#111827', gold: '#D4AF37',
+                darkGold: '#B8860B', lightGold: '#FEF3C7', lightGrey: '#F3F4F6',
+                green: '#1F2937', darkGreen: '#111827', lightGreen: '#F3F4F6',
+                maroon: '#800000', lightMaroon: '#FDF2F2'
             }}}}
         }
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .tab-btn.active { background-color: #800000; color: #ffffff; }
-        .tab-btn.active i { color: #ffffff; }
+        .tab-btn.active {
+            background-color: #1F2937 !important;
+            color: #D4AF37 !important;
+            border-color: #D4AF37 !important;
+            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.15);
+        }
+        .tab-btn.active i { color: #D4AF37 !important; }
         #page-loader {
-            position: fixed; inset: 0; background: #1A472A;
+            position: fixed; inset: 0; background: #1F2937;
             display: flex; align-items: center; justify-content: center;
             z-index: 9999; transition: opacity .3s ease, visibility .3s ease;
         }
         #page-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; display: none !important; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
+<body class="bg-gray-50/70 text-gray-900 font-sans flex flex-col min-h-screen">
 
     <div id="page-loader">
         <div class="text-center">
@@ -98,62 +105,66 @@ if (!empty($_SESSION['admin_flash'])) {
     </script>
 
     <!-- Top Announcement Bar -->
-    <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
+    <div class="bg-gray-950 text-white text-xs py-2.5 px-6 border-b border-brand-gold/30">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
-            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Admin Session</span>
+            <span class="flex items-center gap-2">📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
+            <span class="hidden sm:inline text-gray-300">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
+            <span class="bg-brand-gold text-gray-950 px-3 py-0.5 rounded-full font-extrabold uppercase tracking-wider text-[10px] shadow-sm">Admin Session</span>
         </div>
     </div>
 
     <!-- Main Navigation Bar -->
-    <nav class="sticky top-0 z-50 bg-white shadow-md">
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
+            <div class="flex justify-between h-20 items-center">
                 <div class="flex items-center">
-                    <a href="admin_dashboard.php" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
+                    <a href="admin_dashboard.php" class="flex-shrink-0 flex items-center gap-3 group">
+                        <img class="h-12 w-auto transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
-                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
-                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Admin Control Panel</span>
+                            <span class="text-2xl font-black tracking-tight text-gray-900">Thamani High School</span>
+                            <span class="text-[11px] font-bold text-brand-gold tracking-widest uppercase flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-ping"></span>
+                                Admin Control Panel
+                            </span>
                         </div>
                     </a>
                 </div>
-                <div class="hidden lg:flex items-center space-x-2">
-                    <a href="admin_dashboard.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-maroon">Home</a>
-                    <a href="enrollment_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
-                    <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
-                    <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Teachers</button>
-                    <button type="button" onclick="openModal('modal-upload-gallery');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Gallery</button>
-                    <button type="button" onclick="openModal('modal-upload-calendar');" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</button>
+                <div class="hidden lg:flex items-center gap-2">
+                    <a href="admin_dashboard.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white bg-gray-900 shadow-sm">Dashboard</a>
+                    <a href="enrollment_view.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Enrollment</a>
+                    <a href="alumni_view.php" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Alumni</a>
+                    <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Teachers</button>
+                    <button type="button" onclick="openModal('modal-upload-gallery');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Gallery</button>
+                    <button type="button" onclick="openModal('modal-upload-calendar');" class="nav-link px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900">Calendar & Fees</button>
                 </div>
-                <div class="hidden md:flex items-center space-x-3">
-                    <span class="text-sm text-gray-600 hidden lg:inline">
-                        Signed in as <strong class="text-brand-maroon"><?= htmlspecialchars($admin['name']) ?></strong>
-                    </span>
-                    <button type="button" onclick="openModal('modal-admin-change-password');" class="px-3 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-1.5">
-                        <i data-lucide="key-round" class="w-4 h-4 text-brand-maroon"></i> Password
+                <div class="hidden md:flex items-center gap-3">
+                    <div class="hidden xl:flex flex-col text-right mr-2">
+                        <span class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Administrator</span>
+                        <span class="text-xs font-bold text-gray-900"><?= htmlspecialchars($admin['name']) ?></span>
+                    </div>
+                    <button type="button" onclick="openModal('modal-admin-change-password');" class="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-1.5 border border-gray-200">
+                        <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-600"></i> Password
                     </button>
                     <a href="admin_logout.php"
-                       class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1.5">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                       class="px-4 py-2 rounded-xl text-xs font-bold text-gray-900 bg-brand-gold hover:bg-yellow-400 transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
                     </a>
                 </div>
                 <div class="lg:hidden flex items-center">
-                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
+                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-xl text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
                 </div>
             </div>
         </div>
-        <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
-            <a href="admin_dashboard.php" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-brand-maroon">Dashboard</a>
-            <a href="enrollment.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
-            <a href="alumni_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
-            <button type="button" onclick="openModal('modal-upload-gallery');" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</button>
-            <button type="button" onclick="openModal('modal-upload-calendar');" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</button>
-            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <a href="admin_logout.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>
+        <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-3 pb-5 space-y-2">
+            <a href="admin_dashboard.php" class="block px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gray-900">Dashboard</a>
+            <a href="enrollment_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Enrollment</a>
+            <a href="alumni_view.php" class="block px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Alumni</a>
+            <button type="button" onclick="openModal('modal-upload-gallery');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Gallery</button>
+            <button type="button" onclick="openModal('modal-upload-calendar');" class="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Calendar & Fees</button>
+            <div class="pt-3 border-t border-gray-100 flex flex-col gap-2">
+                <a href="admin_logout.php" class="w-full py-2.5 rounded-xl font-bold text-gray-900 bg-brand-gold text-center">Logout</a>
             </div>
         </div>
     </nav>
@@ -162,22 +173,26 @@ if (!empty($_SESSION['admin_flash'])) {
         <section class="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <!-- Welcome Banner -->
-            <div class="flex flex-wrap justify-between items-center mb-8 gap-4 bg-brand-maroon text-white p-8 rounded-2xl shadow-lg">
-                <div>
-                    <span class="bg-brand-gold text-brand-green px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Admin Portal</span>
-                    <h1 class="text-3xl font-bold mt-2"><?= $greeting ?>, <?= htmlspecialchars($admin['name']) ?></h1>
-                    <p class="text-sm text-gray-200 mt-1">Manage school operations: student enrollment, alumni network, gallery, calendar, fees, and library.</p>
-                    <p class="text-xs text-gray-300 mt-2">Admin ID: <strong><?= htmlspecialchars($admin['admin_id']) ?></strong> · Last login: <?= date('d M Y, g:ia', $_SESSION['admin_logged_in_at']) ?></p>
+            <div class="flex flex-wrap justify-between items-center mb-10 gap-6 bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 text-white p-8 md:p-10 rounded-3xl shadow-xl border-b-4 border-brand-gold">
+                <div class="max-w-2xl">
+                    <span class="bg-brand-gold text-gray-950 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block mb-2 shadow-sm">Admin Control Panel</span>
+                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white"><?= $greeting ?>, <?= htmlspecialchars($admin['name']) ?></h1>
+                    <p class="text-sm text-gray-300 mt-2 leading-relaxed">Manage school operations seamlessly: student enrollments, teacher directory, alumni network, digital library, and academic schedules.</p>
+                    <div class="flex items-center gap-4 text-xs text-gray-400 mt-4 pt-3 border-t border-gray-800">
+                        <span>Admin ID: <strong class="text-amber-400 font-mono"><?= htmlspecialchars($admin['admin_id']) ?></strong></span>
+                        <span>·</span>
+                        <span>Last login: <strong class="text-gray-200"><?= date('d M Y, g:ia', $_SESSION['admin_logged_in_at']) ?></strong></span>
+                    </div>
                 </div>
-                <div class="flex gap-3 flex-wrap">
-                    <button onclick="openModal('modal-add-teacher');" class="px-4 py-2.5 bg-purple-700 text-white font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-purple-800">
+                <div class="flex gap-3 flex-wrap items-center">
+                    <button onclick="openModal('modal-add-teacher');" class="px-5 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg hover:bg-yellow-400 transition-all hover:-translate-y-0.5 active:scale-95">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Add Teacher
                     </button>
-                    <button onclick="openModal('modal-upload-calendar');" class="px-4 py-2.5 bg-brand-gold text-brand-green font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-yellow-400">
-                        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Upload Calendar/Fees
+                    <button onclick="openModal('modal-upload-calendar');" class="px-5 py-3 bg-gray-800 text-white border border-amber-500/30 hover:bg-gray-700 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all hover:-translate-y-0.5">
+                        <i data-lucide="calendar-plus" class="w-4 h-4 text-amber-400"></i> Upload Calendar/Fees
                     </button>
-                    <button onclick="openModal('modal-upload-gallery');" class="px-4 py-2.5 bg-white text-brand-maroon font-bold rounded-lg text-xs flex items-center gap-2 shadow hover:bg-gray-100">
-                        <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Gallery Photo
+                    <button onclick="openModal('modal-upload-gallery');" class="px-5 py-3 bg-white text-gray-900 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md hover:bg-gray-100 transition-all">
+                        <i data-lucide="image-plus" class="w-4 h-4 text-amber-600"></i> Add Gallery Photo
                     </button>
                 </div>
             </div>
@@ -185,96 +200,96 @@ if (!empty($_SESSION['admin_flash'])) {
             <?= $flashHtml ?>
 
             <!-- Overview Stat Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 rounded-xl bg-brand-green/10 text-brand-green flex items-center justify-center">
-                            <i data-lucide="users" class="w-5 h-5"></i>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200/80 hover:border-amber-400/50 hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="users" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">Students</span>
+                        <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Students</span>
                     </div>
-                    <div class="text-2xl font-bold text-brand-green"><?= $totalStudents ?></div>
-                    <div class="text-[11px] text-gray-500 mt-1">
-                        <?= $pendingStudents ?> pending ·
-                        <a href="enrollment.php" class="font-bold text-brand-maroon hover:underline">View</a>
+                    <div class="text-3xl font-black text-gray-900"><?= $totalStudents ?></div>
+                    <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                        <span><?= $pendingStudents ?> pending</span>
+                        <a href="enrollment_view.php" class="font-extrabold text-amber-600 hover:underline">View →</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                            <i data-lucide="user-cog" class="w-5 h-5"></i>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200/80 hover:border-amber-400/50 hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-gray-900 flex items-center justify-center">
+                            <i data-lucide="user-cog" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">Teachers</span>
+                        <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Teachers</span>
                     </div>
-                    <div class="text-2xl font-bold text-purple-700"><?= $totalTeachers ?></div>
-                    <div class="text-[11px] text-gray-500 mt-1">
-                        Staff ·
-                        <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="font-bold text-brand-maroon hover:underline">Manage</button>
+                    <div class="text-3xl font-black text-gray-900"><?= $totalTeachers ?></div>
+                    <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                        <span>Staff</span>
+                        <button type="button" onclick="switchAdminTab('tab-admin-teachers');" class="font-extrabold text-amber-600 hover:underline">Manage →</button>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 rounded-xl bg-brand-maroon/10 text-brand-maroon flex items-center justify-center">
-                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200/80 hover:border-amber-400/50 hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="graduation-cap" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">Alumni</span>
+                        <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Alumni</span>
                     </div>
-                    <div class="text-2xl font-bold text-brand-maroon"><?= $totalAlumni ?></div>
-                    <div class="text-[11px] text-gray-500 mt-1">
-                        Registered ·
-                        <a href="alumni_view.php" class="font-bold text-brand-maroon hover:underline">View</a>
+                    <div class="text-3xl font-black text-gray-900"><?= $totalAlumni ?></div>
+                    <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                        <span>Registered</span>
+                        <a href="alumni_view.php" class="font-extrabold text-amber-600 hover:underline">View →</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 rounded-xl bg-brand-gold/20 text-brand-green flex items-center justify-center">
-                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200/80 hover:border-amber-400/50 hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-gray-900 flex items-center justify-center">
+                            <i data-lucide="book-open" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">Library</span>
+                        <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Library</span>
                     </div>
-                    <div class="text-2xl font-bold text-brand-green"><?= $totalBooks ?></div>
-                    <div class="text-[11px] text-gray-500 mt-1">
-                        Resources ·
-                        <a href="library.php" class="font-bold text-brand-maroon hover:underline">View</a>
+                    <div class="text-3xl font-black text-gray-900"><?= $totalBooks ?></div>
+                    <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                        <span>Resources</span>
+                        <a href="library.php" class="font-extrabold text-amber-600 hover:underline">View →</a>
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                            <i data-lucide="image" class="w-5 h-5"></i>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200/80 hover:border-amber-400/50 hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="image" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">Gallery</span>
+                        <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Gallery</span>
                     </div>
-                    <div class="text-2xl font-bold text-blue-700"><?= $totalPhotos ?></div>
-                    <div class="text-[11px] text-gray-500 mt-1">
-                        Photos ·
-                        <button type="button" onclick="switchAdminTab('tab-admin-gallery');" class="font-bold text-brand-maroon hover:underline">View</button>
+                    <div class="text-3xl font-black text-gray-900"><?= $totalPhotos ?></div>
+                    <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                        <span>Photos</span>
+                        <button type="button" onclick="switchAdminTab('tab-admin-gallery');" class="font-extrabold text-amber-600 hover:underline">View →</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-3 mb-8">
-                <button onclick="switchAdminTab('tab-admin-overview');" id="btn-tab-admin-overview" class="tab-btn active px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200">
+            <!-- Tabs Navigation Bar -->
+            <div class="bg-gray-200/70 p-1.5 rounded-2xl flex flex-wrap gap-2 mb-10 border border-gray-300/60 shadow-inner">
+                <button onclick="switchAdminTab('tab-admin-overview');" id="btn-tab-admin-overview" class="tab-btn active px-6 py-3 rounded-xl text-xs font-black tracking-wide uppercase transition-all flex items-center gap-2">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
                 </button>
-                <button onclick="switchAdminTab('tab-admin-teachers');" id="btn-tab-admin-teachers" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                <button onclick="switchAdminTab('tab-admin-teachers');" id="btn-tab-admin-teachers" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> Teachers & Staff
                 </button>
-                <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> Enrollments
                 </button>
-                <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="graduation-cap" class="w-4 h-4"></i> Alumni
                 </button>
-                <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Calendar & Fees
                 </button>
-                <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700">
+                <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="image" class="w-4 h-4"></i> Gallery
                 </button>
             </div>

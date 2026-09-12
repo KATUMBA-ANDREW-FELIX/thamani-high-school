@@ -108,15 +108,17 @@ $headingText = $isForced
     <script>
         tailwind.config = {
             theme: { extend: { colors: { brand: {
-                green: '#1A472A', maroon: '#800000', gold: '#D4AF37',
-                lightGreen: '#E8F5E9', darkGreen: '#0F2D1A', lightMaroon: '#FDF2F2'
+                slate: '#1F2937', charcoal: '#111827', gold: '#D4AF37',
+                darkGold: '#B8860B', lightGold: '#FEF3C7', lightGrey: '#F3F4F6',
+                green: '#1F2937', darkGreen: '#111827', lightGreen: '#F3F4F6',
+                maroon: '#800000', lightMaroon: '#FDF2F2'
             }}}}
         }
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         #page-loader {
-            position: fixed; inset: 0; background: #1A472A;
+            position: fixed; inset: 0; background: #1F2937;
             display: flex; align-items: center; justify-content: center;
             z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
         }
