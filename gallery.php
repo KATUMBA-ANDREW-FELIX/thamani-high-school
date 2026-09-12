@@ -98,7 +98,7 @@ $photosPayload = json_encode(array_map(function($p) {
             display: flex; align-items: center; justify-content: center;
             z-index: 9999; transition: opacity .5s ease, visibility .5s ease;
         }
-        #page-loader.hidden { opacity: 0; visibility: hidden; }
+        #page-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; display: none !important; }
         .filter-pill.active { background-color: #1A472A !important; color: #fff !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -113,6 +113,12 @@ $photosPayload = json_encode(array_map(function($p) {
             <div class="w-12 h-12 border-4 border-brand-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
     </div>
+    <script>
+        setTimeout(function() {
+            var l = document.getElementById('page-loader');
+            if (l) { l.classList.add('hidden'); l.style.display = 'none'; }
+        }, 50);
+    </script>
 
     <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
