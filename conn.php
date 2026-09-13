@@ -207,10 +207,23 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         full_name TEXT,
                         email TEXT UNIQUE,
                         department TEXT,
+                        is_class_teacher INTEGER DEFAULT 0,
+                        class_teacher_of TEXT,
+                        classes_taught TEXT,
                         password_hash TEXT,
                         must_change_password INTEGER DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
                         last_login DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS class_announcements (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT,
+                        content TEXT,
+                        class_level TEXT,
+                        posted_by_teacher_id INTEGER,
+                        posted_by_name TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 

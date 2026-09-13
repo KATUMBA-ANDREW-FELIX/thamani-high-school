@@ -36,7 +36,7 @@ $ra = mysqli_query($conn, "SELECT id, name, year, profession, phone, email FROM 
 if ($ra) while ($r = mysqli_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = mysqli_query($conn, "SELECT id, staff_id, full_name, email, department, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = mysqli_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = mysqli_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -416,9 +416,10 @@ if (!empty($_SESSION['admin_flash'])) {
                             <thead>
                                 <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
                                     <th class="p-3.5">Staff ID</th>
-                                    <th class="p-3.5">Full Name</th>
+                                    <th class="p-3.5">Full Name & Roles</th>
                                     <th class="p-3.5">Email</th>
                                     <th class="p-3.5">Department</th>
+                                    <th class="p-3.5">Classes Taught</th>
                                     <th class="p-3.5">Status</th>
                                     <th class="p-3.5">Registered</th>
                                     <th class="p-3.5 text-right">Actions</th>
@@ -429,16 +430,31 @@ if (!empty($_SESSION['admin_flash'])) {
                                     <?php foreach ($allTeachers as $t): ?>
                                         <tr class="hover:bg-gray-50 teacher-row">
                                             <td class="p-3.5 font-mono text-xs font-bold text-amber-700 search-target"><?= htmlspecialchars($t['staff_id']) ?></td>
-                                            <td class="p-3.5 font-bold text-gray-900 search-target"><?= htmlspecialchars($t['full_name']) ?></td>
+                                            <td class="p-3.5 font-bold text-gray-900 search-target">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span><?= htmlspecialchars($t['full_name']) ?></span>
+                                                    <?php if ((int)$t['is_class_teacher'] === 1): ?>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                                            <i data-lucide="star" class="w-3 h-3 text-amber-600 fill-amber-500"></i> Class Teacher: <?= htmlspecialchars($t['class_teacher_of']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
                                             <td class="p-3.5 text-xs text-gray-600 search-target"><?= htmlspecialchars($t['email']) ?></td>
                                             <td class="p-3.5 text-xs font-semibold text-gray-700 search-target"><?= htmlspecialchars($t['department'] ?: 'Academic') ?></td>
+                                            <td class="p-3.5 text-xs text-gray-700 search-target">
+                                                <span class="px-2 py-1 bg-gray-100 rounded-lg font-mono text-[11px]"><?= htmlspecialchars($t['classes_taught'] ?: 'None Specified') ?></span>
+                                            </td>
                                             <td class="p-3.5">
                                                 <span class="text-xs font-bold px-2.5 py-1 rounded-full <?= (int)$t['is_active'] === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
                                                     <?= (int)$t['is_active'] === 1 ? 'Active' : 'Disabled' ?>
                                                 </span>
                                             </td>
                                             <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($t['created_at'])) ?></td>
-                                            <td class="p-3.5 text-right whitespace-nowrap">
+                                            <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                <button type="button" onclick="openEditTeacherModal(<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>);" class="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white font-bold rounded-xl text-xs hover:bg-amber-700 transition-colors shadow-sm">
+                                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                                                </button>
                                                 <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete teacher record for <?= htmlspecialchars(addslashes($t['full_name'])) ?>?');">
                                                     <input type="hidden" name="type" value="teacher">
                                                     <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
@@ -451,7 +467,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="7" class="p-8 text-center text-gray-500 text-sm">No teachers registered yet.</td></tr>
+                                    <tr><td colspan="8" class="p-8 text-center text-gray-500 text-sm">No teachers registered yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -730,8 +746,8 @@ if (!empty($_SESSION['admin_flash'])) {
     </main>
 
     <!-- MODAL 1: ADD TEACHER -->
-    <div id="modal-add-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div id="modal-add-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-8">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3">
                 <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-5 h-5 text-amber-600"></i> Register New Teacher
@@ -739,22 +755,62 @@ if (!empty($_SESSION['admin_flash'])) {
                 <button onclick="closeModal('modal-add-teacher');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
             </div>
             <form action="admin_add_teacher.php" method="post" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
-                    <input type="text" name="full_name" required placeholder="e.g. Dr. Sarah Namubiru" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
+                        <input type="text" name="full_name" required placeholder="e.g. Dr. Sarah Namubiru" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
+                        <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
-                    <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
+                        <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
+                        <input type="text" name="department" placeholder="e.g. Science & Technology" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
-                    <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+
+                <!-- ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
+                <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="is_class_teacher" id="add_is_class_teacher" value="1" onchange="toggleAddClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                        <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
+                            <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Assign Elevated Role: Class Teacher
+                        </span>
+                    </label>
+                    <div id="add_class_teacher_wrapper" class="hidden pl-6 space-y-1">
+                        <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form <span class="text-amber-600">*</span></label>
+                        <select name="class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                            <option value="Form 1">Form 1</option>
+                            <option value="Form 2">Form 2</option>
+                            <option value="Form 3">Form 3</option>
+                            <option value="Form 4">Form 4</option>
+                            <option value="Form 5">Form 5</option>
+                            <option value="Form 6">Form 6</option>
+                        </select>
+                        <p class="text-[11px] text-amber-800">Class Teachers can post class timetables & announcements for fellow teachers and students of this class level.</p>
+                    </div>
                 </div>
+
+                <!-- CLASSES TAUGHT -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
-                    <input type="text" name="department" placeholder="e.g. Science & Technology" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
+                            <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="text-amber-600 rounded focus:ring-amber-500">
+                                <span><?= $cOption ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
+
                 <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-900 font-medium">
                     Default password will be automatically assigned as: <strong class="font-mono">Admin@2026</strong>.
                 </div>
@@ -763,6 +819,98 @@ if (!empty($_SESSION['admin_flash'])) {
                         <i data-lucide="user-check" class="w-4 h-4"></i> Save Teacher
                     </button>
                     <button type="button" onclick="closeModal('modal-add-teacher');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 1B: EDIT TEACHER DETAILS & ELEVATED ROLES -->
+    <div id="modal-edit-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-8">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i> Edit Teacher Profile & Roles
+                </h3>
+                <button onclick="closeModal('modal-edit-teacher');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form action="admin_edit_teacher.php" method="post" class="space-y-4">
+                <input type="hidden" name="id" id="edit_teacher_id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
+                        <input type="text" name="full_name" id="edit_full_name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
+                        <input type="text" name="staff_id" id="edit_staff_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
+                        <input type="email" name="email" id="edit_email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
+                        <input type="text" name="department" id="edit_department" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- EDIT ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
+                <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="is_class_teacher" id="edit_is_class_teacher" value="1" onchange="toggleEditClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                        <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
+                            <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Elevated Role: Class Teacher
+                        </span>
+                    </label>
+                    <div id="edit_class_teacher_wrapper" class="hidden pl-6 space-y-1">
+                        <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form</label>
+                        <select name="class_teacher_of" id="edit_class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                            <option value="Form 1">Form 1</option>
+                            <option value="Form 2">Form 2</option>
+                            <option value="Form 3">Form 3</option>
+                            <option value="Form 4">Form 4</option>
+                            <option value="Form 5">Form 5</option>
+                            <option value="Form 6">Form 6</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- EDIT CLASSES TAUGHT -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
+                            <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="edit-class-taught-cb text-amber-600 rounded focus:ring-amber-500">
+                                <span><?= $cOption ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Account Status</label>
+                        <select name="is_active" id="edit_is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="1">Active</option>
+                            <option value="0">Disabled (Suspended)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end pb-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="reset_password" value="1" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                            <span class="text-xs font-bold text-gray-800">Reset password to <code class="bg-amber-100 text-amber-900 px-1 rounded font-mono">Admin@2026</code></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Update Teacher Profile
+                    </button>
+                    <button type="button" onclick="closeModal('modal-edit-teacher');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1229,6 +1377,46 @@ if (!empty($_SESSION['admin_flash'])) {
             `;
             openModal('modal-student');
             lucide.createIcons();
+        }
+
+        // ---------- Class Teacher & Edit Teacher JS Helpers ----------
+        function toggleAddClassTeacherSelect(isCheck) {
+            const w = document.getElementById('add_class_teacher_wrapper');
+            if (w) w.style.display = isCheck ? 'block' : 'none';
+        }
+
+        function toggleEditClassTeacherSelect(isCheck) {
+            const w = document.getElementById('edit_class_teacher_wrapper');
+            if (w) w.style.display = isCheck ? 'block' : 'none';
+        }
+
+        function openEditTeacherModal(t) {
+            document.getElementById('edit_teacher_id').value = t.id || '';
+            document.getElementById('edit_full_name').value = t.full_name || '';
+            document.getElementById('edit_staff_id').value = t.staff_id || '';
+            document.getElementById('edit_email').value = t.email || '';
+            document.getElementById('edit_department').value = t.department || '';
+            document.getElementById('edit_is_active').value = t.is_active !== undefined ? t.is_active : 1;
+
+            const isCT = parseInt(t.is_class_teacher || 0) === 1;
+            const ctCb = document.getElementById('edit_is_class_teacher');
+            if (ctCb) {
+                ctCb.checked = isCT;
+                toggleEditClassTeacherSelect(isCT);
+            }
+
+            const ctSel = document.getElementById('edit_class_teacher_of');
+            if (ctSel && t.class_teacher_of) {
+                ctSel.value = t.class_teacher_of;
+            }
+
+            const taughtArr = (t.classes_taught || '').split(',').map(s => s.trim());
+            document.querySelectorAll('.edit-class-taught-cb').forEach(cb => {
+                cb.checked = taughtArr.includes(cb.value);
+            });
+
+            openModal('modal-edit-teacher');
+            if (window.lucide) lucide.createIcons();
         }
     </script>
 </body>

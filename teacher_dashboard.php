@@ -2,10 +2,19 @@
 require_once 'auth_teacher.php';
 require_teacher_login();
 require_password_changed();
+require_once 'conn.php';
 
 $teacher  = current_teacher();
 $hour     = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
+
+$classAnnouncements = [];
+$caRes = mysqli_query($conn, "SELECT id, title, content, class_level, posted_by_name, created_at FROM class_announcements ORDER BY created_at DESC LIMIT 30");
+if ($caRes) {
+    while ($r = mysqli_fetch_assoc($caRes)) {
+        $classAnnouncements[] = $r;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -116,8 +125,37 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <?php if (!empty($teacher['department'])): ?>
                     · Department: <strong class="text-brand-green"><?= htmlspecialchars($teacher['department']) ?></strong>
                 <?php endif; ?>
+                <?php if (!empty($teacher['classes_taught'])): ?>
+                    · Classes Taught: <strong class="text-brand-green"><?= htmlspecialchars($teacher['classes_taught']) ?></strong>
+                <?php endif; ?>
                 · Last login: <?= date('d M Y, g:ia', $_SESSION['teacher_logged_in_at']) ?>
             </div>
+
+            <?php if (!empty($_SESSION['teacher_flash'])): 
+                $flash = $_SESSION['teacher_flash'];
+                unset($_SESSION['teacher_flash']);
+                $bgColor = $flash['type'] === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200';
+            ?>
+                <div class="mb-6 p-4 rounded-xl border <?= $bgColor ?> text-xs font-bold flex items-center gap-2">
+                    <i data-lucide="<?= $flash['type'] === 'success' ? 'check-circle' : 'alert-triangle' ?>" class="w-4 h-4"></i>
+                    <span><?= htmlspecialchars($flash['message']) ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($teacher['is_class_teacher'])): ?>
+                <div class="mb-6 p-6 rounded-2xl bg-amber-500 text-gray-950 shadow-md border-2 border-amber-400 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full bg-gray-950 text-amber-400 font-black text-[11px] uppercase tracking-wider">⭐ Elevated Role</span>
+                            <h2 class="text-xl font-black">Class Teacher: <?= htmlspecialchars($teacher['class_teacher_of']) ?></h2>
+                        </div>
+                        <p class="text-xs font-medium text-amber-950 mt-1">You are assigned as Class Teacher for <strong><?= htmlspecialchars($teacher['class_teacher_of']) ?></strong>. You can publish class timetables and announcements to fellow teachers & students.</p>
+                    </div>
+                    <button onclick="openModal('modal-post-class-announcement');" class="px-5 py-3 bg-gray-950 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 shadow flex items-center gap-2 transition-transform hover:-translate-y-0.5 active:scale-95">
+                        <i data-lucide="megaphone" class="w-4 h-4 text-amber-400"></i> Post Class Announcement
+                    </button>
+                </div>
+            <?php endif; ?>
 
             <!-- Quick Access: Student Roster & Alumni Registry -->
             <div class="mb-8 flex flex-wrap gap-4">
@@ -160,6 +198,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <!-- Tabs -->
             <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-3 mb-8">
                 <button onclick="switchTeacherTab('tab-teacher-syllabus');" id="btn-tab-teacher-syllabus" class="tab-btn active px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200"><i data-lucide="book-open-check" class="w-4 h-4"></i> UNEB Syllabus Coverage</button>
+                <button onclick="switchTeacherTab('tab-teacher-announcements');" id="btn-tab-teacher-announcements" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700"><i data-lucide="megaphone" class="w-4 h-4"></i> Class Announcements & Timetables</button>
                 <button onclick="switchTeacherTab('tab-teacher-schedule');" id="btn-tab-teacher-schedule" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700"><i data-lucide="clock" class="w-4 h-4"></i> Personal Teaching Schedule</button>
                 <button onclick="switchTeacherTab('tab-teacher-roster');" id="btn-tab-teacher-roster" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700"><i data-lucide="calendar-check" class="w-4 h-4"></i> Teacher On Duty Roster</button>
                 <button onclick="switchTeacherTab('tab-teacher-discipline');" id="btn-tab-teacher-discipline" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700"><i data-lucide="shield-alert" class="w-4 h-4"></i> Discipline & Behavioral Log</button>
@@ -266,6 +305,52 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     </div>
                 </div>
             </div>
+
+            <!-- TAB 5: CLASS ANNOUNCEMENTS & TIMETABLES -->
+            <div id="tab-teacher-announcements" class="teacher-tab-content hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-brand-green flex items-center gap-2">
+                                <i data-lucide="megaphone" class="w-6 h-6 text-amber-600"></i> Class Announcements & Timetables
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Official announcements, timetables, and class updates published by Class Teachers.</p>
+                        </div>
+                        <?php if (!empty($teacher['is_class_teacher'])): ?>
+                            <button onclick="openModal('modal-post-class-announcement');" class="px-4 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-xs hover:bg-amber-700 shadow flex items-center gap-2">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Post Announcement for <?= htmlspecialchars($teacher['class_teacher_of']) ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="space-y-4">
+                        <?php if (!empty($classAnnouncements)): ?>
+                            <?php foreach ($classAnnouncements as $ann): ?>
+                                <div class="p-6 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:shadow-md transition-all">
+                                    <div class="flex flex-wrap justify-between items-start gap-2 mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 bg-amber-100 text-amber-900 font-extrabold text-xs rounded-full border border-amber-200">
+                                                <?= htmlspecialchars($ann['class_level']) ?>
+                                            </span>
+                                            <h4 class="text-lg font-bold text-gray-900"><?= htmlspecialchars($ann['title']) ?></h4>
+                                        </div>
+                                        <span class="text-xs font-mono text-gray-500"><?= date('d M Y, g:ia', strtotime($ann['created_at'])) ?></span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed mb-3"><?= htmlspecialchars($ann['content']) ?></p>
+                                    <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-600"></i> Posted by <strong class="text-gray-800"><?= htmlspecialchars($ann['posted_by_name']) ?></strong>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="p-12 text-center text-gray-500 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                                No class announcements or timetables posted yet.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -354,6 +439,38 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <input type="text" id="disc-action" required placeholder="e.g. Counseling & Parent notified" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                 </div>
                 <button type="submit" class="w-full py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 text-sm">Submit Behavioral Record</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: POST CLASS ANNOUNCEMENT / TIMETABLE -->
+    <div id="modal-post-class-announcement" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="megaphone" class="w-5 h-5 text-amber-600"></i> Post Class Announcement
+                </h3>
+                <button onclick="closeModal('modal-post-class-announcement');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form action="post_class_announcement.php" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class / Form</label>
+                    <input type="text" name="class_level" value="<?= htmlspecialchars($teacher['class_teacher_of'] ?: 'Form 1') ?>" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 font-bold text-gray-800 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Announcement / Timetable Title <span class="text-amber-600">*</span></label>
+                    <input type="text" name="title" required placeholder="e.g. Form 4 Weekly Test & Revision Timetable" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Content & Details <span class="text-amber-600">*</span></label>
+                    <textarea name="content" rows="5" required placeholder="Write announcement details, timetable schedules, or instructions for teachers and students..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="send" class="w-4 h-4"></i> Publish Announcement
+                    </button>
+                    <button type="button" onclick="closeModal('modal-post-class-announcement');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
+                </div>
             </form>
         </div>
     </div>

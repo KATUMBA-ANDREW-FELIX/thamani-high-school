@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS teachers (
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     department VARCHAR(100),
+    is_class_teacher INT DEFAULT 0,
+    class_teacher_of VARCHAR(50),
+    classes_taught VARCHAR(255),
     password_hash VARCHAR(255) NOT NULL,
     must_change_password INT DEFAULT 0,
     is_active INT DEFAULT 1,
@@ -116,6 +119,22 @@ CREATE TABLE IF NOT EXISTS library_resources (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 8. Class & Teacher Announcements Table
+CREATE TABLE IF NOT EXISTS class_announcements (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    class_level VARCHAR(50) NOT NULL,
+    posted_by_teacher_id INT,
+    posted_by_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Safe migrations for existing installations
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0;
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50);
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255);
+
 -- Database Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
 CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_level);
@@ -123,6 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_teachers_active ON teachers(is_active);
 CREATE INDEX IF NOT EXISTS idx_calendar_active ON calendar_documents(is_active, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery_photos(is_active, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_library_active ON library_resources(is_active, uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_announcements_class ON class_announcements(class_level, created_at DESC);
 
 -- Initial Default System Data
 -- Default Admin Account (password: Admin@2026)
@@ -131,6 +151,6 @@ VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', '$2y$10$N
 ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
 
 -- Default Teacher Account (password: Admin@2026)
-INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active)
-VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
-ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
+INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, password_hash, must_change_password, is_active)
+VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', 1, 'Form 1', 'Form 1, Form 2, Form 3', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
+ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', is_class_teacher = 1, class_teacher_of = 'Form 1', classes_taught = 'Form 1, Form 2, Form 3';

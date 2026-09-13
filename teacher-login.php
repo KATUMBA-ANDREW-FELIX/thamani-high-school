@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // TEACHER LOGIN
         // ============================================================
         if ($active_role === 'teacher') {
-            $sql = "SELECT id, staff_id, full_name, email, department,
+            $sql = "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught,
                            password_hash, must_change_password, is_active
                     FROM teachers
                     WHERE staff_id = ? OR email = ?
@@ -82,13 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     session_regenerate_id(true);
 
-                    $_SESSION['teacher_id']           = (int)$teacher['id'];
-                    $_SESSION['teacher_staff_id']     = $teacher['staff_id'];
-                    $_SESSION['teacher_name']         = $teacher['full_name'];
-                    $_SESSION['teacher_email']        = $teacher['email'];
-                    $_SESSION['teacher_department']   = $teacher['department'];
-                    $_SESSION['must_change_password'] = (int)$teacher['must_change_password'];
-                    $_SESSION['teacher_logged_in_at'] = time();
+                    $_SESSION['teacher_id']               = (int)$teacher['id'];
+                    $_SESSION['teacher_staff_id']         = $teacher['staff_id'];
+                    $_SESSION['teacher_name']             = $teacher['full_name'];
+                    $_SESSION['teacher_email']            = $teacher['email'];
+                    $_SESSION['teacher_department']       = $teacher['department'];
+                    $_SESSION['teacher_is_class_teacher'] = (int)($teacher['is_class_teacher'] ?? 0);
+                    $_SESSION['teacher_class_teacher_of'] = $teacher['class_teacher_of'] ?? '';
+                    $_SESSION['teacher_classes_taught']   = $teacher['classes_taught'] ?? '';
+                    $_SESSION['must_change_password']     = (int)$teacher['must_change_password'];
+                    $_SESSION['teacher_logged_in_at']     = time();
 
                     $upd = mysqli_prepare($conn, "UPDATE teachers SET last_login = NOW() WHERE id = ?");
                     if ($upd) {

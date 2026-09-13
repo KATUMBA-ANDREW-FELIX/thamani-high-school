@@ -12,10 +12,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$fullName   = trim($_POST['full_name'] ?? '');
-$staffId    = trim($_POST['staff_id'] ?? $_POST['teacher_id'] ?? '');
-$email      = trim($_POST['email'] ?? '');
-$department = trim($_POST['department'] ?? $_POST['subject'] ?? '');
+$fullName       = trim($_POST['full_name'] ?? '');
+$staffId        = trim($_POST['staff_id'] ?? $_POST['teacher_id'] ?? '');
+$email          = trim($_POST['email'] ?? '');
+$department     = trim($_POST['department'] ?? $_POST['subject'] ?? '');
+$isClassTeacher = !empty($_POST['is_class_teacher']) ? 1 : 0;
+$classTeacherOf = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') : null;
+
+// Handle array or comma-separated string for classes_taught
+$classesTaughtRaw = $_POST['classes_taught'] ?? [];
+if (is_array($classesTaughtRaw)) {
+    $classesTaught = implode(', ', array_filter(array_map('trim', $classesTaughtRaw)));
+} else {
+    $classesTaught = trim((string)$classesTaughtRaw);
+}
 
 $errors = [];
 
@@ -54,13 +64,13 @@ $defaultPassword = 'Admin@2026';
 $hash = password_hash($defaultPassword, PASSWORD_BCRYPT);
 $now  = date('Y-m-d H:i:s');
 
-$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active, created_at)
-              VALUES (?, ?, ?, ?, ?, 1, 1, ?)";
+$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, password_hash, must_change_password, is_active, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
 
 $insStmt = mysqli_prepare($conn, $insertSql);
 
 if ($insStmt) {
-    mysqli_stmt_bind_param($insStmt, "ssssss", $staffId, $fullName, $email, $department, $hash, $now);
+    mysqli_stmt_bind_param($insStmt, "ssssissss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $hash, $now);
     if (mysqli_stmt_execute($insStmt)) {
         mysqli_stmt_close($insStmt);
         $_SESSION['admin_flash'] = [

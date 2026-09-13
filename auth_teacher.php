@@ -27,10 +27,13 @@ function require_password_changed(): void {
 /** Returns basic info about the logged-in teacher. */
 function current_teacher(): array {
     return [
-        'id'         => $_SESSION['teacher_id']         ?? null,
-        'staff_id'   => $_SESSION['teacher_staff_id']   ?? null,
-        'name'       => $_SESSION['teacher_name']       ?? null,
-        'email'      => $_SESSION['teacher_email']      ?? null,
-        'department' => $_SESSION['teacher_department'] ?? null,
+        'id'               => $_SESSION['teacher_id']               ?? null,
+        'staff_id'         => $_SESSION['teacher_staff_id']         ?? null,
+        'name'             => $_SESSION['teacher_name']             ?? null,
+        'email'            => $_SESSION['teacher_email']            ?? null,
+        'department'       => $_SESSION['teacher_department']       ?? null,
+        'is_class_teacher' => (int)($_SESSION['teacher_is_class_teacher'] ?? 0),
+        'class_teacher_of' => $_SESSION['teacher_class_teacher_of'] ?? '',
+        'classes_taught'   => $_SESSION['teacher_classes_taught']   ?? '',
     ];
 }
