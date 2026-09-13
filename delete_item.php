@@ -240,6 +240,41 @@ switch ($type) {
         }
         break;
 
+    // ============================================================
+    // 7. CLASS TIMETABLE RECORD (Admin only)
+    // ============================================================
+    case 'timetable':
+        if (!$isAdmin) {
+            $setFlash('error', 'Only administrators can delete class timetables.');
+        }
+        $check = mysqli_prepare($conn, "SELECT id, title, file_path FROM class_timetables WHERE id = ? LIMIT 1");
+        mysqli_stmt_bind_param($check, "i", $id);
+        mysqli_stmt_execute($check);
+        $res = mysqli_stmt_get_result($check);
+        $item = $res ? mysqli_fetch_assoc($res) : null;
+        mysqli_stmt_close($check);
+
+        if (!$item) {
+            $setFlash('error', 'Class timetable not found.');
+        }
+
+        if (!empty($item['file_path']) && file_exists(__DIR__ . '/' . $item['file_path'])) {
+            @unlink(__DIR__ . '/' . $item['file_path']);
+        }
+
+        $stmt = mysqli_prepare($conn, "DELETE FROM class_timetables WHERE id = ?");
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "i", $id);
+            if (mysqli_stmt_execute($stmt)) {
+                mysqli_stmt_close($stmt);
+                $setFlash('success', 'Timetable record deleted successfully.');
+            } else {
+                mysqli_stmt_close($stmt);
+                $setFlash('error', 'Failed to delete timetable record.');
+            }
+        }
+        break;
+
     default:
         $setFlash('error', 'Invalid deletion request.');
 }

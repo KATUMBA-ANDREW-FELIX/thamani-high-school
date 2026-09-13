@@ -47,6 +47,10 @@ $allGallery = [];
 $rg = mysqli_query($conn, "SELECT id, title, caption, category, file_path, uploaded_at FROM gallery_photos WHERE is_active = 1 ORDER BY uploaded_at DESC");
 if ($rg) while ($r = mysqli_fetch_assoc($rg)) $allGallery[] = $r;
 
+$allClassTimetables = [];
+$rct = mysqli_query($conn, "SELECT id, title, class_level, stream, schedule_json, file_name, file_path, file_size, created_at FROM class_timetables ORDER BY created_at DESC");
+if ($rct) while ($r = mysqli_fetch_assoc($rct)) $allClassTimetables[] = $r;
+
 // ---------- Flash messages ----------
 $flashHtml = '';
 if (!empty($_SESSION['admin_flash'])) {
@@ -76,6 +80,8 @@ if (!empty($_SESSION['admin_flash'])) {
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="stylesheet" href="css/tailwind.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         .tab-btn.active {
             background-color: #1F2937 !important;
@@ -290,6 +296,9 @@ if (!empty($_SESSION['admin_flash'])) {
                 </button>
                 <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Calendar & Fees
+                </button>
+                <button onclick="switchAdminTab('tab-admin-timetables');" id="btn-tab-admin-timetables" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i> Class Timetables
                 </button>
                 <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
                     <i data-lucide="image" class="w-4 h-4"></i> Gallery
@@ -742,6 +751,100 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
             </div>
 
+            <!-- TAB 7: CLASS & STREAM TIMETABLES ROSTER -->
+            <div id="tab-admin-timetables" class="admin-tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="clock" class="w-6 h-6 text-amber-600"></i> Class & Stream Timetable Management
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Build weekly Monday–Sunday timetables with custom time slots, set global all-class programs, or import from Excel/Word tables.</p>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <button onclick="openBuilderTimetableModal();" class="px-4 py-2.5 bg-amber-600 text-white font-extrabold rounded-xl text-xs hover:bg-amber-700 shadow flex items-center gap-1.5 transition-transform hover:-translate-y-0.5">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> + Build / Import Timetable
+                            </button>
+                            <button onclick="openModal('modal-upload-timetable');" class="px-4 py-2.5 bg-gray-900 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 shadow flex items-center gap-1.5">
+                                <i data-lucide="file-up" class="w-4 h-4"></i> Upload Document (PDF/Doc)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse" id="table-timetables">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                                    <th class="p-3.5">Timetable Title</th>
+                                    <th class="p-3.5">Target Class & Stream</th>
+                                    <th class="p-3.5">Schedule Type</th>
+                                    <th class="p-3.5">Document Attachment</th>
+                                    <th class="p-3.5">Created Date</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <?php if (!empty($allClassTimetables)): ?>
+                                    <?php foreach ($allClassTimetables as $tt): ?>
+                                        <?php 
+                                            $slots = json_decode($tt['schedule_json'] ?: '[]', true) ?: [];
+                                            $slotCount = count($slots);
+                                        ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="p-3.5 font-bold text-gray-900 flex items-center gap-2">
+                                                <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
+                                                <?= htmlspecialchars($tt['title']) ?>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-extrabold text-xs border border-amber-200">
+                                                    <?= htmlspecialchars($tt['class_level']) ?> (<?= htmlspecialchars($tt['stream']) ?>)
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5 text-xs text-gray-600 font-medium">
+                                                <?php if ($slotCount > 0): ?>
+                                                    <span class="inline-flex items-center gap-1 text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                                                        <i data-lucide="check-circle-2" class="w-3 h-3"></i> <?= $slotCount ?> Custom Time Slots (Mon–Sun)
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-gray-400 font-italic">Document Attachment Only</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5 text-xs text-gray-600">
+                                                <?php if (!empty($tt['file_path'])): ?>
+                                                    <a href="<?= htmlspecialchars($tt['file_path']) ?>" target="_blank" download class="inline-flex items-center gap-1 text-amber-700 font-bold hover:underline">
+                                                        <i data-lucide="download" class="w-3.5 h-3.5"></i> <?= htmlspecialchars($tt['file_name'] ?: 'Download Document') ?>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-gray-400">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($tt['created_at'])) ?></td>
+                                            <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                <?php if ($slotCount > 0): ?>
+                                                    <button type="button" onclick="viewTimetableDetails(<?= htmlspecialchars(json_encode($tt), ENT_QUOTES, 'UTF-8') ?>);" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm">
+                                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Grid
+                                                    </button>
+                                                <?php endif; ?>
+                                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete timetable <?= htmlspecialchars(addslashes($tt['title'])) ?>?');">
+                                                    <input type="hidden" name="type" value="timetable">
+                                                    <input type="hidden" name="id" value="<?= (int)$tt['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="6" class="p-8 text-center text-gray-500 text-sm">No class timetables published yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 
@@ -1061,6 +1164,180 @@ if (!empty($_SESSION['admin_flash'])) {
                     <button type="button" onclick="closeModal('modal-admin-change-password');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL 7: BUILDER & IMPORT TIMETABLE (MON - SUN) -->
+    <div id="modal-builder-timetable" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 my-8 max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i> Interactive Timetable Builder & Import Engine
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Build custom time slots for Monday through Sunday, toggle global school programs, or parse Excel/Word tables.</p>
+                </div>
+                <button onclick="closeModal('modal-builder-timetable');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+
+            <!-- Import Bar -->
+            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="file-spread-sheet" class="w-5 h-5 text-amber-700"></i>
+                    <div>
+                        <div class="text-xs font-bold text-amber-950">Auto-Import Table from Excel (.xlsx, .csv) or Word (.docx)</div>
+                        <div class="text-[11px] text-amber-800">Select a file containing timetable rows to pre-fill period time slots and subjects automatically.</div>
+                    </div>
+                </div>
+                <div>
+                    <input type="file" id="import-timetable-file" accept=".xlsx,.xls,.csv,.docx" onchange="handleImportTimetableFile(event);" class="hidden">
+                    <button type="button" onclick="document.getElementById('import-timetable-file').click();" class="px-4 py-2 bg-amber-600 text-white font-extrabold rounded-lg text-xs hover:bg-amber-700 shadow flex items-center gap-1.5">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Select Spreadsheet / Word Document
+                    </button>
+                </div>
+            </div>
+
+            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
+                        <input type="text" name="title" id="builder_title" required placeholder="e.g. Senior 4 North Master Schedule & Routine" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class / Form <span class="text-amber-600">*</span></label>
+                        <select name="class_level" id="builder_class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="Senior 1">Senior 1 / Form 1</option>
+                            <option value="Senior 2">Senior 2 / Form 2</option>
+                            <option value="Senior 3">Senior 3 / Form 3</option>
+                            <option value="Senior 4">Senior 4 / Form 4</option>
+                            <option value="Senior 5">Senior 5 / Form 5</option>
+                            <option value="Senior 6">Senior 6 / Form 6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
+                        <select name="stream" id="builder_stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="All Streams">All Streams</option>
+                            <option value="North">North</option>
+                            <option value="South">South</option>
+                            <option value="East">East</option>
+                            <option value="West">West</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Time Slots Grid (Monday - Sunday) -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold text-gray-700 uppercase">Weekly Time Slots & Programs (Monday – Sunday)</label>
+                        <button type="button" onclick="addTimetableRow();" class="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Time Slot Row
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                        <table class="w-full text-left text-xs border-collapse" id="table-builder-slots">
+                            <thead>
+                                <tr class="bg-gray-900 text-amber-400 font-bold">
+                                    <th class="p-2.5 min-w-[150px]">Time Slot</th>
+                                    <th class="p-2.5 min-w-[120px]">Program Type</th>
+                                    <th class="p-2.5 min-w-[110px]">Monday</th>
+                                    <th class="p-2.5 min-w-[110px]">Tuesday</th>
+                                    <th class="p-2.5 min-w-[110px]">Wednesday</th>
+                                    <th class="p-2.5 min-w-[110px]">Thursday</th>
+                                    <th class="p-2.5 min-w-[110px]">Friday</th>
+                                    <th class="p-2.5 min-w-[110px]">Saturday</th>
+                                    <th class="p-2.5 min-w-[110px]">Sunday</th>
+                                    <th class="p-2.5 text-center w-12">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="builder-rows-body" class="divide-y divide-gray-200">
+                                <!-- Dynamic Rows Inserted by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Optional File Attachment -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Attach Downloadable Document (Optional PDF / Word / Excel)</label>
+                    <input type="file" name="timetable_file" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
+                </div>
+
+                <div class="flex gap-3 pt-3">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Save & Publish Timetable
+                    </button>
+                    <button type="button" onclick="closeModal('modal-builder-timetable');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 8: DIRECT DOCUMENT UPLOAD (PDF/DOC) -->
+    <div id="modal-upload-timetable" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="file-up" class="w-5 h-5 text-amber-600"></i> Upload Document Timetable
+                </h3>
+                <button onclick="closeModal('modal-upload-timetable');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
+                    <input type="text" name="title" required placeholder="e.g. Senior 4 Term III Master Examination Timetable" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class</label>
+                        <select name="class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="Senior 1">Senior 1</option>
+                            <option value="Senior 2">Senior 2</option>
+                            <option value="Senior 3">Senior 3</option>
+                            <option value="Senior 4">Senior 4</option>
+                            <option value="Senior 5">Senior 5</option>
+                            <option value="Senior 6">Senior 6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
+                        <select name="stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="All Streams">All Streams</option>
+                            <option value="North">North</option>
+                            <option value="South">South</option>
+                            <option value="East">East</option>
+                            <option value="West">West</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable File (.pdf, .docx, .xlsx) <span class="text-amber-600">*</span></label>
+                    <input type="file" name="timetable_file" required accept=".pdf,.docx,.doc,.xlsx,.xls" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="upload" class="w-4 h-4"></i> Upload Document
+                    </button>
+                    <button type="button" onclick="closeModal('modal-upload-timetable');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 9: VIEW TIMETABLE MATRIX MODAL -->
+    <div id="modal-view-timetable-matrix" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <div>
+                    <h3 id="matrix-modal-title" class="text-xl font-bold text-gray-900">Class Timetable Matrix</h3>
+                    <div id="matrix-modal-sub" class="text-xs text-amber-700 font-bold"></div>
+                </div>
+                <button onclick="closeModal('modal-view-timetable-matrix');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="matrix-modal-body" class="overflow-x-auto">
+                <!-- Rendered Matrix -->
+            </div>
         </div>
     </div>
 
@@ -1417,6 +1694,271 @@ if (!empty($_SESSION['admin_flash'])) {
 
             openModal('modal-edit-teacher');
             if (window.lucide) lucide.createIcons();
+        }
+
+        // ---------- Interactive Timetable Builder & Import Helpers ----------
+        let timetableRowIndex = 0;
+
+        function addTimetableRow(data = {}) {
+            timetableRowIndex++;
+            const idx = timetableRowIndex;
+            const tbody = document.getElementById('builder-rows-body');
+            if (!tbody) return;
+
+            const time = data.time || '08:00 AM - 09:20 AM';
+            const isGlobal = data.is_global_program ? 'checked' : '';
+            const program = data.program_title || '';
+            const mon = data.mon || '';
+            const tue = data.tue || '';
+            const wed = data.wed || '';
+            const thu = data.thu || '';
+            const fri = data.fri || '';
+            const sat = data.sat || '';
+            const sun = data.sun || '';
+
+            const tr = document.createElement('tr');
+            tr.id = `builder-row-${idx}`;
+            tr.className = 'hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="p-2">
+                    <input type="text" name="slot_time[]" value="${escVal(time)}" required placeholder="e.g. 08:00 - 09:20 AM" class="w-full px-2 py-1 border border-gray-300 rounded font-mono text-xs">
+                </td>
+                <td class="p-2">
+                    <label class="flex items-center gap-1 cursor-pointer text-[11px] font-bold text-gray-700 mb-1">
+                        <input type="checkbox" name="slot_is_global[]" value="1" ${isGlobal} onchange="toggleSlotRowType(${idx}, this.checked);" class="text-amber-600 rounded">
+                        <span>Global Program</span>
+                    </label>
+                    <input type="text" name="slot_program[]" id="slot_program_${idx}" value="${escVal(program)}" placeholder="e.g. Morning Assembly / Lunch" class="${isGlobal ? '' : 'hidden'} w-full px-2 py-1 border border-amber-300 rounded font-bold text-amber-900 bg-amber-50 text-xs">
+                </td>
+                <td class="p-1.5"><input type="text" name="slot_mon[]" value="${escVal(mon)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_tue[]" value="${escVal(tue)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_wed[]" value="${escVal(wed)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_thu[]" value="${escVal(thu)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_fri[]" value="${escVal(fri)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_sat[]" value="${escVal(sat)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-1.5"><input type="text" name="slot_sun[]" value="${escVal(sun)}" placeholder="Subject / Event" class="slot-day-input-${idx} w-full px-2 py-1 border border-gray-200 rounded text-xs"></td>
+                <td class="p-2 text-center">
+                    <button type="button" onclick="removeTimetableRow(${idx});" class="p-1 text-red-600 hover:text-red-800"><i data-lucide="trash" class="w-4 h-4"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function escVal(v) {
+            return (v || '').replace(/"/g, '&quot;');
+        }
+
+        function toggleSlotRowType(idx, isCheck) {
+            const progInput = document.getElementById(`slot_program_${idx}`);
+            if (progInput) progInput.classList.toggle('hidden', !isCheck);
+        }
+
+        function removeTimetableRow(idx) {
+            const tr = document.getElementById(`builder-row-${idx}`);
+            if (tr) tr.remove();
+        }
+
+        function openBuilderTimetableModal() {
+            document.getElementById('builder-rows-body').innerHTML = '';
+            timetableRowIndex = 0;
+            // Pre-fill standard Ugandan school routine slots
+            const defaultSlots = [
+                { time: '07:00 AM - 08:00 AM', is_global_program: 1, program_title: 'Morning Roll Call & Assembly' },
+                { time: '08:00 AM - 09:20 AM', mon: 'Physics', tue: 'Mathematics', wed: 'Chemistry', thu: 'Biology', fri: 'English', sat: 'Revision', sun: 'Chapel' },
+                { time: '09:20 AM - 10:40 AM', mon: 'Mathematics', tue: 'Physics', wed: 'Biology', thu: 'Chemistry', fri: 'History', sat: 'Prep', sun: 'Free' },
+                { time: '10:40 AM - 11:10 AM', is_global_program: 1, program_title: 'Morning Tea Break' },
+                { time: '11:10 AM - 12:30 PM', mon: 'Chemistry', tue: 'Biology', wed: 'Physics', thu: 'Mathematics', fri: 'Geography', sat: 'Clubs', sun: 'Free' },
+                { time: '01:00 PM - 02:00 PM', is_global_program: 1, program_title: 'Lunch Break & Fellowship' },
+                { time: '02:00 PM - 03:30 PM', mon: 'English', tue: 'History', wed: 'Geography', thu: 'Agriculture', fri: 'Physical Ed', sat: 'Sports', sun: 'Evening Prep' }
+            ];
+            defaultSlots.forEach(s => addTimetableRow(s));
+            openModal('modal-builder-timetable');
+        }
+
+        // ---------- Excel / Word Table Parser Engine (SheetJS & Mammoth) ----------
+        function handleImportTimetableFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const name = file.name.toLowerCase();
+            if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+                parseExcelTimetable(file);
+            } else if (name.endsWith('.docx')) {
+                parseWordTimetable(file);
+            } else {
+                alert('Unsupported file format. Please upload an Excel (.xlsx, .csv) or Word (.docx) file.');
+            }
+        }
+
+        function parseExcelTimetable(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (!rows || rows.length < 2) {
+                        alert('Could not find table rows in the spreadsheet.');
+                        return;
+                    }
+
+                    document.getElementById('builder-rows-body').innerHTML = '';
+                    timetableRowIndex = 0;
+
+                    const startIdx = (String(rows[0][0] || '').toLowerCase().includes('time') || String(rows[0][0] || '').toLowerCase().includes('period')) ? 1 : 0;
+
+                    for (let i = startIdx; i < rows.length; i++) {
+                        const r = rows[i];
+                        if (!r || r.length === 0) continue;
+
+                        const time = String(r[0] || `Slot ${i}`);
+                        const mon = String(r[1] || '');
+                        const tue = String(r[2] || '');
+                        const wed = String(r[3] || '');
+                        const thu = String(r[4] || '');
+                        const fri = String(r[5] || '');
+                        const sat = String(r[6] || '');
+                        const sun = String(r[7] || '');
+
+                        const isGlobal = (mon === tue && tue === wed && wed === thu && mon !== '') ? 1 : 0;
+                        addTimetableRow({
+                            time: time,
+                            is_global_program: isGlobal,
+                            program_title: isGlobal ? mon : '',
+                            mon: isGlobal ? '' : mon,
+                            tue: isGlobal ? '' : tue,
+                            wed: isGlobal ? '' : wed,
+                            thu: isGlobal ? '' : thu,
+                            fri: isGlobal ? '' : fri,
+                            sat: isGlobal ? '' : sat,
+                            sun: isGlobal ? '' : sun
+                        });
+                    }
+                    alert(`Successfully imported ${rows.length - startIdx} timetable rows from Excel! You can now review and publish.`);
+                } catch (err) {
+                    console.error(err);
+                    alert('Error parsing Excel spreadsheet: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseWordTimetable(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (!window.mammoth) {
+                    alert('Mammoth.js parser not loaded.');
+                    return;
+                }
+                mammoth.convertToHtml({ arrayBuffer: e.target.result })
+                    .then(function(result) {
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = result.value;
+                        const tables = wrapper.querySelectorAll('table');
+                        if (tables.length === 0) {
+                            alert('No table element found in the Word document.');
+                            return;
+                        }
+
+                        document.getElementById('builder-rows-body').innerHTML = '';
+                        timetableRowIndex = 0;
+
+                        const trs = tables[0].querySelectorAll('tr');
+                        const startIdx = trs.length > 1 ? 1 : 0;
+                        for (let i = startIdx; i < trs.length; i++) {
+                            const tds = trs[i].querySelectorAll('td, th');
+                            if (tds.length === 0) continue;
+
+                            const time = tds[0] ? tds[0].textContent.trim() : `Period ${i}`;
+                            const mon  = tds[1] ? tds[1].textContent.trim() : '';
+                            const tue  = tds[2] ? tds[2].textContent.trim() : '';
+                            const wed  = tds[3] ? tds[3].textContent.trim() : '';
+                            const thu  = tds[4] ? tds[4].textContent.trim() : '';
+                            const fri  = tds[5] ? tds[5].textContent.trim() : '';
+                            const sat  = tds[6] ? tds[6].textContent.trim() : '';
+                            const sun  = tds[7] ? tds[7].textContent.trim() : '';
+
+                            const isGlobal = (mon === tue && tue === wed && wed === thu && mon !== '') ? 1 : 0;
+                            addTimetableRow({
+                                time: time,
+                                is_global_program: isGlobal,
+                                program_title: isGlobal ? mon : '',
+                                mon: isGlobal ? '' : mon,
+                                tue: isGlobal ? '' : tue,
+                                wed: isGlobal ? '' : wed,
+                                thu: isGlobal ? '' : thu,
+                                fri: isGlobal ? '' : fri,
+                                sat: isGlobal ? '' : sat,
+                                sun: isGlobal ? '' : sun
+                            });
+                        }
+                        alert(`Successfully imported ${trs.length - startIdx} timetable rows from Word document table!`);
+                    })
+                    .catch(function(err) {
+                        alert('Error parsing Word document table: ' + err.message);
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ---------- Matrix View Modal Helper ----------
+        function viewTimetableDetails(tt) {
+            document.getElementById('matrix-modal-title').textContent = tt.title || 'Class Timetable';
+            document.getElementById('matrix-modal-sub').textContent = (tt.class_level || '') + ' · Stream: ' + (tt.stream || 'All');
+
+            const slots = JSON.parse(tt.schedule_json || '[]');
+            if (slots.length === 0) {
+                document.getElementById('matrix-modal-body').innerHTML = '<div class="p-8 text-center text-gray-500">No time slot matrix defined. Document download available.</div>';
+            } else {
+                let html = `
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-gray-900 text-amber-400 font-bold">
+                                <th class="p-3">Time Slot</th>
+                                <th class="p-3">Monday</th>
+                                <th class="p-3">Tuesday</th>
+                                <th class="p-3">Wednesday</th>
+                                <th class="p-3">Thursday</th>
+                                <th class="p-3">Friday</th>
+                                <th class="p-3">Saturday</th>
+                                <th class="p-3">Sunday</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                `;
+                slots.forEach(s => {
+                    if (s.is_global_program) {
+                        html += `
+                            <tr class="bg-amber-100/80 font-bold text-amber-950">
+                                <td class="p-3 font-mono text-xs">${esc(s.time)}</td>
+                                <td colspan="7" class="p-3 text-center uppercase tracking-wider text-amber-900 bg-amber-200/60">
+                                    ⭐ ${esc(s.program_title || 'Global School Program')} (All Classes)
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        html += `
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 font-bold text-gray-700 bg-gray-50 font-mono">${esc(s.time)}</td>
+                                <td class="p-3 ${s.mon ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.mon)}</td>
+                                <td class="p-3 ${s.tue ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.tue)}</td>
+                                <td class="p-3 ${s.wed ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.wed)}</td>
+                                <td class="p-3 ${s.thu ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.thu)}</td>
+                                <td class="p-3 ${s.fri ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.fri)}</td>
+                                <td class="p-3 ${s.sat ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.sat)}</td>
+                                <td class="p-3 ${s.sun ? 'font-semibold text-gray-900' : 'text-gray-400'}">${esc(s.sun)}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                html += `</tbody></table>`;
+                document.getElementById('matrix-modal-body').innerHTML = html;
+            }
+            openModal('modal-view-timetable-matrix');
         }
     </script>
 </body>

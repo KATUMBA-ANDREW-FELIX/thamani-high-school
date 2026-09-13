@@ -68,6 +68,21 @@ CREATE TABLE IF NOT EXISTS alumni (
     email VARCHAR(255)
 );
 
+-- 8. Class Timetables Table
+CREATE TABLE IF NOT EXISTS class_timetables (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    class_level VARCHAR(50) NOT NULL,
+    stream VARCHAR(50) DEFAULT 'All Streams',
+    schedule_json TEXT,
+    file_name VARCHAR(255),
+    file_path TEXT,
+    file_size INT,
+    uploaded_by INT,
+    is_active INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 5. Academic Calendar & Fee Structure Documents Table
 CREATE TABLE IF NOT EXISTS calendar_documents (
     id SERIAL PRIMARY KEY,

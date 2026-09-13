@@ -295,6 +295,20 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_active INTEGER DEFAULT 1,
                         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS class_timetables (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT,
+                        class_level TEXT,
+                        stream TEXT DEFAULT 'All Streams',
+                        schedule_json TEXT,
+                        file_name TEXT,
+                        file_path TEXT,
+                        file_size INTEGER,
+                        uploaded_by INTEGER,
+                        is_active INTEGER DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
 
             // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
