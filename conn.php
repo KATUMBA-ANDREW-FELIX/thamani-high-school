@@ -297,6 +297,17 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     );
                 ");
 
+            // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
+            if ($this->driver === 'pgsql') {
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255)"); } catch (Exception $e) {}
+            } else {
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN classes_taught TEXT"); } catch (Exception $e) {}
+            }
+
             // Ensure default admin exists and has valid Admin@2026 hash
             $validHash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
             try {
