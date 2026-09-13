@@ -29,4 +29,8 @@
     <FilesMatch "\.(css|js|jpg|jpeg|png|gif|webp|svg|woff|woff2|ttf)$">
         Header set Cache-Control "max-age=31536000, public, no-transform, immutable"
     </FilesMatch>
+    Header set Content-Security-Policy "upgrade-insecure-requests"
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
 </IfModule>
