@@ -25,7 +25,7 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`) || Host(`www.thamaniacademy.work.gd`)"
+      - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`)"
       - "traefik.http.routers.thamani.entrypoints=web,websecure"
       - "traefik.http.routers.thamani.tls=true"
       - "traefik.http.routers.thamani.tls.certresolver=letsencrypt"
