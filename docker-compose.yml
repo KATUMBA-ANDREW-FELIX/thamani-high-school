@@ -28,7 +28,7 @@ services:
       - "traefik.http.routers.thamani.rule=Host(`thamaniacademy.work.gd`) || Host(`www.thamaniacademy.work.gd`)"
       - "traefik.http.routers.thamani.entrypoints=web,websecure"
       - "traefik.http.routers.thamani.tls=true"
-      - "traefik.http.routers.thamani.tls.certresolver=myresolver"
+      - "traefik.http.routers.thamani.tls.certresolver=letsencrypt"
       - "traefik.http.services.thamani.loadbalancer.server.port=80"
       - "traefik.docker.network=${PROXY_NETWORK:-proxy}"
     networks:
