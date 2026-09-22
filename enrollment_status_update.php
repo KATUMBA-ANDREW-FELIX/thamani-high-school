@@ -10,7 +10,8 @@
 require_once 'auth_admin.php';
 require_admin_login();
 
-require_once 'conn.php';
+/** @var mysqli $conn */
+require_once __DIR__ . '/conn.php';
 
 // ---------- Only accept POST ----------
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -46,18 +47,18 @@ if (!in_array($newStatus, $allowedStatuses, true)) {
 }
 
 // ---------- Confirm student exists ----------
-$check = mysqli_prepare($conn, "SELECT id, full_name, status FROM students WHERE id = ? LIMIT 1");
+$check = thamani_db_prepare($conn, "SELECT id, full_name, status FROM students WHERE id = ? LIMIT 1");
 
 if ($check === false) {
-    error_log('[Enrollment Status Check] ' . mysqli_error($conn));
+    error_log('[Enrollment Status Check] ' . thamani_db_error($conn));
     $setFlash('error', 'System error. Please try again.');
 }
 
-mysqli_stmt_bind_param($check, "i", $studentId);
-mysqli_stmt_execute($check);
-$res = mysqli_stmt_get_result($check);
-$student = $res ? mysqli_fetch_assoc($res) : null;
-mysqli_stmt_close($check);
+thamani_db_stmt_bind_param($check, "i", $studentId);
+thamani_db_stmt_execute($check);
+$res = thamani_db_stmt_get_result($check);
+$student = $res ? thamani_db_fetch_assoc($res) : null;
+thamani_db_stmt_close($check);
 
 if (!$student) {
     $setFlash('error', 'Student not found.');
@@ -69,20 +70,20 @@ if ($student['status'] === $newStatus) {
 }
 
 // ---------- Update the status ----------
-$upd = mysqli_prepare($conn, "UPDATE students SET status = ? WHERE id = ?");
+$upd = thamani_db_prepare($conn, "UPDATE students SET status = ? WHERE id = ?");
 
 if ($upd === false) {
-    error_log('[Enrollment Status Prepare] ' . mysqli_error($conn));
+    error_log('[Enrollment Status Prepare] ' . thamani_db_error($conn));
     $setFlash('error', 'System error while updating.');
 }
 
-mysqli_stmt_bind_param($upd, "si", $newStatus, $studentId);
+thamani_db_stmt_bind_param($upd, "si", $newStatus, $studentId);
 
-if (mysqli_stmt_execute($upd)) {
-    mysqli_stmt_close($upd);
+if (thamani_db_stmt_execute($upd)) {
+    thamani_db_stmt_close($upd);
     $setFlash('success', "{$student['full_name']} has been marked as {$newStatus}.");
 } else {
-    error_log('[Enrollment Status Execute] ' . mysqli_stmt_error($upd));
-    mysqli_stmt_close($upd);
+    error_log('[Enrollment Status Execute] ' . thamani_db_stmt_error($upd));
+    thamani_db_stmt_close($upd);
     $setFlash('error', 'Could not update the student status.');
 }

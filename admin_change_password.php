@@ -33,13 +33,13 @@ if ($newPassword !== $confirmPassword) {
 
 if (empty($errors)) {
     // Fetch current password hash
-    $stmt = mysqli_prepare($conn, "SELECT password_hash FROM admins WHERE id = ? LIMIT 1");
+    $stmt = thamani_db_prepare($conn, "SELECT password_hash FROM admins WHERE id = ? LIMIT 1");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "i", $adminId);
-        mysqli_stmt_execute($stmt);
-        $res = mysqli_stmt_get_result($stmt);
-        $row = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($stmt);
+        thamani_db_stmt_bind_param($stmt, "i", $adminId);
+        thamani_db_stmt_execute($stmt);
+        $res = thamani_db_stmt_get_result($stmt);
+        $row = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($stmt);
 
         if (!$row || !password_verify($currentPassword, $row['password_hash'])) {
             $errors[] = 'Incorrect current password.';
@@ -57,14 +57,14 @@ if (!empty($errors)) {
 
 $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
 
-$updStmt = mysqli_prepare($conn, "UPDATE admins SET password_hash = ?, must_change_password = 0 WHERE id = ?");
+$updStmt = thamani_db_prepare($conn, "UPDATE admins SET password_hash = ?, must_change_password = 0 WHERE id = ?");
 if ($updStmt) {
-    mysqli_stmt_bind_param($updStmt, "si", $newHash, $adminId);
-    if (mysqli_stmt_execute($updStmt)) {
-        mysqli_stmt_close($updStmt);
+    thamani_db_stmt_bind_param($updStmt, "si", $newHash, $adminId);
+    if (thamani_db_stmt_execute($updStmt)) {
+        thamani_db_stmt_close($updStmt);
         $_SESSION['admin_flash'] = ['type' => 'success', 'message' => 'Your admin password was changed successfully!'];
     } else {
-        mysqli_stmt_close($updStmt);
+        thamani_db_stmt_close($updStmt);
         $_SESSION['admin_flash'] = ['type' => 'error', 'message' => 'Failed to update admin password.'];
     }
 }

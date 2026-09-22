@@ -165,10 +165,10 @@ $sql = "INSERT INTO library_resources
          file_name, stored_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt === false) {
-    error_log('[Library Insert Prepare] ' . mysqli_error($conn));
+    error_log('[Library Insert Prepare] ' . thamani_db_error($conn));
     @unlink($destPath);
     $_SESSION['library_flash'] = [
         'type'    => 'error',
@@ -182,7 +182,7 @@ $authorVal  = $author      !== '' ? $author      : null;
 $classVal   = $classLevel  !== '' ? $classLevel  : null;
 $descVal    = $description !== '' ? $description : null;
 
-mysqli_stmt_bind_param(
+thamani_db_stmt_bind_param(
     $stmt,
     "sssssssssisi",
     $title, $authorVal, $subject, $category, $classVal, $descVal,
@@ -190,8 +190,8 @@ mysqli_stmt_bind_param(
     $file['size'], $mime, $teacherId
 );
 
-if (mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
+if (thamani_db_stmt_execute($stmt)) {
+    thamani_db_stmt_close($stmt);
     $_SESSION['library_flash'] = [
         'type'    => 'success',
         'message' => 'Resource "' . $title . '" uploaded successfully.',
@@ -199,8 +199,8 @@ if (mysqli_stmt_execute($stmt)) {
     header('Location: library.php');
     exit;
 } else {
-    error_log('[Library Insert Execute] ' . mysqli_stmt_error($stmt));
-    mysqli_stmt_close($stmt);
+    error_log('[Library Insert Execute] ' . thamani_db_stmt_error($stmt));
+    thamani_db_stmt_close($stmt);
     @unlink($destPath);
     $_SESSION['library_flash'] = [
         'type'    => 'error',

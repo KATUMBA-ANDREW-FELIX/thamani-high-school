@@ -48,12 +48,12 @@ $postedByName      = $teacher['name'];
 
 $sql = "INSERT INTO class_announcements (title, content, class_level, posted_by_teacher_id, posted_by_name) 
         VALUES (?, ?, ?, ?, ?)";
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt) {
-    mysqli_stmt_bind_param($stmt, "sssis", $title, $content, $classLevel, $postedByTeacherId, $postedByName);
-    $res = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    thamani_db_stmt_bind_param($stmt, "sssis", $title, $content, $classLevel, $postedByTeacherId, $postedByName);
+    $res = thamani_db_stmt_execute($stmt);
+    thamani_db_stmt_close($stmt);
 
     if ($res) {
         $_SESSION['teacher_flash'] = [
@@ -63,7 +63,7 @@ if ($stmt) {
     } else {
         $_SESSION['teacher_flash'] = [
             'type' => 'error',
-            'message' => "Failed to post announcement: " . mysqli_error($conn)
+            'message' => "Failed to post announcement: " . thamani_db_error($conn)
         ];
     }
 } else {

@@ -51,12 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_once 'conn.php';
 
         // Fetch current hash for verification
-        $sel = mysqli_prepare($conn, "SELECT password_hash FROM teachers WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($sel, "i", $_SESSION['teacher_id']);
-        mysqli_stmt_execute($sel);
-        $res  = mysqli_stmt_get_result($sel);
-        $row  = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($sel);
+        $sel = thamani_db_prepare($conn, "SELECT password_hash FROM teachers WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($sel, "i", $_SESSION['teacher_id']);
+        thamani_db_stmt_execute($sel);
+        $res  = thamani_db_stmt_get_result($sel);
+        $row  = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($sel);
 
         if (!$row) {
             $errors[] = 'Account not found. Please log in again.';
@@ -65,12 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $newHash = password_hash($new, PASSWORD_DEFAULT);
 
-            $upd = mysqli_prepare($conn,
+            $upd = thamani_db_prepare($conn,
                 "UPDATE teachers SET password_hash = ?, must_change_password = 0 WHERE id = ?");
-            mysqli_stmt_bind_param($upd, "si", $newHash, $_SESSION['teacher_id']);
+            thamani_db_stmt_bind_param($upd, "si", $newHash, $_SESSION['teacher_id']);
 
-            if (mysqli_stmt_execute($upd)) {
-                mysqli_stmt_close($upd);
+            if (thamani_db_stmt_execute($upd)) {
+                thamani_db_stmt_close($upd);
                 $_SESSION['must_change_password'] = 0;
 
                 if ($isForced) {
@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
             } else {
-                error_log('[Teacher Change Password] ' . mysqli_stmt_error($upd));
-                mysqli_stmt_close($upd);
+                error_log('[Teacher Change Password] ' . thamani_db_stmt_error($upd));
+                thamani_db_stmt_close($upd);
                 $errors[] = 'A system error occurred. Please try again later.';
             }
         }

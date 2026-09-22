@@ -38,12 +38,12 @@ if ($name === '' || $profession === '' || $phone === '') {
 }
 
 try {
-    $stmt = mysqli_prepare($conn, "INSERT INTO alumni (name, year, profession, phone, email) VALUES (?, ?, ?, ?, ?)");
+    $stmt = thamani_db_prepare($conn, "INSERT INTO alumni (name, year, profession, phone, email) VALUES (?, ?, ?, ?, ?)");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "sssss", $name, $year, $profession, $phone, $email);
-        if (mysqli_stmt_execute($stmt)) {
-            $insertId = mysqli_insert_id($conn);
-            mysqli_stmt_close($stmt);
+        thamani_db_stmt_bind_param($stmt, "sssss", $name, $year, $profession, $phone, $email);
+        if (thamani_db_stmt_execute($stmt)) {
+            $insertId = thamani_db_insert_id($conn);
+            thamani_db_stmt_close($stmt);
             echo json_encode(['success' => true, 'id' => $insertId]);
         } else {
             http_response_code(500);

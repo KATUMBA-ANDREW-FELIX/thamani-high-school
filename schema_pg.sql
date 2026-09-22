@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS students (
     emergency_phone VARCHAR(50),
     medical_notes TEXT,
     status VARCHAR(50) DEFAULT 'Pending',
+    password_hash VARCHAR(255),
+    must_change_password INT DEFAULT 1,
+    account_active INT DEFAULT 1,
+    last_login TIMESTAMP WITH TIME ZONE,
     registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -149,6 +153,10 @@ CREATE TABLE IF NOT EXISTS class_announcements (
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50);
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255);
+ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
 
 -- Database Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);

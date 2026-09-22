@@ -7,11 +7,12 @@
  * - Shows an "Upload" button + modal only if a teacher is logged in
  */
 
-session_start();
+require_once 'auth_student.php';
+require_student_or_admin_login();
 
-// Teacher session check (lightweight — do NOT force login on this page)
+// Only authenticated students and admins may access the library.
 $isAdmin       = !empty($_SESSION['admin_id']);
-$isTeacher     = !empty($_SESSION['teacher_id']);
+$isTeacher     = false;
 $currentUserId = (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0);
 
 require_once 'conn.php';
@@ -34,13 +35,13 @@ $sql = "SELECT id, title, author, subject, category, class_level,
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
 
-$res = mysqli_query($conn, $sql);
+$res = thamani_db_query($conn, $sql);
 
 if ($res === false) {
-    error_log('[Library Fetch] ' . mysqli_error($conn));
+    error_log('[Library Fetch] ' . thamani_db_error($conn));
     $dbError = 'Could not load library resources right now.';
 } else {
-    while ($row = mysqli_fetch_assoc($res)) {
+    while ($row = thamani_db_fetch_assoc($res)) {
         // Map DB row → the JSON shape the JS expects
         $ext = strtoupper(pathinfo($row['file_name'], PATHINFO_EXTENSION));
 
@@ -66,9 +67,9 @@ if ($res === false) {
     }
 
     // Distinct subject list for the filter pills
-    $subsRes = mysqli_query($conn, "SELECT DISTINCT subject FROM library_resources WHERE is_active = 1 ORDER BY subject ASC");
+    $subsRes = thamani_db_query($conn, "SELECT DISTINCT subject FROM library_resources WHERE is_active = 1 ORDER BY subject ASC");
     if ($subsRes) {
-        while ($s = mysqli_fetch_assoc($subsRes)) {
+        while ($s = thamani_db_fetch_assoc($subsRes)) {
             if ($s['subject'] !== '') $subjects[] = $s['subject'];
         }
     }

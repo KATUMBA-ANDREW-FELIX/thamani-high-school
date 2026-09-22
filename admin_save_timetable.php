@@ -124,12 +124,12 @@ if (!empty($errors)) {
 // Insert timetable into database
 $sql = "INSERT INTO class_timetables (title, class_level, stream, schedule_json, file_name, file_path, file_size, uploaded_by) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt) {
-    mysqli_stmt_bind_param($stmt, "ssssssii", $title, $classLevel, $stream, $scheduleJson, $fileName, $filePath, $fileSize, $adminId);
-    $res = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    thamani_db_stmt_bind_param($stmt, "ssssssii", $title, $classLevel, $stream, $scheduleJson, $fileName, $filePath, $fileSize, $adminId);
+    $res = thamani_db_stmt_execute($stmt);
+    thamani_db_stmt_close($stmt);
 
     if ($res) {
         $_SESSION['admin_flash'] = [
@@ -139,13 +139,13 @@ if ($stmt) {
     } else {
         $_SESSION['admin_flash'] = [
             'type' => 'error',
-            'message' => "Failed to save timetable: " . mysqli_error($conn)
+            'message' => "Failed to save timetable: " . thamani_db_error($conn)
         ];
     }
 } else {
     $_SESSION['admin_flash'] = [
         'type' => 'error',
-        'message' => "Database prepare error: " . mysqli_error($conn)
+        'message' => "Database prepare error: " . thamani_db_error($conn)
     ];
 }
 

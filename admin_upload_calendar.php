@@ -133,10 +133,10 @@ $sql = "INSERT INTO calendar_documents
         (title, doc_type, description, file_name, stored_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt === false) {
-    error_log('[Admin Calendar Prepare] ' . mysqli_error($conn));
+    error_log('[Admin Calendar Prepare] ' . thamani_db_error($conn));
     @unlink($destPath);
     $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Database error while saving.'];
     header('Location: ' . $redirectTo);
@@ -145,7 +145,7 @@ if ($stmt === false) {
 
 $descVal = $description !== '' ? $description : null;
 
-mysqli_stmt_bind_param(
+thamani_db_stmt_bind_param(
     $stmt,
     "ssssssisi",
     $title, $docType, $descVal,
@@ -153,12 +153,12 @@ mysqli_stmt_bind_param(
     $file['size'], $mime, $adminId
 );
 
-if (mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
+if (thamani_db_stmt_execute($stmt)) {
+    thamani_db_stmt_close($stmt);
     $_SESSION[$flashKey] = ['type' => 'success', 'message' => 'Document "' . $title . '" uploaded successfully.'];
 } else {
-    error_log('[Admin Calendar Execute] ' . mysqli_stmt_error($stmt));
-    mysqli_stmt_close($stmt);
+    error_log('[Admin Calendar Execute] ' . thamani_db_stmt_error($stmt));
+    thamani_db_stmt_close($stmt);
     @unlink($destPath);
     $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Database error while saving the document.'];
 }

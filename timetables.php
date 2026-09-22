@@ -31,19 +31,19 @@ if ($streamFilter !== 'ALL') {
 
 $sql .= "ORDER BY created_at DESC";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 if ($stmt) {
     if (!empty($params)) {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        thamani_db_stmt_bind_param($stmt, $types, ...$params);
     }
-    mysqli_stmt_execute($stmt);
-    $res = mysqli_stmt_get_result($stmt);
+    thamani_db_stmt_execute($stmt);
+    $res = thamani_db_stmt_get_result($stmt);
     if ($res) {
-        while ($row = mysqli_fetch_assoc($res)) {
+        while ($row = thamani_db_fetch_assoc($res)) {
             $timetables[] = $row;
         }
     }
-    mysqli_stmt_close($stmt);
+    thamani_db_stmt_close($stmt);
 }
 ?>
 <!DOCTYPE html>

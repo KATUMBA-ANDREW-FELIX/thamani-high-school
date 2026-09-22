@@ -47,15 +47,15 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 if (empty($errors)) {
     // Check duplicate staff_id or email for ANOTHER teacher
     $checkSql = "SELECT id FROM teachers WHERE (staff_id = ? OR email = ?) AND id != ? LIMIT 1";
-    $stmt = mysqli_prepare($conn, $checkSql);
+    $stmt = thamani_db_prepare($conn, $checkSql);
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "ssi", $staffId, $email, $id);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_store_result($stmt);
-        if (mysqli_stmt_num_rows($stmt) > 0) {
+        thamani_db_stmt_bind_param($stmt, "ssi", $staffId, $email, $id);
+        thamani_db_stmt_execute($stmt);
+        thamani_db_stmt_store_result($stmt);
+        if (thamani_db_stmt_num_rows($stmt) > 0) {
             $errors[] = 'Another teacher with this Staff ID or Email already exists.';
         }
-        mysqli_stmt_close($stmt);
+        thamani_db_stmt_close($stmt);
     }
 }
 
@@ -71,21 +71,21 @@ if ($resetPassword) {
     $updateSql = "UPDATE teachers 
                   SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, classes_taught = ?, is_active = ?, password_hash = ?, must_change_password = 1
                   WHERE id = ?";
-    $upStmt = mysqli_prepare($conn, $updateSql);
+    $upStmt = thamani_db_prepare($conn, $updateSql);
     if ($upStmt) {
-        mysqli_stmt_bind_param($upStmt, "ssssissisi", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $isActive, $hash, $id);
-        $res = mysqli_stmt_execute($upStmt);
-        mysqli_stmt_close($upStmt);
+        thamani_db_stmt_bind_param($upStmt, "ssssissisi", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $isActive, $hash, $id);
+        $res = thamani_db_stmt_execute($upStmt);
+        thamani_db_stmt_close($upStmt);
     }
 } else {
     $updateSql = "UPDATE teachers 
                   SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, classes_taught = ?, is_active = ?
                   WHERE id = ?";
-    $upStmt = mysqli_prepare($conn, $updateSql);
+    $upStmt = thamani_db_prepare($conn, $updateSql);
     if ($upStmt) {
-        mysqli_stmt_bind_param($upStmt, "ssssissii", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $isActive, $id);
-        $res = mysqli_stmt_execute($upStmt);
-        mysqli_stmt_close($upStmt);
+        thamani_db_stmt_bind_param($upStmt, "ssssissii", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $isActive, $id);
+        $res = thamani_db_stmt_execute($upStmt);
+        thamani_db_stmt_close($upStmt);
     }
 }
 

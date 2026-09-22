@@ -40,6 +40,7 @@ $search = trim($_GET['q'] ?? '');
 $year   = trim($_GET['year'] ?? '');
 
 // ---------- Fetch alumni from DB ----------
+/** @var mysqli $conn */
 require_once 'conn.php';
 
 $alumni     = [];
@@ -72,28 +73,28 @@ $sql = "SELECT id, name, year, profession, phone, email
         $whereSql
         ORDER BY id DESC";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt === false) {
-    error_log('[Alumni View Prepare] ' . mysqli_error($conn));
+    error_log('[Alumni View Prepare] ' . thamani_db_error($conn));
     $dbError = 'Could not load alumni records.';
 } else {
     if ($types !== '') {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        thamani_db_stmt_bind_param($stmt, $types, ...$params);
     }
-    mysqli_stmt_execute($stmt);
+    thamani_db_stmt_execute($stmt);
 
-    if (function_exists('mysqli_stmt_get_result')) {
-        $res = mysqli_stmt_get_result($stmt);
+    if (function_exists('thamani_db_stmt_get_result')) {
+        $res = thamani_db_stmt_get_result($stmt);
         if ($res) {
-            while ($row = mysqli_fetch_assoc($res)) {
+            while ($row = thamani_db_fetch_assoc($res)) {
                 $alumni[] = $row;
             }
         }
     } else {
         // Fallback for servers without mysqlnd
-        mysqli_stmt_bind_result($stmt, $id, $name, $yoc, $prof, $ph, $em);
-        while (mysqli_stmt_fetch($stmt)) {
+        thamani_db_stmt_bind_result($stmt, $id, $name, $yoc, $prof, $ph, $em);
+        while (thamani_db_stmt_fetch($stmt)) {
             $alumni[] = [
                 'id'         => $id,
                 'name'       => $name,
@@ -106,12 +107,12 @@ if ($stmt === false) {
     }
 
     $totalCount = count($alumni);
-    mysqli_stmt_close($stmt);
+    thamani_db_stmt_close($stmt);
 }
 
 // Total count regardless of filter
-$totalAllRes = mysqli_query($conn, "SELECT COUNT(*) AS c FROM alumni");
-$totalAllRow = $totalAllRes ? mysqli_fetch_assoc($totalAllRes) : ['c' => 0];
+$totalAllRes = thamani_db_query($conn, "SELECT COUNT(*) AS c FROM alumni");
+$totalAllRow = $totalAllRes ? thamani_db_fetch_assoc($totalAllRes) : ['c' => 0];
 $totalAll    = (int)$totalAllRow['c'];
 ?>
 <!DOCTYPE html>

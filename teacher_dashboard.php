@@ -9,9 +9,9 @@ $hour     = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 
 $classAnnouncements = [];
-$caRes = mysqli_query($conn, "SELECT id, title, content, class_level, posted_by_name, created_at FROM class_announcements ORDER BY created_at DESC LIMIT 30");
+$caRes = thamani_db_query($conn, "SELECT id, title, content, class_level, posted_by_name, created_at FROM class_announcements ORDER BY created_at DESC LIMIT 30");
 if ($caRes) {
-    while ($r = mysqli_fetch_assoc($caRes)) {
+    while ($r = thamani_db_fetch_assoc($caRes)) {
         $classAnnouncements[] = $r;
     }
 }

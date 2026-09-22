@@ -125,10 +125,10 @@ $sql = "INSERT INTO gallery_photos
         (title, caption, category, file_name, stored_name, file_path, file_size, mime_type, uploaded_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt === false) {
-    error_log('[Admin Gallery Prepare] ' . mysqli_error($conn));
+    error_log('[Admin Gallery Prepare] ' . thamani_db_error($conn));
     @unlink($destPath);
     $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Database error while saving.'];
     header('Location: ' . $redirectTo);
@@ -137,7 +137,7 @@ if ($stmt === false) {
 
 $capVal = $caption !== '' ? $caption : null;
 
-mysqli_stmt_bind_param(
+thamani_db_stmt_bind_param(
     $stmt,
     "ssssssisi",
     $title, $capVal, $category,
@@ -145,12 +145,12 @@ mysqli_stmt_bind_param(
     $file['size'], $mime, $adminId
 );
 
-if (mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
+if (thamani_db_stmt_execute($stmt)) {
+    thamani_db_stmt_close($stmt);
     $_SESSION[$flashKey] = ['type' => 'success', 'message' => 'Photo "' . $title . '" uploaded successfully.'];
 } else {
-    error_log('[Admin Gallery Execute] ' . mysqli_stmt_error($stmt));
-    mysqli_stmt_close($stmt);
+    error_log('[Admin Gallery Execute] ' . thamani_db_stmt_error($stmt));
+    thamani_db_stmt_close($stmt);
     @unlink($destPath);
     $_SESSION[$flashKey] = ['type' => 'error', 'message' => 'Database error while saving the photo.'];
 }

@@ -61,17 +61,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE staff_id = ? OR email = ?
                     LIMIT 1";
 
-            $stmt = mysqli_prepare($conn, $sql);
+            $stmt = thamani_db_prepare($conn, $sql);
 
             if ($stmt === false) {
-                error_log('[Teacher Login Prepare] ' . mysqli_error($conn));
+                error_log('[Teacher Login Prepare] ' . thamani_db_error($conn));
                 $errors[] = 'A system error occurred. Please try again later.';
             } else {
-                mysqli_stmt_bind_param($stmt, "ss", $identifier, $identifier);
-                mysqli_stmt_execute($stmt);
-                $result  = mysqli_stmt_get_result($stmt);
-                $teacher = $result ? mysqli_fetch_assoc($result) : null;
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_bind_param($stmt, "ss", $identifier, $identifier);
+                thamani_db_stmt_execute($stmt);
+                $result  = thamani_db_stmt_get_result($stmt);
+                $teacher = $result ? thamani_db_fetch_assoc($result) : null;
+                thamani_db_stmt_close($stmt);
 
                 if (!$teacher) {
                     $errors[] = 'Invalid credentials. Please check your Staff ID and password.';
@@ -93,11 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['must_change_password']     = (int)$teacher['must_change_password'];
                     $_SESSION['teacher_logged_in_at']     = time();
 
-                    $upd = mysqli_prepare($conn, "UPDATE teachers SET last_login = NOW() WHERE id = ?");
+                    $upd = thamani_db_prepare($conn, "UPDATE teachers SET last_login = NOW() WHERE id = ?");
                     if ($upd) {
-                        mysqli_stmt_bind_param($upd, "i", $teacher['id']);
-                        mysqli_stmt_execute($upd);
-                        mysqli_stmt_close($upd);
+                        thamani_db_stmt_bind_param($upd, "i", $teacher['id']);
+                        thamani_db_stmt_execute($upd);
+                        thamani_db_stmt_close($upd);
                     }
 
                     if (!empty($_SESSION['must_change_password'])) {
@@ -120,17 +120,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE admin_id = ? OR email = ?
                     LIMIT 1";
 
-            $stmt = mysqli_prepare($conn, $sql);
+            $stmt = thamani_db_prepare($conn, $sql);
 
             if ($stmt === false) {
-                error_log('[Admin Login Prepare] ' . mysqli_error($conn));
+                error_log('[Admin Login Prepare] ' . thamani_db_error($conn));
                 $errors[] = 'A system error occurred. Please try again later.';
             } else {
-                mysqli_stmt_bind_param($stmt, "ss", $identifier, $identifier);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-                $admin  = $result ? mysqli_fetch_assoc($result) : null;
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_bind_param($stmt, "ss", $identifier, $identifier);
+                thamani_db_stmt_execute($stmt);
+                $result = thamani_db_stmt_get_result($stmt);
+                $admin  = $result ? thamani_db_fetch_assoc($result) : null;
+                thamani_db_stmt_close($stmt);
 
                 if (!$admin) {
                     $errors[] = 'Invalid credentials. Please check your Admin ID and password.';
@@ -148,11 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_must_change_password'] = (int)$admin['must_change_password'];
                     $_SESSION['admin_logged_in_at']         = time();
 
-                    $upd = mysqli_prepare($conn, "UPDATE admins SET last_login = NOW() WHERE id = ?");
+                    $upd = thamani_db_prepare($conn, "UPDATE admins SET last_login = NOW() WHERE id = ?");
                     if ($upd) {
-                        mysqli_stmt_bind_param($upd, "i", $admin['id']);
-                        mysqli_stmt_execute($upd);
-                        mysqli_stmt_close($upd);
+                        thamani_db_stmt_bind_param($upd, "i", $admin['id']);
+                        thamani_db_stmt_execute($upd);
+                        thamani_db_stmt_close($upd);
                     }
 
                     header('Location: admin_dashboard.php');

@@ -10,9 +10,9 @@ require_once 'conn.php';
 
 // ---------- Stat counters ----------
 function safeCount($conn, string $sql): int {
-    $res = mysqli_query($conn, $sql);
+    $res = thamani_db_query($conn, $sql);
     if (!$res) return 0;
-    $row = mysqli_fetch_assoc($res);
+    $row = thamani_db_fetch_assoc($res);
     return $row ? (int)reset($row) : 0;
 }
 
@@ -28,28 +28,28 @@ $totalTeachers   = safeCount($conn, "SELECT COUNT(*) FROM teachers");
 
 // ---------- Datasets ----------
 $allStudents = [];
-$rs = mysqli_query($conn, "SELECT id, full_name, date_of_birth, gender, nationality, lin_number, previous_school, class_level, stream, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_address, guardian_occupation, emergency_name, emergency_phone, medical_notes, status, registered_at FROM students ORDER BY registered_at DESC");
-if ($rs) while ($r = mysqli_fetch_assoc($rs)) $allStudents[] = $r;
+$rs = thamani_db_query($conn, "SELECT id, full_name, date_of_birth, gender, nationality, lin_number, previous_school, class_level, stream, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_address, guardian_occupation, emergency_name, emergency_phone, medical_notes, status, registered_at FROM students ORDER BY registered_at DESC");
+if ($rs) while ($r = thamani_db_fetch_assoc($rs)) $allStudents[] = $r;
 
 $allAlumni = [];
-$ra = mysqli_query($conn, "SELECT id, name, year, profession, phone, email FROM alumni ORDER BY id DESC");
-if ($ra) while ($r = mysqli_fetch_assoc($ra)) $allAlumni[] = $r;
+$ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email FROM alumni ORDER BY id DESC");
+if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = mysqli_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, is_active, created_at FROM teachers ORDER BY created_at DESC");
-if ($rt) while ($r = mysqli_fetch_assoc($rt)) $allTeachers[] = $r;
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, is_active, created_at FROM teachers ORDER BY created_at DESC");
+if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
-$rc = mysqli_query($conn, "SELECT id, title, doc_type, description, file_path, file_name, file_size, uploaded_at FROM calendar_documents WHERE is_active = 1 ORDER BY uploaded_at DESC");
-if ($rc) while ($r = mysqli_fetch_assoc($rc)) $allCalendar[] = $r;
+$rc = thamani_db_query($conn, "SELECT id, title, doc_type, description, file_path, file_name, file_size, uploaded_at FROM calendar_documents WHERE is_active = 1 ORDER BY uploaded_at DESC");
+if ($rc) while ($r = thamani_db_fetch_assoc($rc)) $allCalendar[] = $r;
 
 $allGallery = [];
-$rg = mysqli_query($conn, "SELECT id, title, caption, category, file_path, uploaded_at FROM gallery_photos WHERE is_active = 1 ORDER BY uploaded_at DESC");
-if ($rg) while ($r = mysqli_fetch_assoc($rg)) $allGallery[] = $r;
+$rg = thamani_db_query($conn, "SELECT id, title, caption, category, file_path, uploaded_at FROM gallery_photos WHERE is_active = 1 ORDER BY uploaded_at DESC");
+if ($rg) while ($r = thamani_db_fetch_assoc($rg)) $allGallery[] = $r;
 
 $allClassTimetables = [];
-$rct = mysqli_query($conn, "SELECT id, title, class_level, stream, schedule_json, file_name, file_path, file_size, created_at FROM class_timetables ORDER BY created_at DESC");
-if ($rct) while ($r = mysqli_fetch_assoc($rct)) $allClassTimetables[] = $r;
+$rct = thamani_db_query($conn, "SELECT id, title, class_level, stream, schedule_json, file_name, file_path, file_size, created_at FROM class_timetables ORDER BY created_at DESC");
+if ($rct) while ($r = thamani_db_fetch_assoc($rct)) $allClassTimetables[] = $r;
 
 // ---------- Flash messages ----------
 $flashHtml = '';

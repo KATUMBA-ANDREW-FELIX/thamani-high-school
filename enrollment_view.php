@@ -26,6 +26,7 @@ $viewerName = $isAdmin
 $viewerRole = $isAdmin ? 'admin' : 'teacher';
 $viewerId   = $isAdmin ? 'ADM' : ($_SESSION['teacher_staff_id'] ?? 'TCH');
 
+/** @var mysqli $conn */
 require_once 'conn.php';
 
 // ---------- Filters ----------
@@ -73,32 +74,32 @@ $sql = "SELECT id, full_name, date_of_birth, gender, nationality,
         $whereSql
         ORDER BY registered_at DESC";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = thamani_db_prepare($conn, $sql);
 
 if ($stmt === false) {
-    error_log('[Enrollment View] ' . mysqli_error($conn));
+    error_log('[Enrollment View] ' . thamani_db_error($conn));
     $dbError = 'Could not load enrollment records.';
 } else {
     if ($types !== '') {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        thamani_db_stmt_bind_param($stmt, $types, ...$params);
     }
-    mysqli_stmt_execute($stmt);
+    thamani_db_stmt_execute($stmt);
 
-    if (function_exists('mysqli_stmt_get_result')) {
-        $res = mysqli_stmt_get_result($stmt);
-        if ($res) while ($row = mysqli_fetch_assoc($res)) $students[] = $row;
+    if (function_exists('thamani_db_stmt_get_result')) {
+        $res = thamani_db_stmt_get_result($stmt);
+        if ($res) while ($row = thamani_db_fetch_assoc($res)) $students[] = $row;
     } else {
         // fallback (no mysqlnd)
-        mysqli_stmt_bind_result($stmt,
+        thamani_db_stmt_bind_result($stmt,
             $id, $full_name, $dob, $gender, $nat, $lin, $prev, $cls, $stream,
             $gname, $grel, $gphone, $gmail, $gaddr, $gocc,
             $ename, $ephone, $med, $status, $reg);
-        while (mysqli_stmt_fetch($stmt)) {
+        while (thamani_db_stmt_fetch($stmt)) {
             $students[] = compact('id','full_name','dob','gender','nat','lin','prev','cls','stream',
                 'gname','grel','gphone','gmail','gaddr','gocc','ename','ephone','med','status','reg');
         }
     }
-    mysqli_stmt_close($stmt);
+    thamani_db_stmt_close($stmt);
 }
 
 // ---------- Stats ----------
@@ -107,9 +108,9 @@ $countPending  = 0;
 $countEnrolled = 0;
 $countRejected = 0;
 
-$stat = mysqli_query($conn, "SELECT status, COUNT(*) AS c FROM students GROUP BY status");
+$stat = thamani_db_query($conn, "SELECT status, COUNT(*) AS c FROM students GROUP BY status");
 if ($stat) {
-    while ($r = mysqli_fetch_assoc($stat)) {
+    while ($r = thamani_db_fetch_assoc($stat)) {
         $countAll += (int)$r['c'];
         if ($r['status'] === 'Pending')  $countPending  = (int)$r['c'];
         if ($r['status'] === 'Enrolled') $countEnrolled = (int)$r['c'];

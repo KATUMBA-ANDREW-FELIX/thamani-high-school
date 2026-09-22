@@ -11,6 +11,8 @@
  */
 
 session_start();
+/** @var mysqli $conn */
+require_once __DIR__ . '/conn.php';
 
 $errors  = [];
 $success = false;
@@ -172,24 +174,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---------- 4. Database insert ----------
     if (empty($errors)) {
-        require_once 'conn.php';
-
         // 4a. Duplicate LIN check
         $checkSql  = "SELECT id FROM students WHERE lin_number = ? LIMIT 1";
-        $checkStmt = mysqli_prepare($conn, $checkSql);
+        $checkStmt = thamani_db_prepare($conn, $checkSql);
 
         if ($checkStmt === false) {
-            error_log('[Enrollment Check Prepare] ' . mysqli_error($conn));
+            error_log('[Enrollment Check Prepare] ' . thamani_db_error($conn));
             $errors[] = 'A system error occurred. Please try again later.';
         } else {
-            mysqli_stmt_bind_param($checkStmt, "s", $lin_number);
-            mysqli_stmt_execute($checkStmt);
-            mysqli_stmt_store_result($checkStmt);
+            thamani_db_stmt_bind_param($checkStmt, "s", $lin_number);
+            thamani_db_stmt_execute($checkStmt);
+            thamani_db_stmt_store_result($checkStmt);
 
-            if (mysqli_stmt_num_rows($checkStmt) > 0) {
+            if (thamani_db_stmt_num_rows($checkStmt) > 0) {
                 $errors[] = 'A student with this LIN / UNEB index number is already registered.';
             }
-            mysqli_stmt_close($checkStmt);
+            thamani_db_stmt_close($checkStmt);
         }
 
         // 4b. Insert
@@ -203,10 +203,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             status, registered_at
                           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
 
-            $stmt = mysqli_prepare($conn, $insertSql);
+            $stmt = thamani_db_prepare($conn, $insertSql);
 
             if ($stmt === false) {
-                error_log('[Enrollment Insert Prepare] ' . mysqli_error($conn));
+                error_log('[Enrollment Insert Prepare] ' . thamani_db_error($conn));
                 $errors[] = 'A system error occurred while saving your application. Please try again later.';
             } else {
                 // Convert empty optional fields to NULL
@@ -221,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // s=string, i=integer. All 17 are strings except none — everything is s here.
                 $types = "sssssssssssssssss";
 
-                mysqli_stmt_bind_param(
+                thamani_db_stmt_bind_param(
                     $stmt,
                     $types,
                     $full_name,
@@ -243,14 +243,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $medicalNotes
                 );
 
-                if (mysqli_stmt_execute($stmt)) {
+                if (thamani_db_stmt_execute($stmt)) {
                     $success = true;
                     $_POST   = []; // clear form so it renders empty after success
                 } else {
-                    error_log('[Enrollment Insert Execute] ' . mysqli_stmt_error($stmt));
+                    error_log('[Enrollment Insert Execute] ' . thamani_db_stmt_error($stmt));
                     $errors[] = 'A system error occurred while saving your application. Please try again later.';
                 }
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_close($stmt);
             }
         }
     }

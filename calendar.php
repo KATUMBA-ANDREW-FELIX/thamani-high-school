@@ -8,7 +8,8 @@
  */
 
 session_start();
-require_once 'conn.php';
+/** @var mysqli $conn */
+require_once __DIR__ . '/conn.php';
 
 $isAdmin   = !empty($_SESSION['admin_id']);
 $isTeacher = !empty($_SESSION['teacher_id']);
@@ -36,12 +37,12 @@ $sql = "SELECT id, title, doc_type, description, file_name, file_path, file_size
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
 
-$res = mysqli_query($conn, $sql);
+$res = thamani_db_query($conn, $sql);
 if ($res === false) {
-    error_log('[Calendar Fetch] ' . mysqli_error($conn));
+    error_log('[Calendar Fetch] ' . thamani_db_error($conn));
     $dbError = 'Could not load calendar documents right now.';
 } else {
-    while ($row = mysqli_fetch_assoc($res)) $documents[] = $row;
+    while ($row = thamani_db_fetch_assoc($res)) $documents[] = $row;
 }
 
 function formatFileSize(int $bytes): string {

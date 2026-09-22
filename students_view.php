@@ -14,9 +14,9 @@ $search = trim($_GET['q'] ?? '');
 $classFilter = trim($_GET['class'] ?? '');
 
 $students = [];
-$res = mysqli_query($conn, "SELECT * FROM students ORDER BY id DESC");
+$res = thamani_db_query($conn, "SELECT * FROM students ORDER BY id DESC");
 if ($res) {
-    while ($row = mysqli_fetch_assoc($res)) {
+    while ($row = thamani_db_fetch_assoc($res)) {
         if ($search !== '') {
             $s = strtolower($search);
             if (strpos(strtolower($row['full_name'] ?? ''), $s) === false &&

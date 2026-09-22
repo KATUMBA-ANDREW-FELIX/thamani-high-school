@@ -11,6 +11,8 @@
  */
 
 session_start();
+/** @var mysqli $conn */
+require_once __DIR__ . '/conn.php';
 
 $errors  = [];
 $success = false;
@@ -60,38 +62,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
 
     // ---------- 3. Insert if no validation errors ----------
     if (empty($errors)) {
-        require_once 'conn.php'; // provides $conn (mysqli connection)
-
         // -- 3a. Check for duplicate email using prepared statement --
         $checkSql  = "SELECT id FROM alumni WHERE email = ? LIMIT 1";
-        $checkStmt = mysqli_prepare($conn, $checkSql);
+        $checkStmt = thamani_db_prepare($conn, $checkSql);
 
         if ($checkStmt === false) {
-            error_log('[Alumni Check Prepare Error] ' . mysqli_error($conn));
+            error_log('[Alumni Check Prepare Error] ' . thamani_db_error($conn));
             $errors[] = 'A system error occurred. Please try again later.';
         } else {
-            mysqli_stmt_bind_param($checkStmt, "s", $email);
-            mysqli_stmt_execute($checkStmt);
-            mysqli_stmt_store_result($checkStmt);
+            thamani_db_stmt_bind_param($checkStmt, "s", $email);
+            thamani_db_stmt_execute($checkStmt);
+            thamani_db_stmt_store_result($checkStmt);
 
-            if (mysqli_stmt_num_rows($checkStmt) > 0) {
+            if (thamani_db_stmt_num_rows($checkStmt) > 0) {
                 $errors[] = 'This email address is already registered.';
             }
-            mysqli_stmt_close($checkStmt);
+            thamani_db_stmt_close($checkStmt);
         }
 
         // -- 3b. Insert the record if still no errors --
         if (empty($errors)) {
             $insertSql  = "INSERT INTO alumni (name, year, profession, phone, email)
                            VALUES (?, ?, ?, ?, ?)";
-            $insertStmt = mysqli_prepare($conn, $insertSql);
+            $insertStmt = thamani_db_prepare($conn, $insertSql);
 
             if ($insertStmt === false) {
-                error_log('[Alumni Insert Prepare Error] ' . mysqli_error($conn));
+                error_log('[Alumni Insert Prepare Error] ' . thamani_db_error($conn));
                 $errors[] = 'A system error occurred while saving your registration. Please try again later.';
             } else {
                 $phoneVal = $phone !== '' ? $phone : null;
-                mysqli_stmt_bind_param(
+                thamani_db_stmt_bind_param(
                     $insertStmt,
                     "sisss",
                     $name,
@@ -101,15 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
                     $email
                 );
 
-                if (mysqli_stmt_execute($insertStmt)) {
+                if (thamani_db_stmt_execute($insertStmt)) {
                     $success = true;
                     $_POST   = []; // clear so fields render empty
                 } else {
-                    error_log('[Alumni Insert Execute Error] ' . mysqli_stmt_error($insertStmt));
+                    error_log('[Alumni Insert Execute Error] ' . thamani_db_stmt_error($insertStmt));
                     $errors[] = 'A system error occurred while saving your registration. Please try again later.';
                 }
 
-                mysqli_stmt_close($insertStmt);
+                thamani_db_stmt_close($insertStmt);
             }
         }
     }

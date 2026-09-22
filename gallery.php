@@ -36,12 +36,12 @@ $sql = "SELECT id, title, caption, category, file_path, uploaded_at, uploaded_by
         WHERE is_active = 1
         ORDER BY uploaded_at DESC";
 
-$res = mysqli_query($conn, $sql);
+$res = thamani_db_query($conn, $sql);
 if ($res === false) {
-    error_log('[Gallery Fetch] ' . mysqli_error($conn));
+    error_log('[Gallery Fetch] ' . thamani_db_error($conn));
     $dbError = 'Could not load gallery photos.';
 } else {
-    while ($row = mysqli_fetch_assoc($res)) $photos[] = $row;
+    while ($row = thamani_db_fetch_assoc($res)) $photos[] = $row;
 }
 
 $flashHtml = '';

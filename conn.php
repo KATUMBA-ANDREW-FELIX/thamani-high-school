@@ -161,9 +161,6 @@ if (!class_exists('ThamaniPolyfillConn')) {
 
             try {
                 $chk = $this->pdo->query("SELECT 1 FROM admins LIMIT 1");
-                if ($chk !== false) {
-                    return; // Database is already initialized
-                }
             } catch (Exception $e) {}
 
             if ($this->driver === 'pgsql') {
@@ -198,6 +195,10 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         emergency_phone TEXT,
                         medical_notes TEXT,
                         status TEXT DEFAULT 'Pending',
+                        password_hash TEXT,
+                        must_change_password INTEGER DEFAULT 1,
+                        account_active INTEGER DEFAULT 1,
+                        last_login DATETIME,
                         registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
@@ -316,10 +317,18 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"); } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN classes_taught TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN password_hash TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN must_change_password INTEGER DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN last_login DATETIME"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash
@@ -413,6 +422,9 @@ if (!function_exists('mysqli_connect')) {
     function mysqli_stmt_num_rows($stmt) {
         return $stmt ? $stmt->num_rows() : 0;
     }
+    function mysqli_stmt_affected_rows($stmt) {
+        return $stmt ? ($stmt->affectedRows ?? 0) : 0;
+    }
     function mysqli_stmt_get_result($stmt) {
         return $stmt ? $stmt->get_result() : false;
     }
@@ -492,6 +504,151 @@ if (!function_exists('mysqli_connect')) {
     }
     function mysqli_set_charset($c, $charset = 'utf8') { return true; }
     function mysqli_close($c = null) { return true; }
+}
+
+// Keep application queries compatible with native mysqli and the PDO polyfill.
+if (!function_exists('thamani_db_prepare')) {
+    function thamani_db_error($connection = null) {
+        global $conn;
+        $connection = $connection ?: $conn;
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
+            return mysqli_error($connection);
+        }
+        return $connection->error ?? '';
+    }
+
+    function thamani_db_insert_id($connection = null) {
+        global $conn;
+        $connection = $connection ?: $conn;
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
+            return mysqli_insert_id($connection);
+        }
+        return (int)($connection->insert_id ?? 0);
+    }
+
+    function thamani_db_prepare($connection, $sql = null) {
+        global $conn;
+        if (is_string($connection) && $sql === null) {
+            $sql = $connection;
+            $connection = $conn;
+        }
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
+            return mysqli_prepare($connection, $sql);
+        }
+        return $connection instanceof ThamaniPolyfillConn ? $connection->prepare($sql) : false;
+    }
+
+    function thamani_db_query($connection, $sql = null) {
+        global $conn;
+        if (is_string($connection) && $sql === null) {
+            $sql = $connection;
+            $connection = $conn;
+        }
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
+            return mysqli_query($connection, $sql);
+        }
+        if (!($connection instanceof ThamaniPolyfillConn) || !$connection->pdo) {
+            return false;
+        }
+        try {
+            $adjustedSql = $sql;
+            if ($connection->driver === 'pgsql') {
+                $adjustedSql = str_ireplace("datetime('now')", 'CURRENT_TIMESTAMP', $adjustedSql);
+                $adjustedSql = str_ireplace('NOW()', 'CURRENT_TIMESTAMP', $adjustedSql);
+            } else {
+                $adjustedSql = str_ireplace('NOW()', "datetime('now')", $adjustedSql);
+            }
+            $statement = $connection->pdo->query($adjustedSql);
+            if ($statement && str_starts_with(strtoupper(trim($sql)), 'SELECT')) {
+                $result = new ThamaniPolyfillResult();
+                $result->rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+                $result->num_rows = count($result->rows);
+                return $result;
+            }
+            return true;
+        } catch (Exception $e) {
+            $connection->error = $e->getMessage();
+            error_log('[Thamani DB Query Error] ' . $e->getMessage() . ' | SQL: ' . $sql);
+            return false;
+        }
+    }
+
+    function thamani_db_stmt_bind_param($stmt, $types, &...$vars) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_bind_param($stmt, $types, ...$vars);
+        }
+        return $stmt ? $stmt->bind_param($types, ...$vars) : false;
+    }
+
+    function thamani_db_stmt_bind_result($stmt, &...$vars) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_bind_result($stmt, ...$vars);
+        }
+        return false;
+    }
+
+    function thamani_db_stmt_execute($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_execute($stmt);
+        }
+        return $stmt ? $stmt->execute() : false;
+    }
+
+    function thamani_db_stmt_store_result($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_store_result($stmt);
+        }
+        return $stmt ? $stmt->store_result() : false;
+    }
+
+    function thamani_db_stmt_num_rows($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_num_rows($stmt);
+        }
+        return $stmt ? $stmt->num_rows() : 0;
+    }
+
+    function thamani_db_stmt_affected_rows($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_affected_rows($stmt);
+        }
+        return $stmt ? ($stmt->affectedRows ?? 0) : 0;
+    }
+
+    function thamani_db_stmt_get_result($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_get_result($stmt);
+        }
+        return $stmt ? $stmt->get_result() : false;
+    }
+
+    function thamani_db_stmt_fetch($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_fetch($stmt);
+        }
+        return false;
+    }
+
+    function thamani_db_stmt_close($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_close($stmt);
+        }
+        return $stmt ? $stmt->close() : true;
+    }
+
+    function thamani_db_stmt_error($stmt) {
+        if (class_exists('mysqli_stmt') && $stmt instanceof mysqli_stmt) {
+            return mysqli_stmt_error($stmt);
+        }
+        return $stmt ? ($stmt->errorMsg ?? '') : '';
+    }
+
+    function thamani_db_fetch_assoc($result) {
+        if (class_exists('mysqli_result') && $result instanceof mysqli_result) {
+            return mysqli_fetch_assoc($result);
+        }
+        return $result instanceof ThamaniPolyfillResult ? $result->fetch_assoc() : null;
+    }
 }
 
 return $conn;

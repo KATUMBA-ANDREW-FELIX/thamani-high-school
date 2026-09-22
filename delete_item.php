@@ -58,14 +58,14 @@ switch ($type) {
         if (!$isAdmin) {
             $setFlash('error', 'Only administrators can delete teacher records.');
         }
-        $stmt = mysqli_prepare($conn, "DELETE FROM teachers WHERE id = ?");
+        $stmt = thamani_db_prepare($conn, "DELETE FROM teachers WHERE id = ?");
         if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "i", $id);
-            if (mysqli_stmt_execute($stmt)) {
-                mysqli_stmt_close($stmt);
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
                 $setFlash('success', 'Teacher record deleted successfully.');
             } else {
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete teacher record.');
             }
         }
@@ -78,14 +78,14 @@ switch ($type) {
         if (!$isAdmin) {
             $setFlash('error', 'Only administrators can delete student enrollment records.');
         }
-        $stmt = mysqli_prepare($conn, "DELETE FROM students WHERE id = ?");
+        $stmt = thamani_db_prepare($conn, "DELETE FROM students WHERE id = ?");
         if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "i", $id);
-            if (mysqli_stmt_execute($stmt)) {
-                mysqli_stmt_close($stmt);
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
                 $setFlash('success', 'Student record deleted successfully.');
             } else {
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete student record.');
             }
         }
@@ -98,14 +98,14 @@ switch ($type) {
         if (!$isAdmin) {
             $setFlash('error', 'Only administrators can delete alumni records.');
         }
-        $stmt = mysqli_prepare($conn, "DELETE FROM alumni WHERE id = ?");
+        $stmt = thamani_db_prepare($conn, "DELETE FROM alumni WHERE id = ?");
         if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "i", $id);
-            if (mysqli_stmt_execute($stmt)) {
-                mysqli_stmt_close($stmt);
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
                 $setFlash('success', 'Alumni record deleted successfully.');
             } else {
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete alumni record.');
             }
         }
@@ -115,12 +115,12 @@ switch ($type) {
     // 4. CALENDAR & FEES DOCUMENT (Admin OR Uploader)
     // ============================================================
     case 'calendar':
-        $check = mysqli_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM calendar_documents WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($check, "i", $id);
-        mysqli_stmt_execute($check);
-        $res = mysqli_stmt_get_result($check);
-        $item = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($check);
+        $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM calendar_documents WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($check, "i", $id);
+        thamani_db_stmt_execute($check);
+        $res = thamani_db_stmt_get_result($check);
+        $item = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($check);
 
         if (!$item) {
             $setFlash('error', 'Calendar document not found.');
@@ -143,13 +143,13 @@ switch ($type) {
             }
         }
 
-        $del = mysqli_prepare($conn, "DELETE FROM calendar_documents WHERE id = ?");
-        mysqli_stmt_bind_param($del, "i", $id);
-        if (mysqli_stmt_execute($del)) {
-            mysqli_stmt_close($del);
+        $del = thamani_db_prepare($conn, "DELETE FROM calendar_documents WHERE id = ?");
+        thamani_db_stmt_bind_param($del, "i", $id);
+        if (thamani_db_stmt_execute($del)) {
+            thamani_db_stmt_close($del);
             $setFlash('success', 'Document "' . $item['title'] . '" deleted successfully.');
         } else {
-            mysqli_stmt_close($del);
+            thamani_db_stmt_close($del);
             $setFlash('error', 'Failed to delete document from database.');
         }
         break;
@@ -158,12 +158,12 @@ switch ($type) {
     // 5. GALLERY PHOTO (Admin OR Uploader)
     // ============================================================
     case 'gallery':
-        $check = mysqli_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM gallery_photos WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($check, "i", $id);
-        mysqli_stmt_execute($check);
-        $res = mysqli_stmt_get_result($check);
-        $item = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($check);
+        $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM gallery_photos WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($check, "i", $id);
+        thamani_db_stmt_execute($check);
+        $res = thamani_db_stmt_get_result($check);
+        $item = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($check);
 
         if (!$item) {
             $setFlash('error', 'Gallery photo not found.');
@@ -186,13 +186,13 @@ switch ($type) {
             }
         }
 
-        $del = mysqli_prepare($conn, "DELETE FROM gallery_photos WHERE id = ?");
-        mysqli_stmt_bind_param($del, "i", $id);
-        if (mysqli_stmt_execute($del)) {
-            mysqli_stmt_close($del);
+        $del = thamani_db_prepare($conn, "DELETE FROM gallery_photos WHERE id = ?");
+        thamani_db_stmt_bind_param($del, "i", $id);
+        if (thamani_db_stmt_execute($del)) {
+            thamani_db_stmt_close($del);
             $setFlash('success', 'Photo "' . $item['title'] . '" deleted successfully.');
         } else {
-            mysqli_stmt_close($del);
+            thamani_db_stmt_close($del);
             $setFlash('error', 'Failed to delete photo from database.');
         }
         break;
@@ -201,12 +201,12 @@ switch ($type) {
     // 6. LIBRARY RESOURCE (Admin OR Uploader)
     // ============================================================
     case 'library':
-        $check = mysqli_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM library_resources WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($check, "i", $id);
-        mysqli_stmt_execute($check);
-        $res = mysqli_stmt_get_result($check);
-        $item = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($check);
+        $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM library_resources WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($check, "i", $id);
+        thamani_db_stmt_execute($check);
+        $res = thamani_db_stmt_get_result($check);
+        $item = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($check);
 
         if (!$item) {
             $setFlash('error', 'Library resource not found.');
@@ -229,13 +229,13 @@ switch ($type) {
             }
         }
 
-        $del = mysqli_prepare($conn, "DELETE FROM library_resources WHERE id = ?");
-        mysqli_stmt_bind_param($del, "i", $id);
-        if (mysqli_stmt_execute($del)) {
-            mysqli_stmt_close($del);
+        $del = thamani_db_prepare($conn, "DELETE FROM library_resources WHERE id = ?");
+        thamani_db_stmt_bind_param($del, "i", $id);
+        if (thamani_db_stmt_execute($del)) {
+            thamani_db_stmt_close($del);
             $setFlash('success', 'Resource "' . $item['title'] . '" deleted successfully.');
         } else {
-            mysqli_stmt_close($del);
+            thamani_db_stmt_close($del);
             $setFlash('error', 'Failed to delete library resource from database.');
         }
         break;
@@ -247,12 +247,12 @@ switch ($type) {
         if (!$isAdmin) {
             $setFlash('error', 'Only administrators can delete class timetables.');
         }
-        $check = mysqli_prepare($conn, "SELECT id, title, file_path FROM class_timetables WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($check, "i", $id);
-        mysqli_stmt_execute($check);
-        $res = mysqli_stmt_get_result($check);
-        $item = $res ? mysqli_fetch_assoc($res) : null;
-        mysqli_stmt_close($check);
+        $check = thamani_db_prepare($conn, "SELECT id, title, file_path FROM class_timetables WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($check, "i", $id);
+        thamani_db_stmt_execute($check);
+        $res = thamani_db_stmt_get_result($check);
+        $item = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($check);
 
         if (!$item) {
             $setFlash('error', 'Class timetable not found.');
@@ -262,14 +262,14 @@ switch ($type) {
             @unlink(__DIR__ . '/' . $item['file_path']);
         }
 
-        $stmt = mysqli_prepare($conn, "DELETE FROM class_timetables WHERE id = ?");
+        $stmt = thamani_db_prepare($conn, "DELETE FROM class_timetables WHERE id = ?");
         if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "i", $id);
-            if (mysqli_stmt_execute($stmt)) {
-                mysqli_stmt_close($stmt);
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
                 $setFlash('success', 'Timetable record deleted successfully.');
             } else {
-                mysqli_stmt_close($stmt);
+                thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete timetable record.');
             }
         }
