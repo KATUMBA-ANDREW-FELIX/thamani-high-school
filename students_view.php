@@ -77,6 +77,9 @@ if ($res) {
                     <span class="text-sm text-gray-600 hidden lg:inline">
                         Signed in as <strong class="text-brand-green"><?= htmlspecialchars($teacher['name']) ?></strong>
                     </span>
+                    <a href="home.php" class="px-4 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="globe" class="w-4 h-4"></i> Main Website
+                    </a>
                     <a href="teacher_logout.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors">
                         Logout
                     </a>

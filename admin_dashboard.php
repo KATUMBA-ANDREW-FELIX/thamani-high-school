@@ -142,6 +142,10 @@ if (!empty($_SESSION['admin_flash'])) {
                 
                 <!-- Clean, Light Action Controls -->
                 <div class="hidden md:flex items-center gap-3 flex-shrink-0">
+                    <a href="home.php" class="px-4 py-2.5 rounded-xl text-xs font-black text-gray-800 bg-gray-100 hover:bg-gray-200 transition-all flex items-center gap-1.5 border border-gray-200 shadow-sm">
+                        <i data-lucide="globe" class="w-4 h-4 text-amber-600"></i> Main Website
+                    </a>
+
                     <button onclick="switchAdminTab('tab-admin-overview');" class="px-4 py-2.5 rounded-xl text-xs font-black text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white transition-all flex items-center gap-1.5">
                         <i data-lucide="layout-dashboard" class="w-4 h-4 text-amber-500"></i> Dashboard
                     </button>
@@ -169,6 +173,7 @@ if (!empty($_SESSION['admin_flash'])) {
             </div>
         </div>
         <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200 px-4 pt-3 pb-5 space-y-2">
+            <a href="home.php" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-gray-900 bg-gray-50 border border-gray-200 block">🌐 Main Website</a>
             <button onclick="switchAdminTab('tab-admin-overview'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-gray-900 bg-gray-50 border border-gray-200">Dashboard</button>
             <button onclick="openModal('modal-admin-change-password'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Change Password</button>
             <div class="pt-3 border-t border-gray-100">

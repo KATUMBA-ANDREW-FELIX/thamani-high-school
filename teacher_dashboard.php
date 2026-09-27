@@ -87,6 +87,10 @@ if ($caRes) {
                     <span class="text-sm text-gray-600 hidden lg:inline">
                         Signed in as <strong class="text-brand-green"><?= htmlspecialchars($teacher['name']) ?></strong>
                     </span>
+                    <a href="home.php"
+                       class="px-4 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="globe" class="w-4 h-4"></i> Main Website
+                    </a>
                     <a href="teacher-change-password.php?voluntary=1"
                        class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5">
                         <i data-lucide="key-round" class="w-4 h-4"></i> Password
@@ -105,8 +109,9 @@ if ($caRes) {
             </div>
         </div>
 
-        <!-- Mobile Menu: Student Roster + Alumni + Timetables + Password + Logout -->
+        <!-- Mobile Menu: Student Roster + Alumni + Timetables + Main Website + Password + Logout -->
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <a href="home.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">🌐 Main Website</a>
             <a href="students_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Student Roster</a>
             <a href="alumni_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni Registry</a>
             <a href="timetables.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Class Timetables</a>

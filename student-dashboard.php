@@ -117,6 +117,10 @@ function formatSize($bytes) {
                     <span class="text-sm text-gray-600 hidden lg:inline">
                         Signed in as <strong class="text-brand-green"><?= htmlspecialchars($student['name']) ?></strong>
                     </span>
+                    <a href="home.php"
+                       class="px-4 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="globe" class="w-4 h-4"></i> Main Website
+                    </a>
                     <a href="student-change-password.php"
                        class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5">
                         <i data-lucide="key-round" class="w-4 h-4"></i> Password
