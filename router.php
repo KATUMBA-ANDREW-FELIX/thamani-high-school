@@ -7,6 +7,12 @@ if ($uri === '/' || $uri === '/index.php' || $uri === '/index.html') {
     exit;
 }
 
+// Redirect old static /admin or /admin.html to real PHP Admin Dashboard
+if ($uri === '/admin' || $uri === '/admin.html') {
+    header('Location: admin_dashboard.php');
+    exit;
+}
+
 // Serve existing static files (css, js, images, html) directly
 $file = __DIR__ . $uri;
 if ($uri !== '/' && file_exists($file) && !is_dir($file)) {
