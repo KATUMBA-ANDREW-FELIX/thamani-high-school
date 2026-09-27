@@ -12,6 +12,7 @@ require_once 'conn.php';
 
 $isAdmin   = !empty($_SESSION['admin_id']);
 $isTeacher = !empty($_SESSION['teacher_id']);
+$isStudent = !empty($_SESSION['student_id']);
 
 if ($isAdmin) {
     $backLink   = 'admin_dashboard.php';
@@ -21,8 +22,12 @@ if ($isAdmin) {
     $backLink   = 'teacher_dashboard.php';
     $logoutLink = 'teacher_logout.php';
     $viewerName = $_SESSION['teacher_name'] ?? 'Teacher';
+} elseif ($isStudent) {
+    $backLink   = 'student-dashboard.php';
+    $logoutLink = 'student_logout.php';
+    $viewerName = $_SESSION['student_name'] ?? 'Student';
 } else {
-    $backLink   = 'index.php';
+    $backLink   = 'home.php';
     $logoutLink = null;
     $viewerName = null;
 }
@@ -143,25 +148,28 @@ $photosPayload = json_encode(array_map(function($p) {
                     <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                     <a href="map.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Campus Map</a>
                 </div>
-                <div class="hidden md:flex items-center space-x-3">
+                <div class="hidden md:flex items-center space-x-2">
                     <?php if ($viewerName): ?>
-                        <span class="text-sm text-gray-600 hidden lg:inline">
+                        <span class="text-xs text-gray-600 hidden xl:inline font-medium">
                             Signed in as <strong class="<?= $isAdmin ? 'text-brand-maroon' : 'text-brand-green' ?>"><?= htmlspecialchars($viewerName) ?></strong>
                         </span>
                         <a href="<?= $backLink ?>"
-                           class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5">
-                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i> Back to Dashboard
                         </a>
                         <a href="<?= $logoutLink ?>"
-                           class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1.5">
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                         </a>
                     <?php else: ?>
-                        <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
-                            <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher Portal
+                        <a href="student-login.php" class="px-3.5 py-2 rounded-md text-xs font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Portal
                         </a>
-                        <a href="teacher-login.php?role=admin" class="px-4 py-2 rounded-md text-sm font-bold text-brand-green bg-brand-gold transition-transform hover:scale-105 shadow flex items-center gap-1.5">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Panel
+                        <a href="teacher-login.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Teacher Portal
+                        </a>
+                        <a href="admin.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-gray-900 bg-brand-gold hover:bg-yellow-400 transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin Panel
                         </a>
                     <?php endif; ?>
                 </div>

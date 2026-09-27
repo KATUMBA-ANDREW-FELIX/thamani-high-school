@@ -4,7 +4,34 @@
  * Accessible to students, parents, and visitors (No login required).
  */
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once 'conn.php';
+
+$isStudent = !empty($_SESSION['student_id']);
+$isTeacher = !empty($_SESSION['teacher_id']);
+$isAdmin   = !empty($_SESSION['admin_id']);
+$isLoggedIn = $isStudent || $isTeacher || $isAdmin;
+
+$dashboardLink = 'home.php';
+$logoutLink    = '#';
+$viewerName    = '';
+
+if ($isStudent) {
+    $dashboardLink = 'student-dashboard.php';
+    $logoutLink    = 'student_logout.php';
+    $viewerName    = $_SESSION['student_name'] ?? 'Student';
+} elseif ($isTeacher) {
+    $dashboardLink = 'teacher_dashboard.php';
+    $logoutLink    = 'teacher_logout.php';
+    $viewerName    = $_SESSION['teacher_name'] ?? 'Teacher';
+} elseif ($isAdmin) {
+    $dashboardLink = 'admin_dashboard.php';
+    $logoutLink    = 'admin_logout.php';
+    $viewerName    = $_SESSION['admin_name'] ?? 'Admin';
+}
 
 $classFilter  = trim($_GET['class'] ?? 'Senior 4');
 $streamFilter = trim($_GET['stream'] ?? 'All Streams');
@@ -70,9 +97,9 @@ if ($stmt) {
     <!-- Main Navigation Bar -->
     <nav class="sticky top-0 z-50 bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
+            <div class="flex justify-between h-20 items-center">
                 <div class="flex items-center">
-                    <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="home.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
                         <div class="flex flex-col">
                             <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
@@ -81,12 +108,48 @@ if ($stmt) {
                     </a>
                 </div>
 
-                <div class="hidden lg:flex items-center space-x-3">
-                    <a href="index.html" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-brand-green">Home</a>
-                    <a href="timetables.php" class="px-3 py-2 text-sm font-bold text-white bg-brand-green rounded-md">Class Timetables</a>
-                    <a href="calendar.php" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-brand-green">Academic Calendar</a>
-                    <a href="gallery.php" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-brand-green">Photo Gallery</a>
-                    <a href="teacher-login.php" class="ml-4 px-4 py-2 text-sm font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white rounded-md transition-colors">Staff Login</a>
+                <!-- Public Navigation Links -->
+                <div class="hidden lg:flex items-center space-x-1 font-medium text-sm">
+                    <a href="home.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Home</a>
+                    <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
+                    <a href="timetables.php" class="nav-link px-3 py-2 rounded-md transition-colors text-white bg-brand-green font-bold">Timetables</a>
+                    <a href="library.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Library</a>
+                    <a href="gallery.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
+                    <a href="calendar.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
+                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                </div>
+
+                <!-- Right-side Actions: Smart Dashboard/Logout OR Portal Login Links -->
+                <div class="hidden md:flex items-center space-x-2">
+                    <?php if ($isLoggedIn): ?>
+                        <span class="text-xs text-gray-600 hidden xl:inline font-medium">
+                            Signed in as <strong class="text-brand-green"><?= htmlspecialchars($viewerName) ?></strong>
+                        </span>
+                        <a href="<?= $dashboardLink ?>"
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i> Back to Dashboard
+                        </a>
+                        <a href="<?= $logoutLink ?>"
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                        </a>
+                    <?php else: ?>
+                        <a href="student-login.php" class="px-3.5 py-2 rounded-md text-xs font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Portal
+                        </a>
+                        <a href="teacher-login.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Teacher Portal
+                        </a>
+                        <a href="admin.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-gray-900 bg-brand-gold hover:bg-yellow-400 transition-colors flex items-center gap-1 shadow-sm">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin Panel
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+                <div class="lg:hidden flex items-center">
+                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
                 </div>
             </div>
         </div>
