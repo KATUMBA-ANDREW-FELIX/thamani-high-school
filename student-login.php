@@ -194,11 +194,6 @@ if (!empty($errors)) {
                         <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Kakiri - Uganda</span>
                     </div>
                 </a>
-                <div class="hidden md:flex items-center space-x-3">
-                    <a href="teacher-login.php" class="px-4 py-2 rounded-md text-sm font-bold text-white bg-brand-maroon transition-transform hover:scale-105 shadow flex items-center gap-1.5">
-                        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Teacher / Admin
-                    </a>
-                </div>
             </div>
         </div>
     </nav>

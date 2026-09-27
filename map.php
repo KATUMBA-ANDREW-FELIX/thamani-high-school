@@ -48,11 +48,6 @@
                     <a href="alumni.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Alumni</a>
                     <a href="map.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white hover:border-gray-900">Campus Map</a>
                 </div>
-                <div class="hidden md:flex items-center gap-3 flex-shrink-0 ml-4">
-                    <a href="teacher-login.php" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gray-800 hover:bg-gray-900 transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
-                        <i data-lucide="log-in" class="w-3.5 h-3.5 text-amber-400"></i> Portal Login
-                    </a>
-                </div>
             </div>
         </div>
     </nav>

@@ -87,9 +87,9 @@ if ($isStudent) {
                     <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                 </div>
 
-                <!-- Right-side Actions: Smart Dashboard/Logout OR Portal Login Links -->
-                <div class="hidden md:flex items-center space-x-2">
-                    <?php if ($isLoggedIn): ?>
+                <!-- Right-side Actions: Smart Dashboard & Logout Controls (Shown only when logged in) -->
+                <?php if ($isLoggedIn): ?>
+                    <div class="hidden md:flex items-center space-x-2">
                         <span class="text-xs text-gray-600 hidden xl:inline font-medium">
                             Signed in as <strong class="text-brand-green"><?= htmlspecialchars($viewerName) ?></strong>
                         </span>
@@ -101,18 +101,8 @@ if ($isStudent) {
                            class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                         </a>
-                    <?php else: ?>
-                        <a href="student-login.php" class="px-3.5 py-2 rounded-md text-xs font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Portal
-                        </a>
-                        <a href="teacher-login.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Teacher Portal
-                        </a>
-                        <a href="admin.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-gray-900 bg-brand-gold hover:bg-yellow-400 transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin Panel
-                        </a>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php endif; ?>
 
                 <div class="lg:hidden flex items-center">
                     <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
@@ -131,20 +121,16 @@ if ($isStudent) {
             <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
             <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
             <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
-            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
-                <?php if ($isLoggedIn): ?>
+            <?php if ($isLoggedIn): ?>
+                <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
                     <a href="<?= $dashboardLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-green text-center flex items-center justify-center gap-2">
                         <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i> Back to Dashboard
                     </a>
                     <a href="<?= $logoutLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center flex items-center justify-center gap-2">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                     </a>
-                <?php else: ?>
-                    <a href="student-login.php" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-lightGreen text-center text-xs">Student Portal</a>
-                    <a href="teacher-login.html" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center text-xs">Teacher Portal</a>
-                    <a href="admin.html" class="w-full py-2.5 rounded-md font-bold text-gray-900 bg-brand-gold text-center text-xs">Admin Panel</a>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
         </div>
     </nav>
 

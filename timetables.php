@@ -119,9 +119,9 @@ if ($stmt) {
                     <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                 </div>
 
-                <!-- Right-side Actions: Smart Dashboard/Logout OR Portal Login Links -->
-                <div class="hidden md:flex items-center space-x-2">
-                    <?php if ($isLoggedIn): ?>
+                <!-- Right-side Actions: Smart Dashboard/Logout (Shown only when logged in) -->
+                <?php if ($isLoggedIn): ?>
+                    <div class="hidden md:flex items-center space-x-2">
                         <span class="text-xs text-gray-600 hidden xl:inline font-medium">
                             Signed in as <strong class="text-brand-green"><?= htmlspecialchars($viewerName) ?></strong>
                         </span>
@@ -133,18 +133,8 @@ if ($stmt) {
                            class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                         </a>
-                    <?php else: ?>
-                        <a href="student-login.php" class="px-3.5 py-2 rounded-md text-xs font-bold text-brand-green bg-brand-lightGreen hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Portal
-                        </a>
-                        <a href="teacher-login.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Teacher Portal
-                        </a>
-                        <a href="admin.html" class="px-3.5 py-2 rounded-md text-xs font-bold text-gray-900 bg-brand-gold hover:bg-yellow-400 transition-colors flex items-center gap-1 shadow-sm">
-                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin Panel
-                        </a>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php endif; ?>
 
                 <div class="lg:hidden flex items-center">
                     <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
