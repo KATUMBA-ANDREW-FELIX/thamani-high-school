@@ -194,6 +194,9 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         emergency_name TEXT,
                         emergency_phone TEXT,
                         medical_notes TEXT,
+                        academic_doc_path TEXT,
+                        recommendation_doc_path TEXT,
+                        medical_doc_path TEXT,
                         status TEXT DEFAULT 'Pending',
                         password_hash TEXT,
                         must_change_password INTEGER DEFAULT 1,
@@ -321,6 +324,9 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS academic_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS recommendation_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS medical_doc_path TEXT"); } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
@@ -329,6 +335,9 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN must_change_password INTEGER DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN last_login DATETIME"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN academic_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN recommendation_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN medical_doc_path TEXT"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash

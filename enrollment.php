@@ -172,6 +172,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'You must accept the declaration to submit the application.';
     }
 
+    // Helper for processing file uploads (PDF, DOC, images, NO videos)
+    $handleDocUpload = function(array $fileInfo, string $prefix, string $linNum) use (&$errors): ?string {
+        if (!isset($fileInfo['error']) || $fileInfo['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        if ($fileInfo['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = "Error uploading {$prefix} document. Code: {$fileInfo['error']}";
+            return null;
+        }
+
+        // 10MB limit
+        if ($fileInfo['size'] > 10 * 1024 * 1024) {
+            $errors[] = "The {$prefix} document exceeds the maximum size of 10MB.";
+            return null;
+        }
+
+        $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'png', 'jpg', 'jpeg', 'webp'];
+        $ext = strtolower(pathinfo($fileInfo['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($ext, $allowedExts, true)) {
+            $errors[] = "Invalid file format for {$prefix} document. Allowed: PDF, DOC, DOCX, PNG, JPG. Video files are strictly prohibited.";
+            return null;
+        }
+
+        // Validate MIME type to reject video formats
+        $mime = '';
+        if (function_exists('mime_content_type') && !empty($fileInfo['tmp_name'])) {
+            $mime = @mime_content_type($fileInfo['tmp_name']) ?: '';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            $errors[] = "Video uploads are not allowed for {$prefix} documents.";
+            return null;
+        }
+
+        $uploadDir = __DIR__ . '/uploads/enrollment_docs/';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        $sanitizedLin = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $linNum);
+        $filename = $prefix . '_' . ($sanitizedLin ?: 'student') . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+        $targetPath = $uploadDir . $filename;
+        $relativePath = 'uploads/enrollment_docs/' . $filename;
+
+        if (!move_uploaded_file($fileInfo['tmp_name'], $targetPath)) {
+            $errors[] = "Failed to save the uploaded {$prefix} document.";
+            return null;
+        }
+
+        return $relativePath;
+    };
+
+    $academicDocPath       = !empty($_FILES['academic_doc'])       ? $handleDocUpload($_FILES['academic_doc'], 'academic', $lin_number) : null;
+    $recommendationDocPath = !empty($_FILES['recommendation_doc']) ? $handleDocUpload($_FILES['recommendation_doc'], 'recommendation', $lin_number) : null;
+    $medicalDocPath        = !empty($_FILES['medical_doc'])        ? $handleDocUpload($_FILES['medical_doc'], 'medical', $lin_number) : null;
+
     // ---------- 4. Database insert ----------
     if (empty($errors)) {
         // 4a. Duplicate LIN check
@@ -200,8 +257,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             guardian_name, guardian_relationship, guardian_phone,
                             guardian_email, guardian_address, guardian_occupation,
                             emergency_name, emergency_phone, medical_notes,
+                            academic_doc_path, recommendation_doc_path, medical_doc_path,
                             status, registered_at
-                          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
+                          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
 
             $stmt = thamani_db_prepare($conn, $insertSql);
 
@@ -217,9 +275,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $emergencyPhone     = $emergency_phone     !== '' ? $emergency_phone     : null;
                 $medicalNotes       = $medical_notes       !== '' ? $medical_notes       : null;
 
-                // Type string: 17 placeholders
-                // s=string, i=integer. All 17 are strings except none — everything is s here.
-                $types = "sssssssssssssssss";
+                // 20 string placeholders
+                $types = "ssssssssssssssssssss";
 
                 thamani_db_stmt_bind_param(
                     $stmt,
@@ -240,7 +297,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $guardianOccupation,
                     $emergencyName,
                     $emergencyPhone,
-                    $medicalNotes
+                    $medicalNotes,
+                    $academicDocPath,
+                    $recommendationDocPath,
+                    $medicalDocPath
                 );
 
                 if (thamani_db_stmt_execute($stmt)) {

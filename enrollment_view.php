@@ -69,6 +69,7 @@ $sql = "SELECT id, full_name, date_of_birth, gender, nationality,
                guardian_name, guardian_relationship, guardian_phone,
                guardian_email, guardian_address, guardian_occupation,
                emergency_name, emergency_phone, medical_notes,
+               academic_doc_path, recommendation_doc_path, medical_doc_path,
                status, registered_at
         FROM students
         $whereSql
@@ -604,6 +605,46 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
                             <div class="text-gray-500 font-medium text-sm mb-1">Medical Notes</div>
                             <div class="text-gray-900 text-sm whitespace-pre-wrap">${esc(s.medical_notes)}</div>
                         </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-bold text-brand-green mb-2 flex items-center gap-2">
+                        <i data-lucide="paperclip" class="w-4 h-4"></i> Uploaded Documents
+                    </h4>
+                    <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+                        ${s.academic_doc_path ? `
+                            <div class="flex items-center justify-between py-1.5 border-b border-gray-200">
+                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <i data-lucide="file-badge" class="w-4 h-4 text-brand-green"></i> Academic Documents
+                                </span>
+                                <a href="${esc(s.academic_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
+                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                                </a>
+                            </div>
+                        ` : '<p class="text-xs text-gray-400 italic">No academic document attached</p>'}
+
+                        ${s.recommendation_doc_path ? `
+                            <div class="flex items-center justify-between py-1.5 border-b border-gray-200">
+                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <i data-lucide="award" class="w-4 h-4 text-brand-green"></i> Recommendation Letter
+                                </span>
+                                <a href="${esc(s.recommendation_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
+                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                                </a>
+                            </div>
+                        ` : '<p class="text-xs text-gray-400 italic">No recommendation letter attached</p>'}
+
+                        ${s.medical_doc_path ? `
+                            <div class="flex items-center justify-between py-1.5">
+                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <i data-lucide="stethoscope" class="w-4 h-4 text-brand-green"></i> Medical Documents
+                                </span>
+                                <a href="${esc(s.medical_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
+                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                                </a>
+                            </div>
+                        ` : '<p class="text-xs text-gray-400 italic">No medical document attached</p>'}
                     </div>
                 </div>
             `;

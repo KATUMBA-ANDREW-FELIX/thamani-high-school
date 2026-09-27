@@ -111,7 +111,7 @@
             <!-- Form Card -->
             <div class="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-gray-100">
 
-                <form action="enrollment.php" method="post" class="space-y-10" novalidate>
+                <form action="enrollment.php" method="post" enctype="multipart/form-data" class="space-y-10" novalidate>
 
                     <!-- SECTION 1: STUDENT INFORMATION -->
                     <div>
@@ -169,6 +169,28 @@
                                        value="<?= htmlspecialchars($_POST['previous_school'] ?? '', ENT_QUOTES) ?>"
                                        placeholder="e.g. Kakiri Secondary School"
                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none">
+                            </div>
+
+                            <!-- Upload Academic Documents -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
+                                    <i data-lucide="file-badge" class="inline w-4 h-4 text-brand-green mr-1"></i>
+                                    Academic Documents <span class="text-gray-400 font-normal normal-case">(PLE/UCE Result Slip / Transcript)</span>
+                                </label>
+                                <input type="file" name="academic_doc" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.rtf,.odt,image/*,application/pdf"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-brand-green focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-brand-green file:text-white hover:file:bg-brand-darkGreen cursor-pointer">
+                                <p class="text-[11px] text-gray-500 mt-1">Accepted: PDF, DOC, DOCX, PNG, JPG (Max 10MB). <strong>No videos.</strong></p>
+                            </div>
+
+                            <!-- Upload Recommendation Letter -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
+                                    <i data-lucide="award" class="inline w-4 h-4 text-brand-green mr-1"></i>
+                                    Recommendation Letter <span class="text-gray-400 font-normal normal-case">(Previous Headteacher / LC1 / Pastor)</span>
+                                </label>
+                                <input type="file" name="recommendation_doc" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.rtf,.odt,image/*,application/pdf"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-brand-green focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-brand-green file:text-white hover:file:bg-brand-darkGreen cursor-pointer">
+                                <p class="text-[11px] text-gray-500 mt-1">Accepted: PDF, DOC, DOCX, PNG, JPG (Max 10MB). <strong>No videos.</strong></p>
                             </div>
                         </div>
                     </div>
@@ -295,6 +317,17 @@
                                 <textarea name="medical_notes" rows="3" maxlength="500"
                                           placeholder="List any known medical conditions, allergies, or special needs..."
                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green focus:outline-none resize-none"><?= htmlspecialchars($_POST['medical_notes'] ?? '', ENT_QUOTES) ?></textarea>
+                            </div>
+
+                            <!-- Upload Medical Documents -->
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
+                                    <i data-lucide="stethoscope" class="inline w-4 h-4 text-brand-green mr-1"></i>
+                                    Medical Documents <span class="text-gray-400 font-normal normal-case">(Medical Exam Form / Immunization / Doctor Certificate)</span>
+                                </label>
+                                <input type="file" name="medical_doc" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt,.rtf,.odt,image/*,application/pdf"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-brand-green focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-brand-green file:text-white hover:file:bg-brand-darkGreen cursor-pointer">
+                                <p class="text-[11px] text-gray-500 mt-1">Accepted: PDF, DOC, DOCX, PNG, JPG (Max 10MB). <strong>No videos allowed.</strong></p>
                             </div>
                         </div>
                     </div>
