@@ -32,8 +32,9 @@ function current_teacher(): array {
         'name'             => $_SESSION['teacher_name']             ?? null,
         'email'            => $_SESSION['teacher_email']            ?? null,
         'department'       => $_SESSION['teacher_department']       ?? null,
-        'is_class_teacher' => (int)($_SESSION['teacher_is_class_teacher'] ?? 0),
-        'class_teacher_of' => $_SESSION['teacher_class_teacher_of'] ?? '',
-        'classes_taught'   => $_SESSION['teacher_classes_taught']   ?? '',
+        'is_class_teacher'     => (int)($_SESSION['teacher_is_class_teacher'] ?? 0),
+        'class_teacher_of'     => $_SESSION['teacher_class_teacher_of'] ?? '',
+        'classes_taught'       => $_SESSION['teacher_classes_taught']   ?? '',
+        'can_view_enrollments' => (int)($_SESSION['teacher_can_view_enrollments'] ?? 0),
     ];
 }

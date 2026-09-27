@@ -214,11 +214,36 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_class_teacher INTEGER DEFAULT 0,
                         class_teacher_of TEXT,
                         classes_taught TEXT,
+                        can_view_enrollments INTEGER DEFAULT 0,
                         password_hash TEXT,
                         must_change_password INTEGER DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
                         last_login DATETIME,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS student_attendance (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER NOT NULL,
+                        class_level TEXT NOT NULL,
+                        attendance_date DATE NOT NULL,
+                        status TEXT NOT NULL,
+                        recorded_by_teacher_id INTEGER,
+                        remarks TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS student_marks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER NOT NULL,
+                        class_level TEXT NOT NULL,
+                        subject TEXT NOT NULL,
+                        term TEXT NOT NULL,
+                        score REAL NOT NULL,
+                        max_score REAL DEFAULT 100,
+                        comments TEXT,
+                        recorded_by_teacher_id INTEGER,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS class_announcements (
@@ -320,6 +345,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_view_enrollments INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1"); } catch (Exception $e) {}
@@ -331,6 +357,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN classes_taught TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN can_view_enrollments INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN password_hash TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN must_change_password INTEGER DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1"); } catch (Exception $e) {}

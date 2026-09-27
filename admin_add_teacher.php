@@ -16,8 +16,9 @@ $fullName       = trim($_POST['full_name'] ?? '');
 $staffId        = trim($_POST['staff_id'] ?? $_POST['teacher_id'] ?? '');
 $email          = trim($_POST['email'] ?? '');
 $department     = trim($_POST['department'] ?? $_POST['subject'] ?? '');
-$isClassTeacher = !empty($_POST['is_class_teacher']) ? 1 : 0;
-$classTeacherOf = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') : null;
+$isClassTeacher      = !empty($_POST['is_class_teacher']) ? 1 : 0;
+$classTeacherOf      = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') : null;
+$canViewEnrollments  = !empty($_POST['can_view_enrollments']) ? 1 : 0;
 
 // Handle array or comma-separated string for classes_taught
 $classesTaughtRaw = $_POST['classes_taught'] ?? [];
@@ -64,13 +65,13 @@ $defaultPassword = 'Admin@2026';
 $hash = password_hash($defaultPassword, PASSWORD_BCRYPT);
 $now  = date('Y-m-d H:i:s');
 
-$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, password_hash, must_change_password, is_active, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
+$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, can_view_enrollments, password_hash, must_change_password, is_active, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
 
 $insStmt = thamani_db_prepare($conn, $insertSql);
 
 if ($insStmt) {
-    thamani_db_stmt_bind_param($insStmt, "ssssissss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $hash, $now);
+    thamani_db_stmt_bind_param($insStmt, "ssssississs", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classesTaught, $canViewEnrollments, $hash, $now);
     if (thamani_db_stmt_execute($insStmt)) {
         thamani_db_stmt_close($insStmt);
         $_SESSION['admin_flash'] = [

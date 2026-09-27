@@ -79,6 +79,9 @@ if ($caRes) {
                 <!-- Desktop Nav: Student Roster, Alumni & Timetables -->
                 <div class="hidden lg:flex items-center space-x-2">
                     <a href="students_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Student Roster</a>
+                    <?php if (!empty($teacher['can_view_enrollments'])): ?>
+                        <a href="enrollment_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-brand-green bg-brand-lightGreen font-bold">Enrollment Queue</a>
+                    <?php endif; ?>
                     <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                     <a href="timetables.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Class Timetables</a>
                 </div>

@@ -36,7 +36,7 @@ $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email F
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, can_view_enrollments, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -450,6 +450,11 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <?php if ((int)$t['is_class_teacher'] === 1): ?>
                                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
                                                             <i data-lucide="star" class="w-3 h-3 text-amber-600 fill-amber-500"></i> Class Teacher: <?= htmlspecialchars($t['class_teacher_of']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <?php if ((int)($t['can_view_enrollments'] ?? 0) === 1): ?>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-300" title="Permitted by admin to view enrolling applicants">
+                                                            <i data-lucide="user-check" class="w-3 h-3 text-blue-600"></i> Enrollment Access
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
@@ -906,6 +911,16 @@ if (!empty($_SESSION['admin_flash'])) {
                     </div>
                 </div>
 
+                <!-- SPECIAL PERMISSION: ENROLLMENT ACCESS -->
+                <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="can_view_enrollments" id="add_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
+                        </span>
+                    </label>
+                </div>
+
                 <!-- CLASSES TAUGHT -->
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher</label>
@@ -983,6 +998,16 @@ if (!empty($_SESSION['admin_flash'])) {
                             <option value="Form 6">Form 6</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- EDIT ENROLLMENT ACCESS PERMISSION -->
+                <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="can_view_enrollments" id="edit_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
+                        </span>
+                    </label>
                 </div>
 
                 <!-- EDIT CLASSES TAUGHT -->
@@ -1685,6 +1710,11 @@ if (!empty($_SESSION['admin_flash'])) {
             if (ctCb) {
                 ctCb.checked = isCT;
                 toggleEditClassTeacherSelect(isCT);
+            }
+
+            const canEnrCb = document.getElementById('edit_can_view_enrollments');
+            if (canEnrCb) {
+                canEnrCb.checked = parseInt(t.can_view_enrollments || 0) === 1;
             }
 
             const ctSel = document.getElementById('edit_class_teacher_of');

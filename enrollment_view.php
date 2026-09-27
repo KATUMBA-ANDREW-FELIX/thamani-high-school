@@ -19,6 +19,16 @@ if (!$isTeacher && !$isAdmin) {
     exit;
 }
 
+// Teachers CANNOT access enrolling/pending student applications unless granted permission by Admin
+if ($isTeacher && !$isAdmin && empty($_SESSION['teacher_can_view_enrollments'])) {
+    $_SESSION['teacher_flash'] = [
+        'type' => 'error',
+        'message' => 'Access Denied: Only administrators or authorized academic staff with explicit admin permissions can access enrolling student applications.'
+    ];
+    header('Location: teacher_dashboard.php');
+    exit;
+}
+
 // Which user is signed in?
 $viewerName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'Admin')
