@@ -80,7 +80,6 @@ if ($isStudent) {
                 <div class="hidden lg:flex items-center space-x-1 font-medium text-sm">
                     <a href="home.php" class="nav-link px-3 py-2 rounded-md transition-colors text-white bg-brand-green font-bold">Home</a>
                     <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
-                    <a href="timetables.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Timetables</a>
                     <a href="library.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Library</a>
                     <a href="gallery.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
                     <a href="calendar.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
@@ -116,7 +115,6 @@ if ($isStudent) {
         <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
             <a href="home.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Home</a>
             <a href="enrollment.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Enrollment</a>
-            <a href="timetables.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Timetables</a>
             <a href="library.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
             <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
             <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
@@ -138,7 +136,7 @@ if ($isStudent) {
         <section id="page-home">
             <!-- Hero Banner -->
             <div class="relative h-[600px] flex items-center justify-center text-white overflow-hidden bg-brand-darkGreen">
-                <div class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-1000 hover:scale-105 opacity-50" style="background-image: url('school.JPG');"></div>
+                <div class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-1000 hover:scale-105 opacity-50" style="background-image: url('E90A3185.JPG');"></div>
                 <div class="absolute inset-0 bg-gradient-to-t from-brand-darkGreen via-brand-green/70 to-transparent"></div>
                 <div class="relative z-10 max-w-4xl mx-auto text-center px-4">
                     <span class="inline-block px-4 py-1.5 rounded-full bg-brand-gold text-brand-green font-bold text-sm mb-4 uppercase tracking-wider shadow-lg">Thamani High School - Kakiri</span>

@@ -15,6 +15,11 @@ $isTeacher = !empty($_SESSION['teacher_id']);
 $isAdmin   = !empty($_SESSION['admin_id']);
 $isLoggedIn = $isStudent || $isTeacher || $isAdmin;
 
+if (!$isLoggedIn) {
+    header('Location: student-login.php');
+    exit;
+}
+
 $dashboardLink = 'home.php';
 $logoutLink    = '#';
 $viewerName    = '';
@@ -108,11 +113,10 @@ if ($stmt) {
                     </a>
                 </div>
 
-                <!-- Public Navigation Links -->
+                <!-- Navigation Links -->
                 <div class="hidden lg:flex items-center space-x-1 font-medium text-sm">
                     <a href="home.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Home</a>
                     <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
-                    <a href="timetables.php" class="nav-link px-3 py-2 rounded-md transition-colors text-white bg-brand-green font-bold">Timetables</a>
                     <a href="library.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Library</a>
                     <a href="gallery.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
                     <a href="calendar.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
