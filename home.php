@@ -86,7 +86,7 @@ if ($isStudent) {
                     <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
                 </div>
 
-                <!-- Right-side Actions: Smart Dashboard & Logout Controls (Shown only when logged in) -->
+                <!-- Right-side Actions: Smart Dashboard & Logout Controls or Unified Login Button -->
                 <?php if ($isLoggedIn): ?>
                     <div class="hidden md:flex items-center space-x-2">
                         <span class="text-xs text-gray-600 hidden xl:inline font-medium">
@@ -99,6 +99,13 @@ if ($isStudent) {
                         <a href="<?= $logoutLink ?>"
                            class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <div class="hidden md:flex items-center space-x-2">
+                        <a href="login.php"
+                           class="px-4 py-2 rounded-md text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
                         </a>
                     </div>
                 <?php endif; ?>
@@ -126,6 +133,12 @@ if ($isStudent) {
                     </a>
                     <a href="<?= $logoutLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center flex items-center justify-center gap-2">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="pt-2 border-t border-gray-100">
+                    <a href="login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-green text-center flex items-center justify-center gap-2">
+                        <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
                     </a>
                 </div>
             <?php endif; ?>
