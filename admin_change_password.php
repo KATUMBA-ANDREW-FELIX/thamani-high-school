@@ -8,7 +8,7 @@ require_admin_login();
 require_once 'conn.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: admin_dashboard.php');
+    header('Location: admin_dashboard.php?tab=tab-admin-overview#tab-admin-overview');
     exit;
 }
 
@@ -51,7 +51,7 @@ if (empty($errors)) {
 
 if (!empty($errors)) {
     $_SESSION['admin_flash'] = ['type' => 'error', 'message' => implode(' ', $errors)];
-    header('Location: admin_dashboard.php');
+    header('Location: admin_dashboard.php?tab=tab-admin-overview#tab-admin-overview');
     exit;
 }
 
@@ -69,5 +69,5 @@ if ($updStmt) {
     }
 }
 
-header('Location: admin_dashboard.php');
+header('Location: admin_dashboard.php?tab=tab-admin-overview#tab-admin-overview');
 exit;

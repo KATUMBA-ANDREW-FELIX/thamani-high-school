@@ -26,8 +26,10 @@ $teachers = [
         'department' => 'Mathematics',
         'is_class_teacher' => 1,
         'class_teacher_of' => 'Senior 1',
+        'class_teacher_stream' => 'Stream A',
         'classes_taught' => 'Senior 1, Senior 3',
         'can_view_enrollments' => 1,
+        'can_manage_duty_roster' => 1,
         'password_hash' => $validHash
     ],
     [
@@ -37,8 +39,10 @@ $teachers = [
         'department' => 'Physics',
         'is_class_teacher' => 0,
         'class_teacher_of' => '',
+        'class_teacher_stream' => 'Stream A',
         'classes_taught' => 'Senior 1, Senior 2',
         'can_view_enrollments' => 0,
+        'can_manage_duty_roster' => 0,
         'password_hash' => $validHash
     ],
     [
@@ -48,8 +52,10 @@ $teachers = [
         'department' => 'Chemistry',
         'is_class_teacher' => 1,
         'class_teacher_of' => 'Senior 2',
+        'class_teacher_stream' => 'Stream B',
         'classes_taught' => 'Senior 2, Senior 4',
         'can_view_enrollments' => 0,
+        'can_manage_duty_roster' => 0,
         'password_hash' => $validHash
     ]
 ];
@@ -63,18 +69,43 @@ foreach ($teachers as $t) {
     thamani_db_stmt_close($stmt);
 
     if ($exists) {
-        $upd = thamani_db_prepare($conn, "UPDATE teachers SET full_name = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, classes_taught = ?, can_view_enrollments = ?, password_hash = ? WHERE id = ?");
-        thamani_db_stmt_bind_param($upd, "ssissisi", $t['full_name'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['classes_taught'], $t['can_view_enrollments'], $t['password_hash'], $exists['id']);
+        $upd = thamani_db_prepare($conn, "UPDATE teachers SET full_name = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, password_hash = ? WHERE id = ?");
+        thamani_db_stmt_bind_param($upd, "ssisssiisi", $t['full_name'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['class_teacher_stream'], $t['classes_taught'], $t['can_view_enrollments'], $t['can_manage_duty_roster'], $t['password_hash'], $exists['id']);
         thamani_db_stmt_execute($upd);
         thamani_db_stmt_close($upd);
     } else {
-        $ins = thamani_db_prepare($conn, "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, can_view_enrollments, password_hash, must_change_password, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)");
-        thamani_db_stmt_bind_param($ins, "ssssissis", $t['staff_id'], $t['full_name'], $t['email'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['classes_taught'], $t['can_view_enrollments'], $t['password_hash']);
+        $ins = thamani_db_prepare($conn, "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, password_hash, must_change_password, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)");
+        thamani_db_stmt_bind_param($ins, "ssssisssiss", $t['staff_id'], $t['full_name'], $t['email'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['class_teacher_stream'], $t['classes_taught'], $t['can_view_enrollments'], $t['can_manage_duty_roster'], $t['password_hash']);
         thamani_db_stmt_execute($ins);
         thamani_db_stmt_close($ins);
     }
 }
 echo "✓ Teachers seed data populated.\n";
+
+// Seed default personal schedules for Mr. Denis Mukasa (TSC-2026-001)
+$stmtM = thamani_db_query($conn, "SELECT id FROM teachers WHERE staff_id = 'TSC-2026-001' LIMIT 1");
+if ($stmtM && $tr = thamani_db_fetch_assoc($stmtM)) {
+    $tId = (int)$tr['id'];
+    $cntRes = thamani_db_query($conn, "SELECT COUNT(*) as cnt FROM teacher_personal_schedules WHERE teacher_id = {$tId}");
+    $cntRow = $cntRes ? thamani_db_fetch_assoc($cntRes) : null;
+    if (empty($cntRow['cnt'])) {
+        $defaultSchedules = [
+            ['day' => 'Monday', 'start' => '08:00 AM', 'end' => '09:20 AM', 'subject' => 'Mathematics', 'class' => 'Senior 1', 'stream' => 'Stream A', 'room' => 'Room 101', 'notes' => 'Algebra & Linear Equations intro'],
+            ['day' => 'Monday', 'start' => '11:00 AM', 'end' => '12:20 PM', 'subject' => 'Physics', 'class' => 'Senior 3', 'stream' => 'Stream B', 'room' => 'Physics Lab', 'notes' => 'Mechanics & Newton Laws Practical'],
+            ['day' => 'Tuesday', 'start' => '09:20 AM', 'end' => '10:40 AM', 'subject' => 'Mathematics', 'class' => 'Senior 1', 'stream' => 'Stream A', 'room' => 'Room 101', 'notes' => 'Quadratic Expressions'],
+            ['day' => 'Wednesday', 'start' => '08:00 AM', 'end' => '09:20 AM', 'subject' => 'Physics', 'class' => 'Senior 3', 'stream' => 'Stream B', 'room' => 'Science Lab 2', 'notes' => 'Optical Instruments & Lenses'],
+            ['day' => 'Thursday', 'start' => '02:00 PM', 'end' => '03:30 PM', 'subject' => 'Mathematics', 'class' => 'Senior 1', 'stream' => 'Stream A', 'room' => 'Room 101', 'notes' => 'Weekly Quiz & Revision Session'],
+            ['day' => 'Friday', 'start' => '10:40 AM', 'end' => '12:00 PM', 'subject' => 'Physics', 'class' => 'Senior 3', 'stream' => 'Stream B', 'room' => 'Main Hall', 'notes' => 'Past Paper Seminar']
+        ];
+        foreach ($defaultSchedules as $sch) {
+            $insS = thamani_db_prepare($conn, "INSERT INTO teacher_personal_schedules (teacher_id, day_of_week, start_time, end_time, subject, class_level, stream, room_no, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            thamani_db_stmt_bind_param($insS, "issssssss", $tId, $sch['day'], $sch['start'], $sch['end'], $sch['subject'], $sch['class'], $sch['stream'], $sch['room'], $sch['notes']);
+            thamani_db_stmt_execute($insS);
+            thamani_db_stmt_close($insS);
+        }
+        echo "✓ Sample teaching schedule seeded for teacher TSC-2026-001.\n";
+    }
+}
 
 // ----------------------------------------------------
 // 2. STUDENTS SEED DATA
@@ -304,8 +335,8 @@ foreach ($students as $s) {
     thamani_db_stmt_close($stmt);
 
     if ($exists) {
-        $upd = thamani_db_prepare($conn, "UPDATE students SET full_name = ?, class_level = ?, stream = ?, status = ? WHERE id = ?");
-        thamani_db_stmt_bind_param($upd, "ssssi", $s['full_name'], $s['class'], $s['stream'], $s['status'], $exists['id']);
+        $upd = thamani_db_prepare($conn, "UPDATE students SET full_name = ?, class_level = ?, stream = ?, status = ?, academic_doc_path = ?, recommendation_doc_path = ?, medical_doc_path = ? WHERE id = ?");
+        thamani_db_stmt_bind_param($upd, "sssssssi", $s['full_name'], $s['class'], $s['stream'], $s['status'], $s['acad_doc'], $s['rec_doc'], $s['med_doc'], $exists['id']);
         thamani_db_stmt_execute($upd);
         thamani_db_stmt_close($upd);
     } else {

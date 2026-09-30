@@ -17,12 +17,15 @@ $adminId = (int)$_SESSION['admin_id'];
 
 // ---------- Redirect target ----------
 $allowedTargets = ['admin_dashboard.php', 'gallery.php'];
-$redirectTo = $_POST['redirect_to'] ?? 'admin_dashboard.php';
-if (!in_array($redirectTo, $allowedTargets, true)) {
-    $redirectTo = 'admin_dashboard.php';
+$rawRedirect = $_POST['redirect_to'] ?? 'admin_dashboard.php?tab=tab-admin-gallery#tab-admin-gallery';
+$baseTarget  = explode('#', explode('?', $rawRedirect)[0])[0];
+if (!in_array($baseTarget, $allowedTargets, true)) {
+    $redirectTo = 'admin_dashboard.php?tab=tab-admin-gallery#tab-admin-gallery';
+} else {
+    $redirectTo = ($rawRedirect === 'admin_dashboard.php') ? 'admin_dashboard.php?tab=tab-admin-gallery#tab-admin-gallery' : $rawRedirect;
 }
 
-$flashKey = ($redirectTo === 'gallery.php') ? 'gallery_flash' : 'admin_flash';
+$flashKey = (str_contains($redirectTo, 'gallery.php')) ? 'gallery_flash' : 'admin_flash';
 
 // ---------- Only POST ----------
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

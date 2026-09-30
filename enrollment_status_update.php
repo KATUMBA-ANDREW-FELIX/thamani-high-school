@@ -24,9 +24,12 @@ $newStatus = trim($_POST['new_status'] ?? '');
 
 $allowedStatuses = ['Pending', 'Enrolled', 'Rejected'];
 
-$redirectTo = $_POST['redirect_to'] ?? 'admin_dashboard.php';
-if (!in_array($redirectTo, ['admin_dashboard.php', 'enrollment_view.php'], true)) {
-    $redirectTo = 'admin_dashboard.php';
+$rawRedirect = $_POST['redirect_to'] ?? 'admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment';
+$baseTarget  = explode('#', explode('?', $rawRedirect)[0])[0];
+if (!in_array($baseTarget, ['admin_dashboard.php', 'enrollment_view.php'], true)) {
+    $redirectTo = 'admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment';
+} else {
+    $redirectTo = ($rawRedirect === 'admin_dashboard.php') ? 'admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment' : $rawRedirect;
 }
 
 $setFlash = function($type, $msg) use ($redirectTo) {

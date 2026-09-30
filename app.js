@@ -92,7 +92,7 @@ function switchPage(pageId) {
     if (pageId === 'home') renderHomeCirculars();
     if (pageId === 'enrollment') renderStudentDirectory();
     if (pageId === 'library') renderLibraryResources();
-    if (pageId === 'teacher') renderSyllabusTracker();
+    if (pageId === 'teacher') switchTeacherTab('tab-teacher-announcements');
     if (pageId === 'admin') {
         renderAdminTimetables();
         renderAdminCirculars();
@@ -307,7 +307,7 @@ function renderLibraryResources() {
     if (window.lucide) lucide.createIcons();
 }
 
-// 4. Teacher Workstation Router & Syllabus Tracker
+// 4. Teacher Workstation Router
 function switchTeacherTab(tabId) {
     document.querySelectorAll('.teacher-tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-brand-green', 'text-white'));
@@ -318,114 +318,14 @@ function switchTeacherTab(tabId) {
     const activeBtn = document.getElementById(`btn-${tabId}`);
     if (activeBtn) activeBtn.classList.add('active', 'bg-brand-green', 'text-white');
 
-    if (tabId === 'tab-teacher-syllabus') renderSyllabusTracker();
     if (tabId === 'tab-teacher-schedule') renderTeacherSchedule();
     if (tabId === 'tab-teacher-discipline') renderDisciplineLogs();
-}
-
-function renderSyllabusTracker() {
-    const sClass = document.getElementById('syllabus-filter-class')?.value || 'Senior 4';
-    const stream = document.getElementById('syllabus-filter-stream')?.value || 'North';
-    const subject = document.getElementById('syllabus-filter-subject')?.value || 'Physics';
-
-    const key = `${sClass}-${stream}-${subject}`;
-    let topics = state.syllabi[key];
-
-    if (!topics) {
-        topics = [
-            { id: "t1", topic: "Introductory Principles & Core Concepts", completed: true },
-            { id: "t2", topic: "Intermediate Problem Solving & Practical Work", completed: false },
-            { id: "t3", topic: "UNEB Past Exam Revision & Mock Assessment", completed: false }
-        ];
-        state.syllabi[key] = topics;
-        saveState();
-    }
-
-    const completedCount = topics.filter(t => t.completed).length;
-    const percentage = Math.round((completedCount / topics.length) * 100);
-
-    const summaryBox = document.getElementById('syllabus-summary-box');
-    if (summaryBox) {
-        const attachedDoc = state.attachedSyllabusDocs.find(d => d.subject === subject && d.class === sClass && d.stream === stream);
-        summaryBox.innerHTML = `
-            <div class="w-full">
-                <div class="flex flex-wrap justify-between items-center mb-2">
-                    <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-brand-green">${sClass} • Stream ${stream} • ${subject}</span>
-                        <div class="text-lg font-bold text-brand-green">UNEB Syllabus Completion Progress: ${percentage}%</div>
-                    </div>
-                    ${attachedDoc ? `
-                        <button onclick="downloadDocument('${attachedDoc.fileName}', 'pdf');" class="px-3 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs flex items-center gap-1">
-                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Download Official Syllabus (${attachedDoc.uploadedBy})
-                        </button>
-                    ` : '<span class="text-xs text-gray-500 italic">No syllabus document attached yet</span>'}
-                </div>
-                <div class="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
-                    <div class="bg-brand-gold h-full transition-all duration-500" style="width: ${percentage}%"></div>
-                </div>
-            </div>
-        `;
-    }
-
-    const checklist = document.getElementById('syllabus-topics-checklist');
-    if (checklist) {
-        checklist.innerHTML = topics.map((t, idx) => `
-            <div class="p-4 rounded-xl border border-gray-200 flex justify-between items-center hover:bg-gray-50">
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleSyllabusTopic('${key}', '${t.id}');" class="w-5 h-5 text-brand-green rounded focus:ring-brand-green cursor-pointer">
-                    <span class="text-sm font-semibold ${t.completed ? 'line-through text-gray-400' : 'text-gray-800'}">${idx + 1}. ${t.topic}</span>
-                </div>
-                <span class="text-xs font-bold px-2.5 py-1 rounded ${t.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                    ${t.completed ? 'Completed' : 'In Progress'}
-                </span>
-            </div>
-        `).join('');
-    }
-
-    if (window.lucide) lucide.createIcons();
-}
-
-function toggleSyllabusTopic(key, topicId) {
-    const topics = state.syllabi[key];
-    if (topics) {
-        const topic = topics.find(t => t.id === topicId);
-        if (topic) {
-            topic.completed = !topic.completed;
-            saveState();
-            renderSyllabusTracker();
-        }
-    }
-}
-
-function handleUploadSyllabus(e) {
-    e.preventDefault();
-    const subjectEl = document.getElementById('syl-subject');
-    const classEl = document.getElementById('syl-class');
-    const streamEl = document.getElementById('syl-stream');
-    const fileInput = document.getElementById('syl-file');
-
-    if (!subjectEl || !classEl || !streamEl) return;
-
-    const subject = subjectEl.value;
-    const sClass = classEl.value;
-    const stream = streamEl.value;
-    const fileName = fileInput && fileInput.files[0] ? fileInput.files[0].name : `${subject}_Syllabus_${sClass}.pdf`;
-
-    state.attachedSyllabusDocs.push({
-        subject, class: sClass, stream, fileName, uploadedBy: "Department Head"
-    });
-
-    saveState();
-    closeModal('modal-upload-syllabus');
-    e.target.reset();
-    renderSyllabusTracker();
-    alert(`Syllabus document for ${subject} (${sClass} ${stream}) uploaded successfully!`);
 }
 
 // 5. Personal Teaching Schedule
 function renderTeacherSchedule() {
     const container = document.getElementById('teacher-schedule-container');
-    if (!container) return;
+    if (!container || container.dataset.serverRendered === 'true') return;
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const periods = [

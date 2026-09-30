@@ -8,32 +8,29 @@
  * - Read-only (registration happens on alumni.php)
  */
 
-require_once 'auth_teacher.php';
 require_once 'auth_admin.php';
 
-// Allow either a teacher OR an admin
-$isTeacher = !empty($_SESSION['teacher_id']);
-$isAdmin   = !empty($_SESSION['admin_id']);
+// Alumni Registry is strictly restricted to Main Administrator only
+$isAdmin = !empty($_SESSION['admin_id']);
 
-if (!$isTeacher && !$isAdmin) {
-    header('Location: teacher-login.php');
+if (!$isAdmin) {
+    if (!empty($_SESSION['teacher_id'])) {
+        $_SESSION['teacher_flash'] = [
+            'type' => 'error',
+            'message' => 'Access Denied: The Alumni Registry can only be accessed by the Main Administrator.'
+        ];
+        header('Location: teacher_dashboard.php');
+    } else {
+        header('Location: login.php');
+    }
     exit;
 }
 
-// Only teachers need to have changed their password
-if ($isTeacher) {
-    require_password_changed();
-}
-
 // Build viewer info for nav + footer
-$viewerName = $isAdmin
-    ? ($_SESSION['admin_name'] ?? 'Admin')
-    : ($_SESSION['teacher_name'] ?? 'Teacher');
-$viewerId = $isAdmin
-    ? ($_SESSION['admin_admin_id'] ?? 'ADM')
-    : ($_SESSION['teacher_staff_id'] ?? 'TCH');
-$backLink   = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
-$logoutLink = $isAdmin ? 'admin_logout.php'    : 'teacher_logout.php';
+$viewerName = $_SESSION['admin_name'] ?? 'System Administrator';
+$viewerId   = $_SESSION['admin_admin_id'] ?? 'ADM-2026-001';
+$backLink   = 'admin_dashboard.php';
+$logoutLink = 'admin_logout.php';
 
 // ---------- Search ----------
 $search = trim($_GET['q'] ?? '');

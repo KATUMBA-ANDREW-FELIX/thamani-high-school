@@ -185,7 +185,7 @@ if (!empty($_SESSION['teacher_flash'])) {
                 <div class="hidden lg:flex items-center space-x-2">
                     <a href="<?= $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php' ?>" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-green">Dashboard</a>
                     <a href="students_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-white bg-brand-green">Student Roster</a>
-                    <?php if (!empty($teacher['can_view_enrollments']) || $isAdmin): ?>
+                    <?php if ($isAdmin): ?>
                         <a href="enrollment_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-green">Enrollment Queue</a>
                     <?php endif; ?>
                     <a href="alumni_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-green">Alumni</a>
@@ -369,106 +369,110 @@ if (!empty($_SESSION['teacher_flash'])) {
     </main>
 
     <!-- MODAL: RECORD CLASS ATTENDANCE -->
-    <div id="modal-attendance" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-brand-green flex items-center gap-2">
+    <div id="modal-attendance" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="calendar-check" class="w-5 h-5 text-amber-600"></i> Record Class Attendance
                 </h3>
-                <button onclick="closeModal('modal-attendance');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-attendance');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="record_attendance.php" method="post" class="space-y-4">
+            <form action="record_attendance.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
                 <input type="hidden" name="student_id" id="att_student_id">
                 <input type="hidden" name="class_level" id="att_class_level">
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Student Name</label>
-                    <div id="att_student_name" class="text-sm font-bold text-brand-green bg-gray-50 p-2.5 rounded-lg"></div>
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Student Name</label>
+                        <div id="att_student_name" class="text-sm font-bold text-brand-green bg-gray-50 p-2.5 rounded-lg border border-gray-200"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Attendance Date</label>
+                        <input type="date" name="attendance_date" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Status</label>
+                        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="Excused">Excused (Medical / Leave)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher Remarks (Optional)</label>
+                        <input type="text" name="remarks" placeholder="e.g. Arrived 15 minutes late" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Attendance Date</label>
-                    <input type="date" name="attendance_date" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
-                        <option value="Present">Present</option>
-                        <option value="Absent">Absent</option>
-                        <option value="Late">Late</option>
-                        <option value="Excused">Excused (Medical / Leave)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher Remarks (Optional)</label>
-                    <input type="text" name="remarks" placeholder="e.g. Arrived 15 minutes late" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="flex-1 py-2.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-brand-darkGreen transition-colors shadow">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         Save Attendance Record
                     </button>
-                    <button type="button" onclick="closeModal('modal-attendance');" class="px-4 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-lg text-xs">Cancel</button>
+                    <button type="button" onclick="closeModal('modal-attendance');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- MODAL: INPUT / EDIT SUBJECT MARKS -->
-    <div id="modal-marks" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-brand-green flex items-center gap-2">
-                    <i data-lucide="award" class="w-5 h-5 text-brand-green"></i> Input Academic Marks
+    <div id="modal-marks" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="award" class="w-5 h-5 text-amber-600"></i> Input Academic Marks
                 </h3>
-                <button onclick="closeModal('modal-marks');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-marks');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="save_marks.php" method="post" class="space-y-4">
+            <form action="save_marks.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
                 <input type="hidden" name="student_id" id="mk_student_id">
                 <input type="hidden" name="class_level" id="mk_class_level">
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Student</label>
-                    <div id="mk_student_name" class="text-sm font-bold text-brand-green bg-gray-50 p-2.5 rounded-lg"></div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Subject Taught <span class="text-red-500">*</span></label>
-                    <?php if (!$isAdmin && !$isClassTeacher): ?>
-                        <input type="text" name="subject" value="<?= htmlspecialchars($teacherSubject) ?>" readonly class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-bold text-brand-green cursor-not-allowed">
-                        <p class="text-[11px] text-gray-500 mt-0.5">Subject teachers can only edit marks for their assigned department/subject.</p>
-                    <?php else: ?>
-                        <input type="text" name="subject" required placeholder="e.g. Mathematics, Physics, English" value="<?= htmlspecialchars($teacherSubject !== 'Academic' ? $teacherSubject : '') ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
-                    <?php endif; ?>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Term</label>
-                        <select name="term" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
-                            <option value="Term III 2026" selected>Term III 2026</option>
-                            <option value="Term II 2026">Term II 2026</option>
-                            <option value="Term I 2026">Term I 2026</option>
-                        </select>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Student</label>
+                        <div id="mk_student_name" class="text-sm font-bold text-brand-green bg-gray-50 p-2.5 rounded-lg border border-gray-200"></div>
                     </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Score / 100 <span class="text-red-500">*</span></label>
-                        <input type="number" name="score" step="0.5" min="0" max="100" required placeholder="e.g. 85.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono font-bold text-brand-green focus:ring-2 focus:ring-brand-green">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Subject Taught <span class="text-red-500">*</span></label>
+                        <?php if (!$isAdmin && !$isClassTeacher): ?>
+                            <input type="text" name="subject" value="<?= htmlspecialchars($teacherSubject) ?>" readonly class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-bold text-brand-green cursor-not-allowed">
+                            <p class="text-[11px] text-gray-500 mt-0.5">Subject teachers can only edit marks for their assigned department/subject.</p>
+                        <?php else: ?>
+                            <input type="text" name="subject" required placeholder="e.g. Mathematics, Physics, English" value="<?= htmlspecialchars($teacherSubject !== 'Academic' ? $teacherSubject : '') ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Term</label>
+                            <select name="term" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-green">
+                                <option value="Term III 2026" selected>Term III 2026</option>
+                                <option value="Term II 2026">Term II 2026</option>
+                                <option value="Term I 2026">Term I 2026</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Score / 100 <span class="text-red-500">*</span></label>
+                            <input type="number" name="score" step="0.5" min="0" max="100" required placeholder="e.g. 85.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono font-bold text-brand-green focus:ring-2 focus:ring-brand-green">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher Remarks (Optional)</label>
+                        <input type="text" name="comments" placeholder="e.g. Excellent analytical performance" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher Remarks (Optional)</label>
-                    <input type="text" name="comments" placeholder="e.g. Excellent analytical performance" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="flex-1 py-2.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-brand-darkGreen transition-colors shadow">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         Save Subject Marks
                     </button>
-                    <button type="button" onclick="closeModal('modal-marks');" class="px-4 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-lg text-xs">Cancel</button>
+                    <button type="button" onclick="closeModal('modal-marks');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
                 </div>
             </form>
         </div>

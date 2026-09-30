@@ -247,42 +247,44 @@ $docsPayload = json_encode(array_map(function($d) {
 
     <!-- ADMIN UPLOAD MODAL -->
     <?php if ($isAdmin): ?>
-    <div id="modal-upload-calendar" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-5">
-                <h3 class="text-xl font-bold text-brand-maroon flex items-center gap-2">
-                    <i data-lucide="calendar-plus" class="w-6 h-6"></i> Upload Calendar / Fees
+    <div id="modal-upload-calendar" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-amber-600"></i> Upload Calendar / Fees
                 </h3>
-                <button onclick="closeModal('modal-upload-calendar');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-upload-calendar');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_upload_calendar.php" method="post" enctype="multipart/form-data" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document Title <span class="text-brand-maroon">*</span></label>
-                    <input type="text" name="title" required maxlength="255" placeholder="e.g. Term III 2026 Fee Structure" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+            <form action="admin_upload_calendar.php" method="post" enctype="multipart/form-data" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document Title <span class="text-brand-maroon">*</span></label>
+                        <input type="text" name="title" required maxlength="255" placeholder="e.g. Term III 2026 Fee Structure" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Type <span class="text-brand-maroon">*</span></label>
+                        <select name="doc_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
+                            <option value="calendar">Academic Calendar</option>
+                            <option value="fees">Fee Structure</option>
+                            <option value="timetable">Timetable</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Description <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                        <textarea name="description" rows="2" maxlength="500" placeholder="Brief description..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">File <span class="text-brand-maroon">*</span></label>
+                        <input type="file" name="doc_file" required accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-brand-maroon">
+                        <p class="text-[11px] text-gray-500 mt-1">Allowed: PDF, DOC, DOCX, XLS, XLSX. Max: 20 MB.</p>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Type <span class="text-brand-maroon">*</span></label>
-                    <select name="doc_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none">
-                        <option value="calendar">Academic Calendar</option>
-                        <option value="fees">Fee Structure</option>
-                        <option value="timetable">Timetable</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Description <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
-                    <textarea name="description" rows="2" maxlength="500" placeholder="Brief description..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-maroon focus:outline-none resize-none"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">File <span class="text-brand-maroon">*</span></label>
-                    <input type="file" name="doc_file" required accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-brand-maroon">
-                    <p class="text-[11px] text-gray-500 mt-1">Allowed: PDF, DOC, DOCX, XLS, XLSX. Max: 20 MB.</p>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="flex-1 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 text-sm flex items-center justify-center gap-2">
-                        <i data-lucide="upload" class="w-4 h-4"></i> Upload
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="upload" class="w-4 h-4"></i> Upload Document
                     </button>
-                    <button type="button" onclick="closeModal('modal-upload-calendar');" class="w-32 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                    <button type="button" onclick="closeModal('modal-upload-calendar');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
                 </div>
             </form>
         </div>

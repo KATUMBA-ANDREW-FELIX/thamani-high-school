@@ -10,29 +10,23 @@
 
 require_once 'auth_admin.php'; // provides session start + helpers
 
-// Allow either teacher OR admin
-$isTeacher = !empty($_SESSION['teacher_id']);
-$isAdmin   = !empty($_SESSION['admin_id']);
+// Enrollment Registry is strictly restricted to Main Administrator only
+$isAdmin = !empty($_SESSION['admin_id']);
 
-if (!$isTeacher && !$isAdmin) {
-    header('Location: teacher-login.php');
+if (!$isAdmin) {
+    if (!empty($_SESSION['teacher_id'])) {
+        $_SESSION['teacher_flash'] = [
+            'type' => 'error',
+            'message' => 'Access Denied: The Enrollment Registry can only be accessed by the Main Administrator.'
+        ];
+        header('Location: teacher_dashboard.php');
+    } else {
+        header('Location: login.php');
+    }
     exit;
 }
 
-// Teachers CANNOT access enrolling/pending student applications unless granted permission by Admin
-if ($isTeacher && !$isAdmin && empty($_SESSION['teacher_can_view_enrollments'])) {
-    $_SESSION['teacher_flash'] = [
-        'type' => 'error',
-        'message' => 'Access Denied: Only administrators or authorized academic staff with explicit admin permissions can access enrolling student applications.'
-    ];
-    header('Location: teacher_dashboard.php');
-    exit;
-}
-
-// Which user is signed in?
-$viewerName = $isAdmin
-    ? ($_SESSION['admin_name'] ?? 'Admin')
-    : ($_SESSION['teacher_name'] ?? 'Teacher');
+$viewerName = $_SESSION['admin_name'] ?? 'System Administrator';
 $viewerRole = $isAdmin ? 'admin' : 'teacher';
 $viewerId   = $isAdmin ? 'ADM' : ($_SESSION['teacher_staff_id'] ?? 'TCH');
 
@@ -417,11 +411,11 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
     </main>
 
     <!-- DETAIL MODAL -->
-    <div id="modal-student" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div id="modal-student" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
 
             <!-- Modal Header -->
-            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-brand-green/10 text-brand-green flex items-center justify-center">
                         <i data-lucide="user" class="w-5 h-5"></i>
@@ -437,11 +431,11 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
             </div>
 
             <!-- Modal Body -->
-            <div id="modal-student-body" class="p-6 space-y-6"></div>
+            <div id="modal-student-body" class="p-6 space-y-6 overflow-y-auto flex-grow min-h-0"></div>
 
             <!-- Modal Footer: status buttons (admin only) -->
             <?php if ($isAdmin): ?>
-            <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex flex-wrap gap-2 justify-end">
+            <div class="bg-gray-50 border-t border-gray-100 px-6 py-4 flex flex-wrap gap-2 justify-end flex-shrink-0">
                 <form method="post" action="enrollment_status_update.php" class="inline">
                     <input type="hidden" name="student_id" id="status-student-id" value="">
                     <input type="hidden" name="new_status" value="Enrolled">
@@ -620,41 +614,74 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
 
                 <div>
                     <h4 class="text-sm font-bold text-brand-green mb-2 flex items-center gap-2">
-                        <i data-lucide="paperclip" class="w-4 h-4"></i> Uploaded Documents
+                        <i data-lucide="paperclip" class="w-4 h-4"></i> Attached Academic Documents & Certificates
                     </h4>
-                    <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+                    <div class="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
                         ${s.academic_doc_path ? `
-                            <div class="flex items-center justify-between py-1.5 border-b border-gray-200">
-                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <i data-lucide="file-badge" class="w-4 h-4 text-brand-green"></i> Academic Documents
-                                </span>
-                                <a href="${esc(s.academic_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
-                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-green-500/10 text-green-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="file-badge" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Academic Certificates / Results</div>
+                                        <div class="text-[11px] text-gray-500">PLE / UCE Results, Transcripts</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.academic_doc_path)}" target="_blank" class="px-3.5 py-2 bg-brand-green text-white font-bold rounded-xl text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
                                 </a>
                             </div>
-                        ` : '<p class="text-xs text-gray-400 italic">No academic document attached</p>'}
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="file-badge" class="w-4 h-4 text-gray-300"></i> Academic Certificates / Transcripts</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
 
                         ${s.recommendation_doc_path ? `
-                            <div class="flex items-center justify-between py-1.5 border-b border-gray-200">
-                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <i data-lucide="award" class="w-4 h-4 text-brand-green"></i> Recommendation Letter
-                                </span>
-                                <a href="${esc(s.recommendation_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
-                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="award" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Recommendation / Conduct Letter</div>
+                                        <div class="text-[11px] text-gray-500">Character reference & former school letter</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.recommendation_doc_path)}" target="_blank" class="px-3.5 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
                                 </a>
                             </div>
-                        ` : '<p class="text-xs text-gray-400 italic">No recommendation letter attached</p>'}
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-gray-300"></i> Recommendation Letter</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
 
                         ${s.medical_doc_path ? `
-                            <div class="flex items-center justify-between py-1.5">
-                                <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <i data-lucide="stethoscope" class="w-4 h-4 text-brand-green"></i> Medical Documents
-                                </span>
-                                <a href="${esc(s.medical_doc_path)}" target="_blank" class="px-3 py-1 bg-brand-green text-white font-bold rounded text-xs hover:bg-brand-darkGreen transition-colors flex items-center gap-1">
-                                    <i data-lucide="external-link" class="w-3 h-3"></i> View File
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Medical Record / Doctor Certificate</div>
+                                        <div class="text-[11px] text-gray-500">Health report & doctor certificates</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.medical_doc_path)}" target="_blank" class="px-3.5 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
                                 </a>
                             </div>
-                        ` : '<p class="text-xs text-gray-400 italic">No medical document attached</p>'}
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="stethoscope" class="w-4 h-4 text-gray-300"></i> Medical Record Document</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
                     </div>
                 </div>
             `;

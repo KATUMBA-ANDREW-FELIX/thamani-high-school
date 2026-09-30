@@ -9,7 +9,7 @@ require_admin_login();
 require_once 'conn.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: admin_dashboard.php');
+    header('Location: admin_dashboard.php?tab=tab-admin-timetables#tab-admin-timetables');
     exit;
 }
 
@@ -117,7 +117,7 @@ if (isset($_FILES['timetable_file']) && $_FILES['timetable_file']['error'] === U
 
 if (!empty($errors)) {
     $_SESSION['admin_flash'] = ['type' => 'error', 'message' => implode(' ', $errors)];
-    header('Location: admin_dashboard.php');
+    header('Location: admin_dashboard.php?tab=tab-admin-timetables#tab-admin-timetables');
     exit;
 }
 
@@ -149,5 +149,5 @@ if ($stmt) {
     ];
 }
 
-header('Location: admin_dashboard.php');
+header('Location: admin_dashboard.php?tab=tab-admin-timetables#tab-admin-timetables');
 exit;

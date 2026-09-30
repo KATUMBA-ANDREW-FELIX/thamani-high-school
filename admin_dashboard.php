@@ -26,9 +26,8 @@ $enrolledStudents= safeCount($conn, "SELECT COUNT(*) FROM students WHERE status 
 $rejectedStudents= safeCount($conn, "SELECT COUNT(*) FROM students WHERE status = 'Rejected'");
 $totalTeachers   = safeCount($conn, "SELECT COUNT(*) FROM teachers");
 
-// ---------- Datasets ----------
 $allStudents = [];
-$rs = thamani_db_query($conn, "SELECT id, full_name, date_of_birth, gender, nationality, lin_number, previous_school, class_level, stream, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_address, guardian_occupation, emergency_name, emergency_phone, medical_notes, status, registered_at FROM students ORDER BY registered_at DESC");
+$rs = thamani_db_query($conn, "SELECT id, full_name, date_of_birth, gender, nationality, lin_number, previous_school, class_level, stream, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_address, guardian_occupation, emergency_name, emergency_phone, medical_notes, academic_doc_path, recommendation_doc_path, medical_doc_path, status, registered_at FROM students ORDER BY registered_at DESC");
 if ($rs) while ($r = thamani_db_fetch_assoc($rs)) $allStudents[] = $r;
 
 $allAlumni = [];
@@ -36,7 +35,7 @@ $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email F
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, can_view_enrollments, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -50,6 +49,26 @@ if ($rg) while ($r = thamani_db_fetch_assoc($rg)) $allGallery[] = $r;
 $allClassTimetables = [];
 $rct = thamani_db_query($conn, "SELECT id, title, class_level, stream, schedule_json, file_name, file_path, file_size, created_at FROM class_timetables ORDER BY created_at DESC");
 if ($rct) while ($r = thamani_db_fetch_assoc($rct)) $allClassTimetables[] = $r;
+
+$allDutyRosters = [];
+$rdr = thamani_db_query($conn, "SELECT id, week_title, senior_duty_teacher, assistant_duty_teacher, primary_focus_area, notes, created_by, created_by_role, created_at FROM teacher_duty_rosters ORDER BY id ASC");
+if ($rdr) while ($r = thamani_db_fetch_assoc($rdr)) $allDutyRosters[] = $r;
+
+// ---------- Active Tab Handling ----------
+$allowedAdminTabs = [
+    'tab-admin-overview',
+    'tab-admin-teachers',
+    'tab-admin-enrollment',
+    'tab-admin-alumni',
+    'tab-admin-calendar',
+    'tab-admin-gallery',
+    'tab-admin-timetables',
+    'tab-admin-roster'
+];
+$activeAdminTab = $_GET['tab'] ?? $_GET['tab_id'] ?? '';
+if (!in_array($activeAdminTab, $allowedAdminTabs, true)) {
+    $activeAdminTab = 'tab-admin-overview';
+}
 
 // ---------- Flash messages ----------
 $flashHtml = '';
@@ -287,31 +306,34 @@ if (!empty($_SESSION['admin_flash'])) {
 
             <!-- Dynamic Tab Bar Navigation (Main Workstation Navigation) -->
             <div class="bg-gray-200/70 p-1.5 rounded-2xl flex flex-wrap gap-2 mb-10 border border-gray-300/60 shadow-inner">
-                <button onclick="switchAdminTab('tab-admin-overview');" id="btn-tab-admin-overview" class="tab-btn active px-6 py-3 rounded-xl text-xs font-black tracking-wide uppercase transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-overview');" id="btn-tab-admin-overview" class="tab-btn <?= $activeAdminTab === 'tab-admin-overview' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-black tracking-wide uppercase transition-all flex items-center gap-2">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
                 </button>
-                <button onclick="switchAdminTab('tab-admin-teachers');" id="btn-tab-admin-teachers" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-teachers');" id="btn-tab-admin-teachers" class="tab-btn <?= $activeAdminTab === 'tab-admin-teachers' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> Teachers & Staff
                 </button>
-                <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn <?= $activeAdminTab === 'tab-admin-enrollment' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> Enrollments (<?= $totalStudents ?>)
                 </button>
-                <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn <?= $activeAdminTab === 'tab-admin-alumni' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="graduation-cap" class="w-4 h-4"></i> Alumni (<?= $totalAlumni ?>)
                 </button>
-                <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-calendar');" id="btn-tab-admin-calendar" class="tab-btn <?= $activeAdminTab === 'tab-admin-calendar' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Calendar & Fees
                 </button>
-                <button onclick="switchAdminTab('tab-admin-timetables');" id="btn-tab-admin-timetables" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-timetables');" id="btn-tab-admin-timetables" class="tab-btn <?= $activeAdminTab === 'tab-admin-timetables' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="clock" class="w-4 h-4"></i> Class Timetables
                 </button>
-                <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn px-6 py-3 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 hover:bg-white/70 transition-all flex items-center gap-2">
+                <button onclick="switchAdminTab('tab-admin-roster');" id="btn-tab-admin-roster" class="tab-btn <?= $activeAdminTab === 'tab-admin-roster' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="calendar-check" class="w-4 h-4"></i> TOD Duty Roster
+                </button>
+                <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn <?= $activeAdminTab === 'tab-admin-gallery' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="image" class="w-4 h-4"></i> Gallery
                 </button>
             </div>
 
             <!-- TAB 1: OVERVIEW -->
-            <div id="tab-admin-overview" class="admin-tab-content space-y-6">
+            <div id="tab-admin-overview" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-overview' ? '' : 'hidden' ?> space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     <!-- Recent Enrollments Card -->
@@ -449,12 +471,17 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <span><?= htmlspecialchars($t['full_name']) ?></span>
                                                     <?php if ((int)$t['is_class_teacher'] === 1): ?>
                                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
-                                                            <i data-lucide="star" class="w-3 h-3 text-amber-600 fill-amber-500"></i> Class Teacher: <?= htmlspecialchars($t['class_teacher_of']) ?>
+                                                            <i data-lucide="star" class="w-3 h-3 text-amber-600 fill-amber-500"></i> Class Teacher: <?= htmlspecialchars($t['class_teacher_of']) ?> (<?= htmlspecialchars($t['class_teacher_stream'] ?: 'Stream A') ?>)
                                                         </span>
                                                     <?php endif; ?>
                                                     <?php if ((int)($t['can_view_enrollments'] ?? 0) === 1): ?>
                                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-300" title="Permitted by admin to view enrolling applicants">
                                                             <i data-lucide="user-check" class="w-3 h-3 text-blue-600"></i> Enrollment Access
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <?php if ((int)($t['can_manage_duty_roster'] ?? 0) === 1): ?>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300" title="Permitted by admin to manage Teacher On Duty Roster">
+                                                            <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i> TOD Roster Access
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
@@ -477,7 +504,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete teacher record for <?= htmlspecialchars(addslashes($t['full_name'])) ?>?');">
                                                     <input type="hidden" name="type" value="teacher">
                                                     <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
-                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-teachers#tab-admin-teachers">
                                                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                                                     </button>
@@ -573,7 +600,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <form action="delete_item.php" method="post" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete student record for <?= htmlspecialchars(addslashes($s['full_name'])) ?>?');">
                                                     <input type="hidden" name="type" value="student">
                                                     <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment">
                                                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                                                     </button>
@@ -637,7 +664,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete alumni record for <?= htmlspecialchars(addslashes($a['name'])) ?>?');">
                                                     <input type="hidden" name="type" value="alumni">
                                                     <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
-                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-alumni#tab-admin-alumni">
                                                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                                                     </button>
@@ -698,7 +725,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <form action="delete_item.php" method="post" class="inline ml-1" onsubmit="return confirm('Are you sure you want to delete document <?= htmlspecialchars(addslashes($c['title'])) ?>?');">
                                                     <input type="hidden" name="type" value="calendar">
                                                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-calendar#tab-admin-calendar">
                                                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                                                     </button>
@@ -745,7 +772,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                             <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete photo <?= htmlspecialchars(addslashes($g['title'])) ?>?');">
                                                 <input type="hidden" name="type" value="gallery">
                                                 <input type="hidden" name="id" value="<?= (int)$g['id'] ?>">
-                                                <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-gallery#tab-admin-gallery">
                                                 <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-600 text-white font-bold rounded-lg text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                     <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
                                                 </button>
@@ -838,7 +865,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete timetable <?= htmlspecialchars(addslashes($tt['title'])) ?>?');">
                                                     <input type="hidden" name="type" value="timetable">
                                                     <input type="hidden" name="id" value="<?= (int)$tt['id'] ?>">
-                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-timetables#tab-admin-timetables">
                                                     <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                                                     </button>
@@ -855,89 +882,195 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
             </div>
 
+            <!-- TAB 8: TEACHER ON DUTY (TOD) ROSTER -->
+            <div id="tab-admin-roster" class="admin-tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="calendar-check" class="w-6 h-6 text-brand-green"></i> Teacher On Duty (TOD) Roster Management
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Publish weekly duty rosters for Senior & Assistant duty teachers, supervision focus areas, and instructions.</p>
+                        </div>
+                        <button onclick="openModal('modal-add-duty-roster');" class="px-4 py-2.5 bg-brand-green text-white font-extrabold rounded-xl text-xs hover:bg-green-800 shadow flex items-center gap-1.5 transition-transform hover:-translate-y-0.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> + Add / Upload Duty Roster Entry
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                                    <th class="p-3.5">Week / Dates</th>
+                                    <th class="p-3.5">Senior Duty Teacher</th>
+                                    <th class="p-3.5">Assistant Duty Teacher</th>
+                                    <th class="p-3.5">Primary Focus Area</th>
+                                    <th class="p-3.5">Notes / Instructions</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <?php if (!empty($allDutyRosters)): ?>
+                                    <?php foreach ($allDutyRosters as $rItem): ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="p-3.5 font-bold text-brand-maroon whitespace-nowrap">
+                                                <?= htmlspecialchars($rItem['week_title']) ?>
+                                            </td>
+                                            <td class="p-3.5 font-medium text-gray-900">
+                                                <?= htmlspecialchars($rItem['senior_duty_teacher']) ?>
+                                            </td>
+                                            <td class="p-3.5 text-gray-700">
+                                                <?= htmlspecialchars($rItem['assistant_duty_teacher'] ?: '—') ?>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded-md bg-amber-50 text-amber-900 font-bold text-xs border border-amber-200">
+                                                    <?= htmlspecialchars($rItem['primary_focus_area']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5 text-xs text-gray-600 max-w-xs">
+                                                <?= htmlspecialchars($rItem['notes'] ?: '—') ?>
+                                            </td>
+                                            <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                <button type="button" onclick="editDutyRoster(<?= htmlspecialchars(json_encode($rItem), ENT_QUOTES, 'UTF-8') ?>);" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm">
+                                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                                                </button>
+                                                <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete this duty roster entry?');">
+                                                    <input type="hidden" name="type" value="duty_roster">
+                                                    <input type="hidden" name="id" value="<?= (int)$rItem['id'] ?>">
+                                                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-roster#tab-admin-roster">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors shadow-sm">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="p-12 text-center text-gray-500 text-sm">
+                                            No Teacher On Duty roster entries created yet. Click "+ Add / Upload Duty Roster Entry" to publish one.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 
     <!-- MODAL 1: ADD TEACHER -->
-    <div id="modal-add-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-8">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-add-teacher" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-5 h-5 text-amber-600"></i> Register New Teacher
                 </h3>
-                <button onclick="closeModal('modal-add-teacher');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-add-teacher');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_add_teacher.php" method="post" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
-                        <input type="text" name="full_name" required placeholder="e.g. Dr. Sarah Namubiru" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <form action="admin_add_teacher.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
+                            <input type="text" name="full_name" required placeholder="e.g. Dr. Sarah Namubiru" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
+                            <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
-                        <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
+                            <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
+                            <input type="text" name="department" placeholder="e.g. Science & Technology" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
-                        <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
-                        <input type="text" name="department" placeholder="e.g. Science & Technology" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    </div>
-                </div>
 
-                <!-- ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
-                <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_class_teacher" id="add_is_class_teacher" value="1" onchange="toggleAddClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
-                        <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-                            <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Assign Elevated Role: Class Teacher
-                        </span>
-                    </label>
-                    <div id="add_class_teacher_wrapper" class="hidden pl-6 space-y-1">
-                        <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form <span class="text-amber-600">*</span></label>
-                        <select name="class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
-                            <option value="Form 1">Form 1</option>
-                            <option value="Form 2">Form 2</option>
-                            <option value="Form 3">Form 3</option>
-                            <option value="Form 4">Form 4</option>
-                            <option value="Form 5">Form 5</option>
-                            <option value="Form 6">Form 6</option>
-                        </select>
-                        <p class="text-[11px] text-amber-800">Class Teachers can post class timetables & announcements for fellow teachers and students of this class level.</p>
+                    <!-- ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
+                    <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="is_class_teacher" id="add_is_class_teacher" value="1" onchange="toggleAddClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                            <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
+                                <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Assign Elevated Role: Class Teacher
+                            </span>
+                        </label>
+                        <div id="add_class_teacher_wrapper" class="hidden pl-6 space-y-2">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form <span class="text-amber-600">*</span></label>
+                                    <select name="class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                                        <option value="Senior 1">Senior 1</option>
+                                        <option value="Senior 2">Senior 2</option>
+                                        <option value="Senior 3">Senior 3</option>
+                                        <option value="Senior 4">Senior 4</option>
+                                        <option value="Senior 5">Senior 5</option>
+                                        <option value="Senior 6">Senior 6</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Stream <span class="text-amber-600">*</span></label>
+                                    <select name="class_teacher_stream" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                                        <option value="Stream A">Stream A</option>
+                                        <option value="Stream B">Stream B</option>
+                                        <option value="Stream C">Stream C</option>
+                                        <option value="Stream D">Stream D</option>
+                                        <option value="North">North</option>
+                                        <option value="South">South</option>
+                                        <option value="East">East</option>
+                                        <option value="West">West</option>
+                                        <option value="All Streams">All Streams</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-amber-800">Class Teachers are assigned to an individual stream in a class to take daily stream attendance registers and post class announcements.</p>
+                        </div>
+                    </div>
+
+                    <!-- SPECIAL PERMISSION: ENROLLMENT ACCESS -->
+                    <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_view_enrollments" id="add_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                            <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- SPECIAL PERMISSION: TOD ROSTER ACCESS -->
+                    <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_manage_duty_roster" id="add_can_manage_duty_roster" value="1" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-600"></i> Admin Permission: Permit teacher to upload & manage Teacher On Duty (TOD) Roster
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- CLASSES TAUGHT -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
+                                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="text-amber-600 rounded focus:ring-amber-500">
+                                    <span><?= $cOption ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-900 font-medium">
+                        Default password will be automatically assigned as: <strong class="font-mono">Admin@2026</strong>.
                     </div>
                 </div>
-
-                <!-- SPECIAL PERMISSION: ENROLLMENT ACCESS -->
-                <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="can_view_enrollments" id="add_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                            <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
-                        </span>
-                    </label>
-                </div>
-
-                <!-- CLASSES TAUGHT -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
-                            <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
-                                <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="text-amber-600 rounded focus:ring-amber-500">
-                                <span><?= $cOption ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-900 font-medium">
-                    Default password will be automatically assigned as: <strong class="font-mono">Admin@2026</strong>.
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="user-check" class="w-4 h-4"></i> Save Teacher
                     </button>
@@ -948,98 +1081,127 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 1B: EDIT TEACHER DETAILS & ELEVATED ROLES -->
-    <div id="modal-edit-teacher" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-8">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-edit-teacher" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i> Edit Teacher Profile & Roles
                 </h3>
-                <button onclick="closeModal('modal-edit-teacher');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-edit-teacher');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_edit_teacher.php" method="post" class="space-y-4">
+            <form action="admin_edit_teacher.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
                 <input type="hidden" name="id" id="edit_teacher_id">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
-                        <input type="text" name="full_name" id="edit_full_name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
+                            <input type="text" name="full_name" id="edit_full_name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
+                            <input type="text" name="staff_id" id="edit_staff_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Staff ID <span class="text-amber-600">*</span></label>
-                        <input type="text" name="staff_id" id="edit_staff_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
+                            <input type="email" name="email" id="edit_email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
+                            <input type="text" name="department" id="edit_department" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
-                        <input type="email" name="email" id="edit_email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
-                        <input type="text" name="department" id="edit_department" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    </div>
-                </div>
 
-                <!-- EDIT ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
-                <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_class_teacher" id="edit_is_class_teacher" value="1" onchange="toggleEditClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
-                        <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-                            <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Elevated Role: Class Teacher
-                        </span>
-                    </label>
-                    <div id="edit_class_teacher_wrapper" class="hidden pl-6 space-y-1">
-                        <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form</label>
-                        <select name="class_teacher_of" id="edit_class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
-                            <option value="Form 1">Form 1</option>
-                            <option value="Form 2">Form 2</option>
-                            <option value="Form 3">Form 3</option>
-                            <option value="Form 4">Form 4</option>
-                            <option value="Form 5">Form 5</option>
-                            <option value="Form 6">Form 6</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- EDIT ENROLLMENT ACCESS PERMISSION -->
-                <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="can_view_enrollments" id="edit_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                            <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
-                        </span>
-                    </label>
-                </div>
-
-                <!-- EDIT CLASSES TAUGHT -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
-                            <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
-                                <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="edit-class-taught-cb text-amber-600 rounded focus:ring-amber-500">
-                                <span><?= $cOption ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Account Status</label>
-                        <select name="is_active" id="edit_is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                            <option value="1">Active</option>
-                            <option value="0">Disabled (Suspended)</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end pb-1">
+                    <!-- EDIT ELEVATED ROLE: CLASS TEACHER ASSIGNMENT -->
+                    <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="reset_password" value="1" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
-                            <span class="text-xs font-bold text-gray-800">Reset password to <code class="bg-amber-100 text-amber-900 px-1 rounded font-mono">Admin@2026</code></span>
+                            <input type="checkbox" name="is_class_teacher" id="edit_is_class_teacher" value="1" onchange="toggleEditClassTeacherSelect(this.checked);" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                            <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
+                                <i data-lucide="award" class="w-4 h-4 text-amber-600"></i> Elevated Role: Class Teacher
+                            </span>
+                        </label>
+                        <div id="edit_class_teacher_wrapper" class="hidden pl-6 space-y-2">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Class / Form</label>
+                                    <select name="class_teacher_of" id="edit_class_teacher_of" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                                        <option value="Senior 1">Senior 1</option>
+                                        <option value="Senior 2">Senior 2</option>
+                                        <option value="Senior 3">Senior 3</option>
+                                        <option value="Senior 4">Senior 4</option>
+                                        <option value="Senior 5">Senior 5</option>
+                                        <option value="Senior 6">Senior 6</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Stream</label>
+                                    <select name="class_teacher_stream" id="edit_class_teacher_stream" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
+                                        <option value="Stream A">Stream A</option>
+                                        <option value="Stream B">Stream B</option>
+                                        <option value="Stream C">Stream C</option>
+                                        <option value="Stream D">Stream D</option>
+                                        <option value="North">North</option>
+                                        <option value="South">South</option>
+                                        <option value="East">East</option>
+                                        <option value="West">West</option>
+                                        <option value="All Streams">All Streams</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EDIT ENROLLMENT ACCESS PERMISSION -->
+                    <div class="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_view_enrollments" id="edit_can_view_enrollments" value="1" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                            <span class="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i> Admin Permission: Permit teacher to view enrolling/pending applicants
+                            </span>
                         </label>
                     </div>
-                </div>
 
-                <div class="flex gap-3 pt-2">
+                    <!-- EDIT TOD ROSTER ACCESS PERMISSION -->
+                    <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_manage_duty_roster" id="edit_can_manage_duty_roster" value="1" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-600"></i> Admin Permission: Permit teacher to upload & manage Teacher On Duty (TOD) Roster
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- EDIT CLASSES TAUGHT -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
+                                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="edit-class-taught-cb text-amber-600 rounded focus:ring-amber-500">
+                                    <span><?= $cOption ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Account Status</label>
+                            <select name="is_active" id="edit_is_active" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                <option value="1">Active</option>
+                                <option value="0">Disabled (Suspended)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end pb-1">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="reset_password" value="1" class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500">
+                                <span class="text-xs font-bold text-gray-800">Reset password to <code class="bg-amber-100 text-amber-900 px-1 rounded font-mono">Admin@2026</code></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="check-circle" class="w-4 h-4"></i> Update Teacher Profile
                     </button>
@@ -1050,36 +1212,38 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 2: REGISTER ALUMNI -->
-    <div id="modal-register-alumni" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-register-alumni" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="graduation-cap" class="w-5 h-5 text-amber-600"></i> Add Alumni Record
                 </h3>
-                <button onclick="closeModal('modal-register-alumni');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-register-alumni');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="register_alumni.php" method="post" onsubmit="handleAdminAddAlumni(event);" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
-                    <input type="text" id="alumni_name" required placeholder="e.g. Grace Nabukenya" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <form action="register_alumni.php" method="post" onsubmit="handleAdminAddAlumni(event);" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name <span class="text-amber-600">*</span></label>
+                        <input type="text" id="alumni_name" required placeholder="e.g. Grace Nabukenya" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Graduation Year <span class="text-amber-600">*</span></label>
+                        <input type="text" id="alumni_year" required placeholder="e.g. 2024" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Profession / Field <span class="text-amber-600">*</span></label>
+                        <input type="text" id="alumni_profession" required placeholder="e.g. Software Engineer" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number <span class="text-amber-600">*</span></label>
+                        <input type="text" id="alumni_phone" required placeholder="e.g. +256 700 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
+                        <input type="email" id="alumni_email" placeholder="alumni@example.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Graduation Year <span class="text-amber-600">*</span></label>
-                    <input type="text" id="alumni_year" required placeholder="e.g. 2024" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Profession / Field <span class="text-amber-600">*</span></label>
-                    <input type="text" id="alumni_profession" required placeholder="e.g. Software Engineer" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number <span class="text-amber-600">*</span></label>
-                    <input type="text" id="alumni_phone" required placeholder="e.g. +256 700 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
-                    <input type="email" id="alumni_email" placeholder="alumni@example.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="check" class="w-4 h-4"></i> Save Alumni
                     </button>
@@ -1090,34 +1254,36 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 3: UPLOAD CALENDAR / FEES -->
-    <div id="modal-upload-calendar" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-upload-calendar" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="calendar-plus" class="w-5 h-5 text-amber-600"></i> Upload Calendar / Fees Document
                 </h3>
-                <button onclick="closeModal('modal-upload-calendar');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-upload-calendar');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_upload_calendar.php" method="post" enctype="multipart/form-data" class="space-y-4">
-                <input type="hidden" name="redirect_to" value="admin_dashboard.php">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Title <span class="text-amber-600">*</span></label>
-                    <input type="text" name="title" required placeholder="e.g. Term III Fee Structure" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <form action="admin_upload_calendar.php" method="post" enctype="multipart/form-data" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-calendar#tab-admin-calendar">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Title <span class="text-amber-600">*</span></label>
+                        <input type="text" name="title" required placeholder="e.g. Term III Fee Structure" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document Category</label>
+                        <select name="doc_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="calendar">Academic Calendar</option>
+                            <option value="fees">Fee Structure</option>
+                            <option value="timetable">Timetable</option>
+                            <option value="other">Other Circular</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document File (PDF / Word / Excel) <span class="text-amber-600">*</span></label>
+                        <input type="file" name="doc_file" required accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document Category</label>
-                    <select name="doc_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <option value="calendar">Academic Calendar</option>
-                        <option value="fees">Fee Structure</option>
-                        <option value="timetable">Timetable</option>
-                        <option value="other">Other Circular</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Document File (PDF / Word / Excel) <span class="text-amber-600">*</span></label>
-                    <input type="file" name="doc_file" required accept=".pdf,.doc,.docx,.xls,.xlsx" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs">
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="upload" class="w-4 h-4"></i> Upload Document
                     </button>
@@ -1128,34 +1294,36 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 4: UPLOAD GALLERY PHOTO -->
-    <div id="modal-upload-gallery" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-upload-gallery" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="image-plus" class="w-5 h-5 text-amber-600"></i> Upload Gallery Photo
                 </h3>
-                <button onclick="closeModal('modal-upload-gallery');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-upload-gallery');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_upload_gallery.php" method="post" enctype="multipart/form-data" class="space-y-4">
-                <input type="hidden" name="redirect_to" value="admin_dashboard.php">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Title <span class="text-amber-600">*</span></label>
-                    <input type="text" name="title" required placeholder="e.g. Science Fair 2026" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <form action="admin_upload_gallery.php" method="post" enctype="multipart/form-data" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-gallery#tab-admin-gallery">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Title <span class="text-amber-600">*</span></label>
+                        <input type="text" name="title" required placeholder="e.g. Science Fair 2026" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Category</label>
+                        <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="campus">Campus</option>
+                            <option value="sports">Sports</option>
+                            <option value="academic">Academic</option>
+                            <option value="cultural">Cultural</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Photo Image <span class="text-amber-600">*</span></label>
+                        <input type="file" name="photo_file" required accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Category</label>
-                    <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <option value="campus">Campus</option>
-                        <option value="sports">Sports</option>
-                        <option value="academic">Academic</option>
-                        <option value="cultural">Cultural</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Photo Image <span class="text-amber-600">*</span></label>
-                    <input type="file" name="photo_file" required accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs">
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="upload" class="w-4 h-4"></i> Upload Photo
                     </button>
@@ -1166,28 +1334,30 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 5: ADMIN CHANGE PASSWORD -->
-    <div id="modal-admin-change-password" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-admin-change-password" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="key-round" class="w-5 h-5 text-amber-600"></i> Change Admin Password
                 </h3>
-                <button onclick="closeModal('modal-admin-change-password');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-admin-change-password');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_change_password.php" method="post" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Current Password <span class="text-amber-600">*</span></label>
-                    <input type="password" name="current_password" required placeholder="Enter current password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <form action="admin_change_password.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Current Password <span class="text-amber-600">*</span></label>
+                        <input type="password" name="current_password" required placeholder="Enter current password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">New Password <span class="text-amber-600">*</span></label>
+                        <input type="password" name="new_password" required minlength="6" placeholder="Enter new password (min 6 chars)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Confirm New Password <span class="text-amber-600">*</span></label>
+                        <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm new password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">New Password <span class="text-amber-600">*</span></label>
-                    <input type="password" name="new_password" required minlength="6" placeholder="Enter new password (min 6 chars)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Confirm New Password <span class="text-amber-600">*</span></label>
-                    <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm new password" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="lock" class="w-4 h-4"></i> Update Password
                     </button>
@@ -1198,103 +1368,105 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 7: BUILDER & IMPORT TIMETABLE (MON - SUN) -->
-    <div id="modal-builder-timetable" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 my-8 max-h-[92vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+    <div id="modal-builder-timetable" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-5xl w-full shadow-2xl max-h-[92vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                         <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i> Interactive Timetable Builder & Import Engine
                     </h3>
                     <p class="text-xs text-gray-500 mt-0.5">Build custom time slots for Monday through Sunday, toggle global school programs, or parse Excel/Word tables.</p>
                 </div>
-                <button onclick="closeModal('modal-builder-timetable');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-builder-timetable');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Import Bar -->
-            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="file-spread-sheet" class="w-5 h-5 text-amber-700"></i>
+            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <!-- Import Bar -->
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="file-spread-sheet" class="w-5 h-5 text-amber-700"></i>
+                            <div>
+                                <div class="text-xs font-bold text-amber-950">Auto-Import Table from Excel (.xlsx, .csv) or Word (.docx)</div>
+                                <div class="text-[11px] text-amber-800">Select a file containing timetable rows to pre-fill period time slots and subjects automatically.</div>
+                            </div>
+                        </div>
+                        <div>
+                            <input type="file" id="import-timetable-file" accept=".xlsx,.xls,.csv,.docx" onchange="handleImportTimetableFile(event);" class="hidden">
+                            <button type="button" onclick="document.getElementById('import-timetable-file').click();" class="px-4 py-2 bg-amber-600 text-white font-extrabold rounded-lg text-xs hover:bg-amber-700 shadow flex items-center gap-1.5">
+                                <i data-lucide="upload-cloud" class="w-4 h-4"></i> Select Spreadsheet / Word Document
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
+                            <input type="text" name="title" id="builder_title" required placeholder="e.g. Senior 4 North Master Schedule & Routine" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class / Form <span class="text-amber-600">*</span></label>
+                            <select name="class_level" id="builder_class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                                <option value="Senior 1">Senior 1 / Form 1</option>
+                                <option value="Senior 2">Senior 2 / Form 2</option>
+                                <option value="Senior 3">Senior 3 / Form 3</option>
+                                <option value="Senior 4">Senior 4 / Form 4</option>
+                                <option value="Senior 5">Senior 5 / Form 5</option>
+                                <option value="Senior 6">Senior 6 / Form 6</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
+                            <select name="stream" id="builder_stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                                <option value="All Streams">All Streams</option>
+                                <option value="North">North</option>
+                                <option value="South">South</option>
+                                <option value="East">East</option>
+                                <option value="West">West</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Time Slots Grid (Monday - Sunday) -->
                     <div>
-                        <div class="text-xs font-bold text-amber-950">Auto-Import Table from Excel (.xlsx, .csv) or Word (.docx)</div>
-                        <div class="text-[11px] text-amber-800">Select a file containing timetable rows to pre-fill period time slots and subjects automatically.</div>
-                    </div>
-                </div>
-                <div>
-                    <input type="file" id="import-timetable-file" accept=".xlsx,.xls,.csv,.docx" onchange="handleImportTimetableFile(event);" class="hidden">
-                    <button type="button" onclick="document.getElementById('import-timetable-file').click();" class="px-4 py-2 bg-amber-600 text-white font-extrabold rounded-lg text-xs hover:bg-amber-700 shadow flex items-center gap-1.5">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Select Spreadsheet / Word Document
-                    </button>
-                </div>
-            </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-bold text-gray-700 uppercase">Weekly Time Slots & Programs (Monday – Sunday)</label>
+                            <button type="button" onclick="addTimetableRow();" class="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Time Slot Row
+                            </button>
+                        </div>
 
-            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
-                        <input type="text" name="title" id="builder_title" required placeholder="e.g. Senior 4 North Master Schedule & Routine" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+                        <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                            <table class="w-full text-left text-xs border-collapse" id="table-builder-slots">
+                                <thead>
+                                    <tr class="bg-gray-900 text-amber-400 font-bold">
+                                        <th class="p-2.5 min-w-[150px]">Time Slot</th>
+                                        <th class="p-2.5 min-w-[120px]">Program Type</th>
+                                        <th class="p-2.5 min-w-[110px]">Monday</th>
+                                        <th class="p-2.5 min-w-[110px]">Tuesday</th>
+                                        <th class="p-2.5 min-w-[110px]">Wednesday</th>
+                                        <th class="p-2.5 min-w-[110px]">Thursday</th>
+                                        <th class="p-2.5 min-w-[110px]">Friday</th>
+                                        <th class="p-2.5 min-w-[110px]">Saturday</th>
+                                        <th class="p-2.5 min-w-[110px]">Sunday</th>
+                                        <th class="p-2.5 text-center w-12">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="builder-rows-body" class="divide-y divide-gray-200">
+                                    <!-- Dynamic Rows Inserted by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class / Form <span class="text-amber-600">*</span></label>
-                        <select name="class_level" id="builder_class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
-                            <option value="Senior 1">Senior 1 / Form 1</option>
-                            <option value="Senior 2">Senior 2 / Form 2</option>
-                            <option value="Senior 3">Senior 3 / Form 3</option>
-                            <option value="Senior 4">Senior 4 / Form 4</option>
-                            <option value="Senior 5">Senior 5 / Form 5</option>
-                            <option value="Senior 6">Senior 6 / Form 6</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
-                        <select name="stream" id="builder_stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
-                            <option value="All Streams">All Streams</option>
-                            <option value="North">North</option>
-                            <option value="South">South</option>
-                            <option value="East">East</option>
-                            <option value="West">West</option>
-                        </select>
+
+                    <!-- Optional File Attachment -->
+                    <div class="pt-2">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Attach Downloadable Document (Optional PDF / Word / Excel)</label>
+                        <input type="file" name="timetable_file" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
                     </div>
                 </div>
 
-                <!-- Custom Time Slots Grid (Monday - Sunday) -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-bold text-gray-700 uppercase">Weekly Time Slots & Programs (Monday – Sunday)</label>
-                        <button type="button" onclick="addTimetableRow();" class="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Time Slot Row
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto border border-gray-200 rounded-xl">
-                        <table class="w-full text-left text-xs border-collapse" id="table-builder-slots">
-                            <thead>
-                                <tr class="bg-gray-900 text-amber-400 font-bold">
-                                    <th class="p-2.5 min-w-[150px]">Time Slot</th>
-                                    <th class="p-2.5 min-w-[120px]">Program Type</th>
-                                    <th class="p-2.5 min-w-[110px]">Monday</th>
-                                    <th class="p-2.5 min-w-[110px]">Tuesday</th>
-                                    <th class="p-2.5 min-w-[110px]">Wednesday</th>
-                                    <th class="p-2.5 min-w-[110px]">Thursday</th>
-                                    <th class="p-2.5 min-w-[110px]">Friday</th>
-                                    <th class="p-2.5 min-w-[110px]">Saturday</th>
-                                    <th class="p-2.5 min-w-[110px]">Sunday</th>
-                                    <th class="p-2.5 text-center w-12">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="builder-rows-body" class="divide-y divide-gray-200">
-                                <!-- Dynamic Rows Inserted by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Optional File Attachment -->
-                <div class="pt-2">
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Attach Downloadable Document (Optional PDF / Word / Excel)</label>
-                    <input type="file" name="timetable_file" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
-                </div>
-
-                <div class="flex gap-3 pt-3">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="check-circle" class="w-4 h-4"></i> Save & Publish Timetable
                     </button>
@@ -1305,47 +1477,49 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 8: DIRECT DOCUMENT UPLOAD (PDF/DOC) -->
-    <div id="modal-upload-timetable" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+    <div id="modal-upload-timetable" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i data-lucide="file-up" class="w-5 h-5 text-amber-600"></i> Upload Document Timetable
                 </h3>
-                <button onclick="closeModal('modal-upload-timetable');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-upload-timetable');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
-                    <input type="text" name="title" required placeholder="e.g. Senior 4 Term III Master Examination Timetable" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+            <form action="admin_save_timetable.php" method="post" enctype="multipart/form-data" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class</label>
-                        <select name="class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                            <option value="Senior 1">Senior 1</option>
-                            <option value="Senior 2">Senior 2</option>
-                            <option value="Senior 3">Senior 3</option>
-                            <option value="Senior 4">Senior 4</option>
-                            <option value="Senior 5">Senior 5</option>
-                            <option value="Senior 6">Senior 6</option>
-                        </select>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable Title <span class="text-amber-600">*</span></label>
+                        <input type="text" name="title" required placeholder="e.g. Senior 4 Term III Master Examination Timetable" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Class</label>
+                            <select name="class_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="Senior 1">Senior 1</option>
+                                <option value="Senior 2">Senior 2</option>
+                                <option value="Senior 3">Senior 3</option>
+                                <option value="Senior 4">Senior 4</option>
+                                <option value="Senior 5">Senior 5</option>
+                                <option value="Senior 6">Senior 6</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
+                            <select name="stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="All Streams">All Streams</option>
+                                <option value="North">North</option>
+                                <option value="South">South</option>
+                                <option value="East">East</option>
+                                <option value="West">West</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
-                        <select name="stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                            <option value="All Streams">All Streams</option>
-                            <option value="North">North</option>
-                            <option value="South">South</option>
-                            <option value="East">East</option>
-                            <option value="West">West</option>
-                        </select>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable File (.pdf, .docx, .xlsx) <span class="text-amber-600">*</span></label>
+                        <input type="file" name="timetable_file" required accept=".pdf,.docx,.doc,.xlsx,.xls" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Timetable File (.pdf, .docx, .xlsx) <span class="text-amber-600">*</span></label>
-                    <input type="file" name="timetable_file" required accept=".pdf,.docx,.doc,.xlsx,.xls" class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-2">
-                </div>
-                <div class="flex gap-3 pt-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
                         <i data-lucide="upload" class="w-4 h-4"></i> Upload Document
                     </button>
@@ -1356,26 +1530,26 @@ if (!empty($_SESSION['admin_flash'])) {
     </div>
 
     <!-- MODAL 9: VIEW TIMETABLE MATRIX MODAL -->
-    <div id="modal-view-timetable-matrix" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+    <div id="modal-view-timetable-matrix" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-5xl w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                 <div>
-                    <h3 id="matrix-modal-title" class="text-xl font-bold text-gray-900">Class Timetable Matrix</h3>
+                    <h3 id="matrix-modal-title" class="text-lg sm:text-xl font-bold text-gray-900">Class Timetable Matrix</h3>
                     <div id="matrix-modal-sub" class="text-xs text-amber-700 font-bold"></div>
                 </div>
-                <button onclick="closeModal('modal-view-timetable-matrix');" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal('modal-view-timetable-matrix');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div id="matrix-modal-body" class="overflow-x-auto">
+            <div id="matrix-modal-body" class="p-6 overflow-x-auto overflow-y-auto flex-grow min-h-0">
                 <!-- Rendered Matrix -->
             </div>
         </div>
     </div>
 
     <!-- MODAL 6: FULL STUDENT DETAILS & STATUS MANAGEMENT -->
-    <div id="modal-student" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div id="modal-student" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
             <!-- Modal Header -->
-            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold">
                         <i data-lucide="user" class="w-5 h-5"></i>
@@ -1391,12 +1565,12 @@ if (!empty($_SESSION['admin_flash'])) {
             </div>
 
             <!-- Modal Body -->
-            <div id="modal-student-body" class="p-6 space-y-6"></div>
+            <div id="modal-student-body" class="p-6 space-y-6 overflow-y-auto flex-grow min-h-0"></div>
 
             <!-- Modal Footer: Status Change Actions -->
-            <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex flex-wrap gap-2 justify-end">
+            <div class="bg-gray-50 border-t border-gray-100 px-6 py-4 flex flex-wrap gap-2 justify-end flex-shrink-0">
                 <form method="post" action="enrollment_status_update.php" class="inline">
-                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment">
                     <input type="hidden" name="student_id" id="status-student-id" value="">
                     <input type="hidden" name="new_status" value="Enrolled">
                     <button type="submit" class="px-4 py-2.5 bg-green-600 text-white font-extrabold rounded-xl text-xs hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
@@ -1405,7 +1579,7 @@ if (!empty($_SESSION['admin_flash'])) {
                 </form>
 
                 <form method="post" action="enrollment_status_update.php" class="inline">
-                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment">
                     <input type="hidden" name="student_id" id="status-student-id-2" value="">
                     <input type="hidden" name="new_status" value="Pending">
                     <button type="submit" class="px-4 py-2.5 bg-amber-500 text-gray-950 font-extrabold rounded-xl text-xs hover:bg-amber-400 transition-colors flex items-center gap-1.5 shadow-sm">
@@ -1414,7 +1588,7 @@ if (!empty($_SESSION['admin_flash'])) {
                 </form>
 
                 <form method="post" action="enrollment_status_update.php" class="inline">
-                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment">
                     <input type="hidden" name="student_id" id="status-student-id-3" value="">
                     <input type="hidden" name="new_status" value="Rejected">
                     <button type="submit" class="px-4 py-2.5 bg-orange-600 text-white font-extrabold rounded-xl text-xs hover:bg-orange-700 transition-colors flex items-center gap-1.5 shadow-sm"
@@ -1426,7 +1600,7 @@ if (!empty($_SESSION['admin_flash'])) {
                 <form method="post" action="delete_item.php" class="inline" onsubmit="return confirm('Are you sure you want to PERMANENTLY DELETE this student record?');">
                     <input type="hidden" name="type" value="student">
                     <input type="hidden" name="id" id="delete-student-id-modal" value="">
-                    <input type="hidden" name="redirect_to" value="admin_dashboard.php">
+                    <input type="hidden" name="redirect_to" value="admin_dashboard.php?tab=tab-admin-enrollment#tab-admin-enrollment">
                     <button type="submit" class="px-4 py-2.5 bg-red-700 text-white font-extrabold rounded-xl text-xs hover:bg-red-800 transition-colors flex items-center gap-1.5 shadow-sm">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Record
                     </button>
@@ -1489,21 +1663,60 @@ if (!empty($_SESSION['admin_flash'])) {
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
         function switchAdminTab(tabId) {
+            if (!document.getElementById(tabId)) return;
+
             document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.remove('active', 'text-gray-900', 'bg-white', 'shadow-sm');
                 btn.classList.add('text-gray-700');
             });
 
             document.getElementById(tabId)?.classList.remove('hidden');
             const btn = document.getElementById('btn-' + tabId);
             if (btn) {
-                btn.classList.add('active');
+                btn.classList.add('active', 'text-gray-900', 'bg-white', 'shadow-sm');
                 btn.classList.remove('text-gray-700');
             }
+
+            try {
+                if (history.replaceState) {
+                    history.replaceState(null, null, '#' + tabId);
+                } else {
+                    window.location.hash = tabId;
+                }
+                sessionStorage.setItem('activeAdminTab', tabId);
+            } catch (e) {}
+
             lucide.createIcons();
             window.scrollTo({ top: 300, behavior: 'smooth' });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let targetTab = urlParams.get('tab') || urlParams.get('tab_id');
+
+            if (!targetTab && window.location.hash) {
+                targetTab = window.location.hash.replace('#', '');
+            }
+
+            if (!targetTab) {
+                targetTab = sessionStorage.getItem('activeAdminTab');
+            }
+
+            const validTabs = [
+                'tab-admin-overview',
+                'tab-admin-teachers',
+                'tab-admin-enrollment',
+                'tab-admin-alumni',
+                'tab-admin-calendar',
+                'tab-admin-gallery',
+                'tab-admin-timetables'
+            ];
+
+            if (targetTab && validTabs.includes(targetTab)) {
+                switchAdminTab(targetTab);
+            }
+        });
 
         // ---------- Student Search & Status Filter ----------
         let currentStudentStatus = 'ALL';
@@ -1588,7 +1801,7 @@ if (!empty($_SESSION['admin_flash'])) {
             .then(data => {
                 if (data.success) {
                     alert('Alumni registered successfully!');
-                    window.location.reload();
+                    window.location.href = 'admin_dashboard.php?tab=tab-admin-alumni#tab-admin-alumni';
                 } else {
                     alert(data.error || 'Failed to register alumni');
                 }
@@ -1681,6 +1894,79 @@ if (!empty($_SESSION['admin_flash'])) {
                         </div>
                     </div>
                 </div>
+
+                <div>
+                    <h4 class="text-xs font-extrabold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i data-lucide="paperclip" class="w-4 h-4"></i> Attached Academic Documents & Certificates
+                    </h4>
+                    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
+                        ${s.academic_doc_path ? `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="file-badge" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Academic Certificates / Results</div>
+                                        <div class="text-[11px] text-gray-500">PLE / UCE Results, UNEB Index / Transcripts</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.academic_doc_path)}" target="_blank" class="px-3.5 py-2 bg-gray-900 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
+                                </a>
+                            </div>
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="file-badge" class="w-4 h-4 text-gray-300"></i> Academic Certificates / Transcripts</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
+
+                        ${s.recommendation_doc_path ? `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="award" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Recommendation / Conduct Letter</div>
+                                        <div class="text-[11px] text-gray-500">Character reference & former school letter</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.recommendation_doc_path)}" target="_blank" class="px-3.5 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
+                                </a>
+                            </div>
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-gray-300"></i> Recommendation Letter</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
+
+                        ${s.medical_doc_path ? `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold">
+                                        <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-900">Medical Record / Doctor Certificate</div>
+                                        <div class="text-[11px] text-gray-500">Health report & doctor certificates</div>
+                                    </div>
+                                </div>
+                                <a href="${esc(s.medical_doc_path)}" target="_blank" class="px-3.5 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open File
+                                </a>
+                            </div>
+                        ` : `
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl text-gray-400 text-xs italic">
+                                <span class="flex items-center gap-2"><i data-lucide="stethoscope" class="w-4 h-4 text-gray-300"></i> Medical Record Document</span>
+                                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-semibold">Not Uploaded</span>
+                            </div>
+                        `}
+                    </div>
+                </div>
             `;
             openModal('modal-student');
             lucide.createIcons();
@@ -1717,9 +2003,19 @@ if (!empty($_SESSION['admin_flash'])) {
                 canEnrCb.checked = parseInt(t.can_view_enrollments || 0) === 1;
             }
 
+            const canDutyCb = document.getElementById('edit_can_manage_duty_roster');
+            if (canDutyCb) {
+                canDutyCb.checked = parseInt(t.can_manage_duty_roster || 0) === 1;
+            }
+
             const ctSel = document.getElementById('edit_class_teacher_of');
             if (ctSel && t.class_teacher_of) {
                 ctSel.value = t.class_teacher_of;
+            }
+
+            const ctStrSel = document.getElementById('edit_class_teacher_stream');
+            if (ctStrSel && t.class_teacher_stream) {
+                ctStrSel.value = t.class_teacher_stream;
             }
 
             const taughtArr = (t.classes_taught || '').split(',').map(s => s.trim());

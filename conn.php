@@ -213,8 +213,10 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         department TEXT,
                         is_class_teacher INTEGER DEFAULT 0,
                         class_teacher_of TEXT,
+                        class_teacher_stream TEXT DEFAULT 'Stream A',
                         classes_taught TEXT,
                         can_view_enrollments INTEGER DEFAULT 0,
+                        can_manage_duty_roster INTEGER DEFAULT 0,
                         password_hash TEXT,
                         must_change_password INTEGER DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
@@ -338,14 +340,42 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_active INTEGER DEFAULT 1,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS teacher_duty_rosters (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        week_title TEXT,
+                        senior_duty_teacher TEXT,
+                        assistant_duty_teacher TEXT,
+                        primary_focus_area TEXT,
+                        notes TEXT,
+                        created_by INTEGER,
+                        created_by_role TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS teacher_personal_schedules (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        teacher_id INTEGER NOT NULL,
+                        day_of_week TEXT NOT NULL,
+                        start_time TEXT NOT NULL,
+                        end_time TEXT NOT NULL,
+                        subject TEXT NOT NULL,
+                        class_level TEXT NOT NULL,
+                        stream TEXT DEFAULT 'All Streams',
+                        room_no TEXT,
+                        notes TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
 
             // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
             if ($this->driver === 'pgsql') {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_stream VARCHAR(50) DEFAULT 'Stream A'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_view_enrollments INT DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_manage_duty_roster INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1"); } catch (Exception $e) {}
@@ -353,11 +383,30 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS academic_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS recommendation_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS medical_doc_path TEXT"); } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS teacher_personal_schedules (
+                            id SERIAL PRIMARY KEY,
+                            teacher_id INT NOT NULL,
+                            day_of_week VARCHAR(20) NOT NULL,
+                            start_time VARCHAR(20) NOT NULL,
+                            end_time VARCHAR(20) NOT NULL,
+                            subject VARCHAR(100) NOT NULL,
+                            class_level VARCHAR(50) NOT NULL,
+                            stream VARCHAR(50) DEFAULT 'All Streams',
+                            room_no VARCHAR(50),
+                            notes TEXT,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        );
+                    ");
+                } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_stream TEXT DEFAULT 'Stream A'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN classes_taught TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN can_view_enrollments INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN can_manage_duty_roster INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN password_hash TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN must_change_password INTEGER DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1"); } catch (Exception $e) {}
@@ -376,6 +425,28 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     $insAdmin->execute([$validHash]);
                 } else {
                     $this->pdo->exec("UPDATE admins SET password_hash = '$validHash' WHERE email = 'admin@thamani.ac.ug' OR admin_id = 'ADM-2026-001'");
+                }
+            } catch (Exception $e) {}
+
+            // Ensure default teacher exists and has valid Admin@2026 hash & TOD permission
+            try {
+                $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
+                if ($stmtTeacher && $stmtTeacher->fetchColumn() == 0) {
+                    $insTeacher = $this->pdo->prepare("INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active, can_manage_duty_roster) VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', ?, 0, 1, 1)");
+                    $insTeacher->execute([$validHash]);
+                } else {
+                    $this->pdo->exec("UPDATE teachers SET password_hash = '$validHash', can_manage_duty_roster = 1 WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
+                }
+            } catch (Exception $e) {}
+
+            // Seed default duty roster rows if empty
+            try {
+                $stmtRoster = $this->pdo->query("SELECT COUNT(*) FROM teacher_duty_rosters");
+                if ($stmtRoster && $stmtRoster->fetchColumn() == 0) {
+                    $insRoster = $this->pdo->prepare("INSERT INTO teacher_duty_rosters (week_title, senior_duty_teacher, assistant_duty_teacher, primary_focus_area, notes, created_by_role) VALUES (?, ?, ?, ?, ?, 'admin')");
+                    $insRoster->execute(['Week 1 (Sept 15 - Sept 21)', 'Mr. Mukasa Denis (Physics Dept)', 'Ms. Namatovu Sarah (English Dept)', 'Dining Hall & Evening Prep Supervision', 'Ensure strict timekeeping during meals and evening preps.']);
+                    $insRoster->execute(['Week 2 (Sept 22 - Sept 28)', 'Mr. Okello Patrick (Math Dept)', 'Mrs. Akello Grace (Chemistry Dept)', 'Campus Cleanliness & Assembly Rollcall', 'Inspect dormitory sanitation daily before morning assembly.']);
+                    $insRoster->execute(['Week 3 (Sept 29 - Oct 5)', 'Dr. Kiggundu John (Biology Dept)', 'Ms. Atuhaire Brenda (History Dept)', 'Library Silence & Dormitory Lights Out', 'Ensure all students are in dorms by 9:30 PM.']);
                 }
             } catch (Exception $e) {}
 

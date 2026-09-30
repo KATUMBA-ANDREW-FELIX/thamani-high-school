@@ -26,11 +26,31 @@ require_once 'cloudinary_helper.php';
 
 $type       = trim($_POST['type']        ?? '');
 $id         = (int)($_POST['id']         ?? 0);
-$redirectTo = trim($_POST['redirect_to'] ?? ($isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php'));
 
+$tabMap = [
+    'teacher'     => 'tab-admin-teachers',
+    'student'     => 'tab-admin-enrollment',
+    'alumni'      => 'tab-admin-alumni',
+    'calendar'    => 'tab-admin-calendar',
+    'gallery'     => 'tab-admin-gallery',
+    'timetable'   => 'tab-admin-timetables',
+    'duty_roster' => 'tab-admin-roster'
+];
+$defaultTab = $tabMap[$type] ?? 'tab-admin-overview';
+$defaultRedirect = $isAdmin ? "admin_dashboard.php?tab={$defaultTab}#{$defaultTab}" : 'teacher_dashboard.php';
+
+$rawRedirect = trim($_POST['redirect_to'] ?? $defaultRedirect);
+$baseTarget  = explode('#', explode('?', $rawRedirect)[0])[0];
 $allowedTargets = ['admin_dashboard.php', 'teacher_dashboard.php', 'enrollment_view.php', 'alumni_view.php', 'library.php', 'gallery.php', 'calendar.php'];
-if (!in_array($redirectTo, $allowedTargets, true)) {
-    $redirectTo = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
+
+if (!in_array($baseTarget, $allowedTargets, true)) {
+    $redirectTo = $defaultRedirect;
+} else {
+    if ($rawRedirect === 'admin_dashboard.php') {
+        $redirectTo = "admin_dashboard.php?tab={$defaultTab}#{$defaultTab}";
+    } else {
+        $redirectTo = $rawRedirect;
+    }
 }
 
 $setFlash = function($flashType, $msg) use ($redirectTo) {
@@ -271,6 +291,74 @@ switch ($type) {
             } else {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete timetable record.');
+            }
+        }
+        break;
+
+    // ============================================================
+    // 8. TEACHER ON DUTY ROSTER RECORD (Admin OR Authorized Teacher)
+    // ============================================================
+    case 'duty_roster':
+        $canDelete = false;
+        if ($isAdmin) {
+            $canDelete = true;
+        } else if ($isTeacher) {
+            $tStmt = thamani_db_prepare($conn, "SELECT can_manage_duty_roster FROM teachers WHERE id = ? LIMIT 1");
+            if ($tStmt) {
+                thamani_db_stmt_bind_param($tStmt, "i", $currentTeacherId);
+                thamani_db_stmt_execute($tStmt);
+                $tRes = thamani_db_stmt_get_result($tStmt);
+                $tData = $tRes ? thamani_db_fetch_assoc($tRes) : null;
+                thamani_db_stmt_close($tStmt);
+                if (!empty($tData['can_manage_duty_roster'])) {
+                    $canDelete = true;
+                }
+            }
+        }
+        if (!$canDelete) {
+            $setFlash('error', 'You do not have permission to delete Duty Roster entries.');
+        }
+        $stmt = thamani_db_prepare($conn, "DELETE FROM teacher_duty_rosters WHERE id = ?");
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
+                $setFlash('success', 'Duty roster entry deleted successfully.');
+            } else {
+                thamani_db_stmt_close($stmt);
+                $setFlash('error', 'Failed to delete duty roster entry.');
+            }
+        }
+        break;
+
+    // ============================================================
+    // 9. TEACHER PERSONAL SCHEDULE RECORD (Teacher owner OR Admin)
+    // ============================================================
+    case 'personal_schedule':
+        $check = thamani_db_prepare($conn, "SELECT id, teacher_id, subject FROM teacher_personal_schedules WHERE id = ? LIMIT 1");
+        thamani_db_stmt_bind_param($check, "i", $id);
+        thamani_db_stmt_execute($check);
+        $res = thamani_db_stmt_get_result($check);
+        $item = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($check);
+
+        if (!$item) {
+            $setFlash('error', 'Schedule entry not found.');
+        }
+
+        if (!$isAdmin && (int)$item['teacher_id'] !== $currentTeacherId) {
+            $setFlash('error', 'You do not have permission to delete this schedule entry.');
+        }
+
+        $stmt = thamani_db_prepare($conn, "DELETE FROM teacher_personal_schedules WHERE id = ?");
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, "i", $id);
+            if (thamani_db_stmt_execute($stmt)) {
+                thamani_db_stmt_close($stmt);
+                $setFlash('success', 'Teaching schedule entry deleted successfully.');
+            } else {
+                thamani_db_stmt_close($stmt);
+                $setFlash('error', 'Failed to delete schedule entry.');
             }
         }
         break;
