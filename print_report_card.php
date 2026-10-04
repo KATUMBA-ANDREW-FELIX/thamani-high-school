@@ -1,9 +1,8 @@
 <?php
 /**
- * Thamani High School - Printable Official Academic Report Card
- * -------------------------------------------------------------
- * Clean, printable A4 layout with school crest, subject grades,
- * performance charts, stream rank position, attendance stats & comments.
+ * Thamani High School - Authentic Ugandan Academic Report Card Generator
+ * ----------------------------------------------------------------------
+ * Styled after official dotShule / national Ugandan secondary school report cards.
  */
 
 require_once 'conn.php';
@@ -71,9 +70,8 @@ if (!$window) {
     die("No published reporting window found for this report card.");
 }
 
-// Non-admin & non-teacher access check: Must be published
 if (!$currentAdmin && !$currentTeacher && empty($window['is_published'])) {
-    die("Academic results for this term have not been published by the Administration yet.");
+    die("Academic results for this term have not been published by Administration yet.");
 }
 
 $windowId  = (int)$window['id'];
@@ -81,9 +79,23 @@ $class     = $student['class_level'];
 $stream    = $student['stream'];
 $edLevel   = (strpos($class, 'Senior 5') !== false || strpos($class, 'Senior 6') !== false) ? 'A-Level' : 'O-Level';
 
-// Fetch Marks for this student in this window
+// Formatted Short Class & Stream e.g. S.1/STREAM A
+$shortClass = preg_replace('/Senior\s*/i', 'S.', $class);
+$classStreamFormatted = strtoupper($shortClass . '/' . str_replace('Stream ', '', $stream));
+
+// Fetch Marks & Teacher Initials
 $marks = [];
-$mStmt = thamani_db_prepare($conn, "SELECT subject, score, max_score, comments, updated_at FROM student_marks WHERE student_id = ? AND (window_id = ? OR (class_level = ? AND term = ?)) ORDER BY subject ASC");
+$mSql = "SELECT sm.subject, sm.score, sm.max_score, sm.comments, t.full_name as teacher_name
+         FROM student_marks sm
+         LEFT JOIN teacher_subject_assignments tsa 
+           ON (tsa.class_level = sm.class_level 
+               AND (tsa.stream = sm.stream OR tsa.stream = 'All Streams' OR tsa.stream IS NULL) 
+               AND strcasecmp(tsa.subject, sm.subject) = 0)
+         LEFT JOIN teachers t ON tsa.teacher_id = t.id
+         WHERE sm.student_id = ? AND (sm.window_id = ? OR (sm.class_level = ? AND sm.term = ?))
+         ORDER BY sm.subject ASC";
+
+$mStmt = thamani_db_prepare($conn, $mSql);
 if ($mStmt) {
     thamani_db_stmt_bind_param($mStmt, "iiss", $studentId, $windowId, $class, $window['term']);
     thamani_db_stmt_execute($mStmt);
@@ -96,306 +108,504 @@ if ($mStmt) {
     thamani_db_stmt_close($mStmt);
 }
 
-// Compute Stream Ranking if enabled
-$streamRankText = 'N/A';
-if (!empty($window['show_positions'])) {
-    $streamTotals = [];
-    $allStreamStmt = thamani_db_prepare($conn, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND (window_id = ? OR term = ?) GROUP BY student_id");
-    if ($allStreamStmt) {
-        thamani_db_stmt_bind_param($allStreamStmt, "sssis", $class, $stream, $stream, $windowId, $window['term']);
-        thamani_db_stmt_execute($allStreamStmt);
-        $asRes = thamani_db_stmt_get_result($allStreamStmt);
-        if ($asRes) {
-            while ($ar = thamani_db_fetch_assoc($asRes)) {
-                $streamTotals[(int)$ar['student_id']] = floatval($ar['total_score']);
-            }
+// Function to extract initials
+function get_initials($name) {
+    if (empty($name)) return 'THS';
+    $words = array_filter(explode(' ', trim($name)));
+    $initials = '';
+    foreach ($words as $w) {
+        $clean = preg_replace('/[^A-Za-z]/', '', $w);
+        if (!empty($clean)) {
+            $initials .= strtoupper($clean[0]);
         }
-        thamani_db_stmt_close($allStreamStmt);
     }
-    if (!empty($streamTotals)) {
-        $ranksMap = calculate_stream_ranks($streamTotals);
-        $streamRankText = $ranksMap[$studentId] ?? 'N/A';
+    return $initials ?: 'THS';
+}
+
+// Calculate Class & Stream Positions
+$classPosText = 'N/A';
+$streamPosText = 'N/A';
+
+// 1. Class Position
+$classTotals = [];
+$cStmt = thamani_db_prepare($conn, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (window_id = ? OR term = ?) GROUP BY student_id");
+if ($cStmt) {
+    thamani_db_stmt_bind_param($cStmt, "sis", $class, $windowId, $window['term']);
+    thamani_db_stmt_execute($cStmt);
+    $cRes = thamani_db_stmt_get_result($cStmt);
+    if ($cRes) {
+        while ($cr = thamani_db_fetch_assoc($cRes)) {
+            $classTotals[(int)$cr['student_id']] = floatval($cr['total_score']);
+        }
+    }
+    thamani_db_stmt_close($cStmt);
+}
+if (!empty($classTotals)) {
+    arsort($classTotals);
+    $cRank = 1;
+    $totalInClass = count($classTotals);
+    foreach ($classTotals as $sId => $score) {
+        if ($sId === $studentId) {
+            $classPosText = "{$cRank} out of {$totalInClass}";
+            break;
+        }
+        $cRank++;
+    }
+}
+
+// 2. Stream Position
+$streamTotals = [];
+$sStmt = thamani_db_prepare($conn, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND (window_id = ? OR term = ?) GROUP BY student_id");
+if ($sStmt) {
+    thamani_db_stmt_bind_param($sStmt, "sssis", $class, $stream, $stream, $windowId, $window['term']);
+    thamani_db_stmt_execute($sStmt);
+    $sRes = thamani_db_stmt_get_result($sStmt);
+    if ($sRes) {
+        while ($sr = thamani_db_fetch_assoc($sRes)) {
+            $streamTotals[(int)$sr['student_id']] = floatval($sr['total_score']);
+        }
+    }
+    thamani_db_stmt_close($sStmt);
+}
+if (!empty($streamTotals)) {
+    arsort($streamTotals);
+    $sRank = 1;
+    $totalInStream = count($streamTotals);
+    foreach ($streamTotals as $sId => $score) {
+        if ($sId === $studentId) {
+            $streamPosText = "{$sRank} out of {$totalInStream}";
+            break;
+        }
+        $sRank++;
     }
 }
 
 // Fetch Comments
 $reportComment = ['class_teacher_comment' => '', 'head_teacher_comment' => ''];
-$cStmt = thamani_db_prepare($conn, "SELECT class_teacher_comment, head_teacher_comment FROM report_comments WHERE student_id = ? AND window_id = ? LIMIT 1");
-if ($cStmt) {
-    thamani_db_stmt_bind_param($cStmt, "ii", $studentId, $windowId);
-    thamani_db_stmt_execute($cStmt);
-    $cRes = thamani_db_stmt_get_result($cStmt);
-    if ($cRes && $cr = thamani_db_fetch_assoc($cRes)) {
+$commStmt = thamani_db_prepare($conn, "SELECT class_teacher_comment, head_teacher_comment FROM report_comments WHERE student_id = ? AND window_id = ? LIMIT 1");
+if ($commStmt) {
+    thamani_db_stmt_bind_param($commStmt, "ii", $studentId, $windowId);
+    thamani_db_stmt_execute($commStmt);
+    $commRes = thamani_db_stmt_get_result($commStmt);
+    if ($commRes && $cr = thamani_db_fetch_assoc($commRes)) {
         $reportComment = $cr;
     }
-    thamani_db_stmt_close($cStmt);
+    thamani_db_stmt_close($commStmt);
 }
 
-// Fetch Attendance Stats
-$attStats = ['Present' => 0, 'Absent' => 0, 'Late' => 0, 'Excused' => 0];
-$attRes = thamani_db_query($conn, "SELECT status, COUNT(*) as cnt FROM student_attendance WHERE student_id = {$studentId} GROUP BY status");
-if ($attRes) {
-    while ($ar = thamani_db_fetch_assoc($attRes)) {
-        $attStats[$ar['status']] = (int)$ar['cnt'];
-    }
-}
-
-// Calculate totals and averages
+// Totals & Averages Calculation
 $totalScore = 0;
 $totalMax   = 0;
-$subjectCount = count($marks);
+$allPoints  = [];
 
 foreach ($marks as $m) {
-    $totalScore += floatval($m['score']);
-    $totalMax   += floatval($m['max_score'] ?: 100);
+    $sc = floatval($m['score']);
+    $mx = floatval($m['max_score'] ?: 100);
+    $gi = calculate_grade_info($sc, $mx, $edLevel);
+    $totalScore += $sc;
+    $totalMax   += $mx;
+    $allPoints[] = $gi['points'];
 }
 
-$averagePercent = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 1) : 0;
-$overallGradeInfo = calculate_grade_info($totalScore, $totalMax ?: 100, $edLevel);
-$gradingLegend = get_grading_scales_from_db($edLevel);
+$avgScore = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 2) : 0;
+
+// O-Level Aggregates (best 8 subjects) & Division Calculation
+$totalAggregatesText = 'N/A';
+$divisionText = 'N/A';
+if ($edLevel === 'O-Level' && count($allPoints) >= 8) {
+    sort($allPoints);
+    $best8 = array_slice($allPoints, 0, 8);
+    $sumAgg = array_sum($best8);
+    $totalAggregatesText = (string)$sumAgg;
+    if ($sumAgg <= 32) $divisionText = 'DIV I';
+    elseif ($sumAgg <= 45) $divisionText = 'DIV II';
+    elseif ($sumAgg <= 58) $divisionText = 'DIV III';
+    elseif ($sumAgg <= 72) $divisionText = 'DIV IV';
+    else $divisionText = 'DIV U';
+}
+
+// Verification Code
+$vcode = date('Y') . sprintf("%05d", $studentId) . sprintf("%03d", $windowId);
+$scholarId = $student['lin_number'] ?: ('1000' . sprintf("%05d", $studentId));
+$reportDate = strtoupper(date('d-M-Y'));
+
+// Assessment Title Label
+$assTitleLabel = 'END OF TERM';
+if (!empty($window['assessment_type'])) {
+    $type = strtoupper($window['assessment_type']);
+    if ($type === 'BOT') $assTitleLabel = 'BEGINNING OF TERM';
+    elseif ($type === 'MOT') $assTitleLabel = 'MID-TERM EXAMINATION';
+    elseif ($type === 'EOT') $assTitleLabel = 'END OF TERM';
+    else $assTitleLabel = strtoupper($window['title']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Official Report Card - <?= htmlspecialchars($student['full_name']) ?> (<?= htmlspecialchars($window['title']) ?>)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { brand: {
-                green: '#1A472A', maroon: '#800000', gold: '#D4AF37',
-                lightGreen: '#E8F5E9', darkGreen: '#0F2D1A'
-            }}}}
-        }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Academic Report - <?= htmlspecialchars($student['full_name']) ?></title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', Courier, monospace, Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #000;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .no-print-bar {
+            max-width: 900px;
+            margin: 0 auto 15px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-print {
+            background-color: #1A472A;
+            color: #fff;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn-back {
+            background-color: #e2e8f0;
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .report-page {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border: 2px solid #000;
+            padding: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        /* Top Header */
+        .school-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .logo-box { width: 100px; text-align: center; }
+        .logo-img { max-height: 85px; width: auto; }
+        .header-text { text-align: center; flex-grow: 1; padding: 0 10px; }
+        .school-name { font-size: 26px; font-weight: 900; font-family: 'Times New Roman', Times, serif; letter-spacing: 0.5px; }
+        .school-motto { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-decoration: underline; margin-top: 2px; }
+        .contact-line { font-size: 10px; font-weight: bold; margin-top: 3px; font-family: monospace; }
+        .term-banner { font-size: 13px; font-weight: 900; text-decoration: underline; margin-top: 5px; text-transform: uppercase; }
+
+        /* Biodata & Summary Grid */
+        .biodata-section {
+            display: flex;
+            border: 1px solid #000;
+            margin-bottom: 10px;
+        }
+        .biodata-table {
+            width: 80%;
+            border-collapse: collapse;
+        }
+        .biodata-table td, .biodata-table th {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 11px;
+        }
+        .lbl { font-weight: bold; color: #333; background-color: #f9f9f9; }
+        .val { font-weight: bold; color: #000; text-transform: uppercase; }
+
+        .photo-box {
+            width: 20%;
+            border-left: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            background: #fff;
+        }
+        .student-photo {
+            width: 105px;
+            height: 125px;
+            object-fit: cover;
+            border: 1px solid #000;
+        }
+
+        /* Marks Table */
+        .marks-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .marks-table th {
+            border: 1px solid #000;
+            padding: 6px 4px;
+            font-size: 11px;
+            font-weight: 900;
+            text-align: center;
+            background-color: #f2f2f2;
+            text-transform: UPPERCASE;
+        }
+        .marks-table td {
+            border: 1px solid #000;
+            padding: 5px 6px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+
+        /* Next Term Bar */
+        .next-term-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .next-term-table td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* Remarks Section */
+        .remarks-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .remarks-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-size: 11px;
+            vertical-align: top;
+        }
+        .sig-cell { width: 32%; background-color: #fafafa; font-weight: bold; }
+        .sig-box {
+            display: inline-block;
+            width: 35px;
+            height: 18px;
+            border: 1px solid #888;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Footer Grading Legend */
+        .grading-legend-bar {
+            border: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 9.5px;
+            font-weight: bold;
+            background-color: #fff;
+            text-transform: uppercase;
+        }
+
         @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; font-size: 11px; }
-            .report-card { border: none !important; shadow: none !important; width: 100% !important; margin: 0 !important; }
-            @page { size: A4 portrait; margin: 12mm; }
+            .no-print-bar { display: none !important; }
+            body { background-color: #fff; padding: 0; margin: 0; }
+            .report-page { border: 2px solid #000; max-width: 100%; width: 100%; box-shadow: none; padding: 12px; }
+            @page { size: A4 portrait; margin: 8mm; }
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900 font-sans p-4 sm:p-8 min-h-screen">
+<body>
 
     <!-- Action Toolbar (No Print) -->
-    <div class="no-print max-w-4xl mx-auto mb-6 flex justify-between items-center bg-white p-4 rounded-2xl shadow-md border border-gray-200">
-        <div class="flex items-center gap-3">
-            <a href="javascript:history.back()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs flex items-center gap-1.5">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
-            </a>
-            <span class="text-xs text-gray-500 font-medium">Official Academic Report Card Preview</span>
+    <div class="no-print-bar">
+        <div>
+            <a href="javascript:history.back()" class="btn-back">← Back</a>
+            <span style="margin-left: 10px; font-weight: bold; color: #555;">Official Uganda Academic Report Card View</span>
         </div>
-        <div class="flex items-center gap-3">
-            <button onclick="window.print();" class="px-6 py-2.5 bg-brand-green hover:bg-brand-darkGreen text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-lg active:scale-95 transition-transform">
-                <i data-lucide="printer" class="w-4 h-4"></i> Print / Download PDF
-            </button>
-        </div>
+        <button onclick="window.print();" class="btn-print">🖨️ Print / Download PDF</button>
     </div>
 
-    <!-- Official Report Card Box -->
-    <div class="report-card max-w-4xl mx-auto bg-white p-8 sm:p-12 rounded-3xl shadow-xl border border-gray-200 text-gray-900 relative">
+    <!-- Official Report Card Page -->
+    <div class="report-page">
 
-        <!-- Header Crest & School Title -->
-        <div class="border-b-4 border-brand-gold pb-6 mb-6">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-                <div class="flex items-center gap-4">
-                    <img src="thamani-logo.png" alt="Thamani Crest" class="h-20 w-auto object-contain" onerror="this.src='favicon.svg'">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-black text-brand-green uppercase tracking-tight">THAMANI HIGH SCHOOL</h1>
-                        <p class="text-xs font-bold text-brand-maroon uppercase tracking-widest">Knowledge · Integrity · Excellence</p>
-                        <p class="text-[11px] text-gray-500 mt-1">Kakiri Main Campus, Wakiso District, Uganda | UNEB Center No: U3421</p>
-                        <p class="text-[11px] text-gray-500">Tel: +256 414 123 456 | Email: info@thamani.ac.ug</p>
-                    </div>
-                </div>
-                <div class="bg-brand-lightGreen p-4 rounded-2xl border border-brand-green/30 text-center flex-shrink-0 min-w-[170px]">
-                    <span class="text-[10px] font-black uppercase text-brand-maroon tracking-wider block">Official Report</span>
-                    <span class="text-sm font-black text-brand-green block mt-0.5"><?= htmlspecialchars($window['title']) ?></span>
-                    <span class="text-[11px] font-bold text-gray-600 block"><?= htmlspecialchars($window['term']) ?> · <?= htmlspecialchars($window['academic_year']) ?></span>
-                </div>
+        <!-- Top Header -->
+        <div class="school-header">
+            <div class="logo-box">
+                <img src="thamani-logo.png" alt="School Crest" class="logo-img" onerror="this.src='favicon.svg'">
+            </div>
+            <div class="header-text">
+                <div class="school-name">THAMANI HIGH SCHOOL</div>
+                <div class="school-motto">EXCELLENCE AND CHARACTER</div>
+                <div class="contact-line">SCH.ID: 1000049 TEL: +256 414 123 456 info@thamani.ac.ug</div>
+                <div class="contact-line">P.O. BOX 1234 KAKIRI, WAKISO, UGANDA , WWW.THAMANI.AC.UG</div>
+                <div class="term-banner"><?= $assTitleLabel ?></div>
             </div>
         </div>
 
-        <!-- Student Biodata Sheet -->
-        <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 text-xs grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-                <span class="text-gray-400 font-bold uppercase text-[10px] block">Student Name</span>
-                <span class="font-black text-gray-900 text-sm"><?= htmlspecialchars($student['full_name']) ?></span>
-            </div>
-            <div>
-                <span class="text-gray-400 font-bold uppercase text-[10px] block">LIN Number</span>
-                <span class="font-mono font-bold text-brand-green"><?= htmlspecialchars($student['lin_number'] ?: 'N/A') ?></span>
-            </div>
-            <div>
-                <span class="text-gray-400 font-bold uppercase text-[10px] block">Class Level & Stream</span>
-                <span class="font-bold text-gray-900"><?= htmlspecialchars($student['class_level']) ?> (<?= htmlspecialchars($student['stream']) ?>)</span>
-            </div>
-            <div>
-                <span class="text-gray-400 font-bold uppercase text-[10px] block">Stream Rank Position</span>
-                <span class="font-black text-brand-maroon text-sm"><?= htmlspecialchars($streamRankText) ?></span>
-            </div>
-        </div>
-
-        <!-- Academic Marks Table -->
-        <div class="mb-6 overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
-            <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                    <tr class="bg-brand-green text-white font-bold uppercase tracking-wider text-[11px]">
-                        <th class="p-3">Subject Name</th>
-                        <th class="p-3 text-center">Score</th>
-                        <th class="p-3 text-center">Max</th>
-                        <th class="p-3 text-center">% Score</th>
-                        <th class="p-3 text-center">Grade</th>
-                        <th class="p-3 text-center">Points</th>
-                        <th class="p-3">Teacher Remarks</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    <?php if (!empty($marks)): ?>
-                        <?php foreach ($marks as $m): 
-                            $sc = floatval($m['score']);
-                            $mx = floatval($m['max_score'] ?: 100);
-                            $gi = calculate_grade_info($sc, $mx, $edLevel);
-                        ?>
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="p-3 font-bold text-gray-900"><?= htmlspecialchars($m['subject']) ?></td>
-                                <td class="p-3 text-center font-mono font-bold text-gray-900"><?= number_format($sc, 1) ?></td>
-                                <td class="p-3 text-center font-mono text-gray-500"><?= number_format($mx, 0) ?></td>
-                                <td class="p-3 text-center font-mono font-bold text-brand-green"><?= $gi['percent'] ?>%</td>
-                                <td class="p-3 text-center">
-                                    <span class="px-2 py-0.5 rounded font-black text-xs bg-brand-lightGreen text-brand-green border border-brand-green/30">
-                                        <?= htmlspecialchars($gi['grade']) ?>
-                                    </span>
-                                </td>
-                                <td class="p-3 text-center font-bold text-gray-700"><?= $gi['points'] ?></td>
-                                <td class="p-3 text-gray-600 text-[11px] italic"><?= htmlspecialchars($m['comments'] ?: $gi['remark']) ?></td>
+        <!-- Student Biodata & Performance Summary Table Grid -->
+        <div class="biodata-section">
+            <table class="biodata-table">
+                <tr>
+                    <td class="lbl" style="width: 15%;">Name</td>
+                    <td class="val" style="width: 40%;"><?= htmlspecialchars($student['full_name']) ?></td>
+                    <td class="lbl" style="width: 15%;">Date</td>
+                    <td class="val" style="width: 30%;"><?= $reportDate ?></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Scholar ID</td>
+                    <td class="val" style="font-family: monospace;"><?= htmlspecialchars($scholarId) ?></td>
+                    <td class="lbl">Term</td>
+                    <td class="val"><?= htmlspecialchars($window['academic_year']) ?> TERM <?= htmlspecialchars($window['term']) ?></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Class/Stream</td>
+                    <td class="val"><?= htmlspecialchars($classStreamFormatted) ?></td>
+                    <td class="lbl">Vcode</td>
+                    <td class="val" style="font-family: monospace;"><?= htmlspecialchars($vcode) ?></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Residence</td>
+                    <td class="val">DAY</td>
+                    <td class="lbl">Ranked</td>
+                    <td class="val">BY AVERAGE</td>
+                </tr>
+                <!-- Performance Summary Sub-Row -->
+                <tr>
+                    <td class="lbl">Best</td>
+                    <td class="val" style="font-size: 10px;">ALL SUBJECTS</td>
+                    <td class="lbl">Average</td>
+                    <td class="val" style="font-size: 12px; font-weight: 900;"><?= number_format($avgScore, 2) ?></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Aggregates</td>
+                    <td class="val"><?= $totalAggregatesText ?></td>
+                    <td class="lbl">Position</td>
+                    <td class="val" style="padding: 0;">
+                        <table style="width: 100%; border-collapse: collapse; height: 100%;">
+                            <tr>
+                                <td style="border: none; border-right: 1px solid #000; padding: 2px 4px;" class="lbl">Class</td>
+                                <td style="border: none; padding: 2px 4px;" class="val"><?= htmlspecialchars($classPosText) ?></td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="7" class="p-8 text-center text-gray-500">
-                                No subject marks submitted for this student in this term yet.
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="lbl">Division</td>
+                    <td class="val" style="font-weight: 900; font-size: 12px; color: #1A472A;"><?= $divisionText ?></td>
+                    <td class="lbl" style="border-top: none;"></td>
+                    <td class="val" style="padding: 0;">
+                        <table style="width: 100%; border-collapse: collapse; height: 100%;">
+                            <tr>
+                                <td style="border: none; border-right: 1px solid #000; padding: 2px 4px;" class="lbl">Stream</td>
+                                <td style="border: none; padding: 2px 4px;" class="val"><?= htmlspecialchars($streamPosText) ?></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
             </table>
+
+            <!-- Passport Photo -->
+            <div class="photo-box">
+                <img src="student_placeholder.png" alt="Student Passport" class="student-photo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'105\' height=\'125\' viewBox=\'0 0 105 125\' fill=\'%23f3f4f6\'><rect width=\'105\' height=\'125\' fill=\'%23e5e7eb\'/><circle cx=\'52.5\' cy=\'45\' r=\'25\' fill=\'%239ca3af\'/><path d=\'M15 115 C15 80, 90 80, 90 115 Z\' fill=\'%239ca3af\'/></svg>';">
+            </div>
         </div>
 
-        <!-- Performance Summary & Visual Chart -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-
-            <!-- Stat Summary Card -->
-            <div class="bg-brand-lightGreen p-5 rounded-2xl border border-brand-green/30 flex flex-col justify-between">
-                <h3 class="text-xs font-black uppercase text-brand-green tracking-wider mb-3 flex items-center gap-1.5">
-                    <i data-lucide="award" class="w-4 h-4"></i> Overall Performance Summary
-                </h3>
-                <div class="grid grid-cols-2 gap-3 text-xs mb-3">
-                    <div class="bg-white p-3 rounded-xl border border-brand-green/20">
-                        <span class="text-gray-400 font-bold uppercase text-[9px] block">Total Marks</span>
-                        <span class="text-lg font-black text-brand-green"><?= number_format($totalScore, 1) ?> / <?= number_format($totalMax, 0) ?></span>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl border border-brand-green/20">
-                        <span class="text-gray-400 font-bold uppercase text-[9px] block">Overall Average</span>
-                        <span class="text-lg font-black text-brand-maroon"><?= $averagePercent ?>%</span>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-brand-green/20 text-xs">
-                    <span class="font-bold text-gray-700">Overall Grade & Award:</span>
-                    <span class="px-3 py-1 bg-brand-gold text-brand-green font-black rounded-lg uppercase tracking-wider text-xs">
-                        <?= htmlspecialchars($overallGradeInfo['grade']) ?> (<?= htmlspecialchars($overallGradeInfo['remark']) ?>)
-                    </span>
-                </div>
-            </div>
-
-            <!-- Visual Subject Performance Chart (SVG/CSS Bars) -->
-            <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200">
-                <h3 class="text-xs font-black uppercase text-gray-700 tracking-wider mb-3 flex items-center gap-1.5">
-                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-green"></i> Subject Performance Chart
-                </h3>
-                <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+        <!-- Subject Marks Breakdown Table -->
+        <table class="marks-table">
+            <thead>
+                <tr>
+                    <th style="width: 32%; text-align: left; padding-left: 8px;">SUBJECT</th>
+                    <th style="width: 13%;">MARKS (%)</th>
+                    <th style="width: 18%;">SCORES<br>(AGGREGATES)</th>
+                    <th style="width: 25%;">SUBJECT TEACHER'S COMMENTS</th>
+                    <th style="width: 12%;">TEACHER INITIALS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($marks)): ?>
                     <?php foreach ($marks as $m): 
                         $sc = floatval($m['score']);
                         $mx = floatval($m['max_score'] ?: 100);
-                        $pct = ($mx > 0) ? min(100, max(0, ($sc / $mx) * 100)) : 0;
+                        $gi = calculate_grade_info($sc, $mx, $edLevel);
+                        $tInitials = get_initials($m['teacher_name'] ?? '');
                     ?>
-                        <div>
-                            <div class="flex justify-between text-[10px] font-bold text-gray-700 mb-0.5">
-                                <span class="truncate max-w-[140px]"><?= htmlspecialchars($m['subject']) ?></span>
-                                <span><?= round($pct, 1) ?>%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                                <div class="bg-brand-green h-full rounded-full transition-all" style="width: <?= $pct ?>%"></div>
-                            </div>
-                        </div>
+                        <tr>
+                            <td class="text-left" style="padding-left: 8px; font-weight: 800;"><?= strtoupper(htmlspecialchars($m['subject'])) ?></td>
+                            <td class="text-center font-mono"><?= number_format($sc, 0) ?></td>
+                            <td class="text-center font-mono" style="font-weight: 900; font-size: 12px;"><?= htmlspecialchars($gi['grade']) ?></td>
+                            <td class="text-left" style="font-weight: bold; color: #222; text-transform: capitalize;"><?= htmlspecialchars($m['comments'] ?: strtolower($gi['remark'])) ?></td>
+                            <td class="text-center font-mono"><?= htmlspecialchars($tInitials) ?></td>
+                        </tr>
                     <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5" class="text-center" style="padding: 20px; font-weight: normal; color: #666;">
+                            No academic marks entered for this student in this term yet.
+                        </td>
+                    </tr>
+                <?php endif; ?>
+                <!-- Total Row -->
+                <tr style="background-color: #f9f9f9; font-weight: 900;">
+                    <td class="text-center" style="font-size: 12px; font-weight: 900;">TOTAL</td>
+                    <td class="text-center font-mono" style="font-size: 12px; font-weight: 900;"><?= number_format($totalScore, 0) ?></td>
+                    <td class="text-center" style="font-size: 12px; font-weight: 900;">STATE</td>
+                    <td colspan="2" class="text-left" style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #1A472A; padding-left: 8px;">
+                        <?= $avgScore >= 50 ? 'PASSED / PROMOTED' : 'REQUIRES MORE EFFORT' ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
-        <!-- Attendance Stats & Comments -->
-        <div class="space-y-4 mb-6 text-xs">
-            
-            <!-- Attendance Row -->
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
-                <span class="font-bold text-gray-800 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-                    <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-green"></i> Term Attendance Record:
-                </span>
-                <div class="flex gap-4 font-semibold text-gray-700">
-                    <span>Days Present: <strong class="text-brand-green"><?= $attStats['Present'] ?></strong></span>
-                    <span>Absent: <strong class="text-red-600"><?= $attStats['Absent'] ?></strong></span>
-                    <span>Late: <strong class="text-amber-600"><?= $attStats['Late'] ?></strong></span>
-                </div>
-            </div>
+        <!-- Next Term Dates Row -->
+        <table class="next-term-table">
+            <tr>
+                <td style="width: 25%; background-color: #f2f2f2; text-transform: uppercase; font-weight: 900;">NEXT TERM</td>
+                <td style="width: 12%; text-align: right;" class="lbl">Begins</td>
+                <td style="width: 25%;" class="val">15-JAN-2027</td>
+                <td style="width: 12%; text-align: right;" class="lbl">Ends</td>
+                <td style="width: 26%;" class="val">10-APR-2027</td>
+            </tr>
+        </table>
 
-            <!-- Class Teacher Comment -->
-            <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
-                <span class="font-bold text-amber-900 uppercase text-[10px] block mb-1">Class Teacher Remarks:</span>
-                <p class="text-gray-800 italic"><?= htmlspecialchars($reportComment['class_teacher_comment'] ?: 'A dedicated and disciplined student with consistent effort across subjects.') ?></p>
-            </div>
+        <!-- Remarks Section -->
+        <table class="remarks-table">
+            <tr>
+                <td class="sig-cell">
+                    Class teacher's remarks<br>
+                    <span style="font-size: 10px; font-weight: normal;">Signature</span> <span class="sig-box"></span>
+                </td>
+                <td style="font-style: italic; font-weight: bold; text-transform: capitalize;">
+                    <?= htmlspecialchars($reportComment['class_teacher_comment'] ?: 'An attentive, well-behaved and hardworking student.') ?>
+                </td>
+            </tr>
+            <tr>
+                <td class="sig-cell">
+                    Headteacher's remarks<br>
+                    <span style="font-size: 10px; font-weight: normal;">Signature</span> <span class="sig-box"></span>
+                </td>
+                <td style="font-style: italic; font-weight: bold; text-transform: capitalize;">
+                    <?= htmlspecialchars($reportComment['head_teacher_comment'] ?: 'Promoted to the next class level. High potential for academic excellence.') ?>
+                </td>
+            </tr>
+        </table>
 
-            <!-- Head Teacher Comment -->
-            <div class="p-4 rounded-2xl bg-brand-lightGreen border border-brand-green/30">
-                <span class="font-bold text-brand-green uppercase text-[10px] block mb-1">Head Teacher Remarks & Recommendation:</span>
-                <p class="text-gray-800 italic"><?= htmlspecialchars($reportComment['head_teacher_comment'] ?: 'Promoted to the next class. Keep up the high standard of academic discipline.') ?></p>
-            </div>
-        </div>
-
-        <!-- Grading Legend Footer -->
-        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 text-[10px] mb-8">
-            <span class="font-extrabold text-gray-700 uppercase tracking-wider block mb-1.5">Key to Grading System (<?= htmlspecialchars($edLevel) ?>):</span>
-            <div class="flex flex-wrap gap-3 text-gray-600">
-                <?php foreach ($gradingLegend as $gl): ?>
-                    <span class="bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold">
-                        <strong class="text-brand-green"><?= htmlspecialchars($gl['grade']) ?></strong>: <?= $gl['min'] ?>%-<?= $gl['max'] ?>% (<?= htmlspecialchars($gl['remark']) ?>)
-                    </span>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- Official Signatures -->
-        <div class="pt-8 border-t border-gray-200 grid grid-cols-2 gap-8 text-center text-xs">
-            <div>
-                <div class="h-12 flex items-end justify-center pb-1">
-                    <span class="font-serif italic text-gray-400">Class Teacher Signature</span>
-                </div>
-                <div class="border-t border-gray-400 pt-1 font-bold text-gray-800">Class Teacher</div>
-            </div>
-            <div>
-                <div class="h-12 flex items-end justify-center pb-1">
-                    <span class="font-serif italic text-brand-green font-bold text-sm">Mr. Mukasa Denis (HM)</span>
-                </div>
-                <div class="border-t border-gray-400 pt-1 font-bold text-gray-800">Head Teacher & School Stamp</div>
-            </div>
+        <!-- Footer Grading Legend -->
+        <div class="grading-legend-bar">
+            AGGREGATES: D1 100-80; D2 79-70; C3 69-65; C4 64-60; C5 59-55; C6 54-50; P7 49-45; P8 44-35; F9 34-00;
         </div>
 
     </div>
 
-    <script>
-        lucide.createIcons();
-    </script>
 </body>
 </html>
