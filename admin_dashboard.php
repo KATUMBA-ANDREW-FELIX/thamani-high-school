@@ -1337,21 +1337,61 @@ if (!empty($_SESSION['admin_flash'])) {
                         </label>
                     </div>
 
-                    <!-- CLASSES TAUGHT -->
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $cOption): ?>
-                                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
-                                    <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="text-amber-600 rounded focus:ring-amber-500">
-                                    <span><?= $cOption ?></span>
+                    <!-- SUBJECTS TAUGHT FOR AUTOMATIC ALLOCATION -->
+                    <div class="p-4 bg-amber-50/50 border border-amber-200 rounded-xl space-y-2">
+                        <label class="block text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
+                            <i data-lucide="book-open" class="w-4 h-4 text-amber-600"></i> Subjects Taught by this Teacher <span class="text-amber-600">*</span>
+                        </label>
+                        <p class="text-[11px] text-amber-800">Select all subjects this teacher is qualified to teach. Allocations per class & stream will be generated automatically.</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                            <?php 
+                            $ugSubjects = [
+                                'Mathematics', 'Physics', 'Chemistry', 'Biology',
+                                'English Language', 'Literature in English', 'Geography', 'History',
+                                'Entrepreneurship', 'Agriculture', 'Computer Studies / ICT',
+                                'CRE', 'IRE', 'Fine Art', 'Physical Education'
+                            ];
+                            foreach ($ugSubjects as $subOpt): 
+                            ?>
+                                <label class="flex items-center gap-2 p-2 border border-amber-200/80 bg-white rounded-lg text-xs hover:bg-amber-100/50 cursor-pointer">
+                                    <input type="checkbox" name="subjects_taught[]" value="<?= $subOpt ?>" class="text-amber-600 rounded focus:ring-amber-500">
+                                    <span class="font-medium text-gray-800"><?= $subOpt ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
                     </div>
 
-                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs text-amber-900 font-medium">
-                        Default password will be automatically assigned as: <strong class="font-mono">Admin@2026</strong>.
+                    <!-- CLASSES TAUGHT -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Classes Taught by this Teacher <span class="text-amber-600">*</span></label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <?php foreach (['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'] as $cOption): ?>
+                                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="classes_taught[]" value="<?= $cOption ?>" class="text-amber-600 rounded focus:ring-amber-500">
+                                    <span class="font-medium text-gray-800"><?= $cOption ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- STREAMS TAUGHT -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Streams Taught by this Teacher</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <?php foreach (['Stream A', 'Stream B', 'Stream C', 'Stream D'] as $strmOpt): ?>
+                                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="streams_taught[]" value="<?= $strmOpt ?>" checked class="text-amber-600 rounded focus:ring-amber-500">
+                                    <span class="font-medium text-gray-800"><?= $strmOpt ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 p-3.5 rounded-xl border border-amber-300 text-xs text-amber-950 font-medium space-y-1">
+                        <div class="font-black text-amber-900 flex items-center gap-1.5">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i> Automatic Allocation Engine:
+                        </div>
+                        <p class="text-[11px] text-amber-800">Saving this teacher will automatically create Subject Allocations per Class & Stream under <strong>Academic Reporting Control</strong>. Default login password: <strong class="font-mono bg-white px-1 py-0.5 rounded border border-amber-200">Admin@2026</strong>.</p>
                     </div>
                 </div>
                 <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">

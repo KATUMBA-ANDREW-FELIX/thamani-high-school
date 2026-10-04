@@ -24,10 +24,36 @@ $canManageDutyRoster = !empty($_POST['can_manage_duty_roster']) ? 1 : 0;
 
 // Handle array or comma-separated string for classes_taught
 $classesTaughtRaw = $_POST['classes_taught'] ?? [];
+$classesList = [];
 if (is_array($classesTaughtRaw)) {
-    $classesTaught = implode(', ', array_filter(array_map('trim', $classesTaughtRaw)));
+    $classesList = array_values(array_filter(array_map('trim', $classesTaughtRaw)));
 } else {
-    $classesTaught = trim((string)$classesTaughtRaw);
+    $classesList = array_values(array_filter(array_map('trim', explode(',', (string)$classesTaughtRaw))));
+}
+$classesTaught = implode(', ', $classesList);
+
+// Handle array or comma-separated string for subjects_taught
+$subjectsTaughtRaw = $_POST['subjects_taught'] ?? [];
+$subjectsList = [];
+if (is_array($subjectsTaughtRaw)) {
+    $subjectsList = array_values(array_filter(array_map('trim', $subjectsTaughtRaw)));
+} else {
+    $subjectsList = array_values(array_filter(array_map('trim', explode(',', (string)$subjectsTaughtRaw))));
+}
+if ($department !== '' && !in_array($department, $subjectsList, true)) {
+    $subjectsList[] = $department;
+}
+
+// Handle array or comma-separated string for streams_taught
+$streamsTaughtRaw = $_POST['streams_taught'] ?? ['Stream A', 'Stream B'];
+$streamsList = [];
+if (is_array($streamsTaughtRaw)) {
+    $streamsList = array_values(array_filter(array_map('trim', $streamsTaughtRaw)));
+} else {
+    $streamsList = array_values(array_filter(array_map('trim', explode(',', (string)$streamsTaughtRaw))));
+}
+if (empty($streamsList) || in_array('All Streams', $streamsList, true)) {
+    $streamsList = ['Stream A', 'Stream B'];
 }
 
 $errors = [];
@@ -76,9 +102,53 @@ if ($insStmt) {
     thamani_db_stmt_bind_param($insStmt, "ssssisssiisss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $hash, $now);
     if (thamani_db_stmt_execute($insStmt)) {
         thamani_db_stmt_close($insStmt);
+
+        // Fetch inserted teacher ID
+        $teacherId = 0;
+        $stmtNew = thamani_db_prepare($conn, "SELECT id FROM teachers WHERE staff_id = ? LIMIT 1");
+        if ($stmtNew) {
+            thamani_db_stmt_bind_param($stmtNew, "s", $staffId);
+            thamani_db_stmt_execute($stmtNew);
+            $resNew = thamani_db_stmt_get_result($stmtNew);
+            if ($resNew && $rNew = thamani_db_fetch_assoc($resNew)) {
+                $teacherId = (int)$rNew['id'];
+            }
+            thamani_db_stmt_close($stmtNew);
+        }
+
+        // AUTOMATIC SUBJECT ALLOCATION PER CLASS & STREAM
+        $autoCount = 0;
+        if ($teacherId > 0 && !empty($subjectsList) && !empty($classesList)) {
+            foreach ($subjectsList as $sub) {
+                foreach ($classesList as $cls) {
+                    foreach ($streamsList as $strm) {
+                        $chkA = thamani_db_prepare($conn, "SELECT id FROM teacher_subject_assignments WHERE teacher_id = ? AND subject = ? AND class_level = ? AND stream = ? LIMIT 1");
+                        if ($chkA) {
+                            thamani_db_stmt_bind_param($chkA, "isss", $teacherId, $sub, $cls, $strm);
+                            thamani_db_stmt_execute($chkA);
+                            $resA = thamani_db_stmt_get_result($chkA);
+                            $existsA = $resA ? thamani_db_fetch_assoc($resA) : null;
+                            thamani_db_stmt_close($chkA);
+
+                            if (!$existsA) {
+                                $insA = thamani_db_prepare($conn, "INSERT INTO teacher_subject_assignments (teacher_id, subject, class_level, stream) VALUES (?, ?, ?, ?)");
+                                if ($insA) {
+                                    thamani_db_stmt_bind_param($insA, "isss", $teacherId, $sub, $cls, $strm);
+                                    thamani_db_stmt_execute($insA);
+                                    thamani_db_stmt_close($insA);
+                                    $autoCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $allocMsg = $autoCount > 0 ? " Automatically generated {$autoCount} Subject Teacher Allocations per Class & Stream!" : "";
         $_SESSION['admin_flash'] = [
             'type' => 'success',
-            'message' => "Teacher \"{$fullName}\" (Staff ID: {$staffId}) registered successfully! Default password is set to: Admin@2026"
+            'message' => "Teacher \"{$fullName}\" (Staff ID: {$staffId}) registered successfully!{$allocMsg} Default password is set to: Admin@2026"
         ];
     } else {
         error_log('[Admin Add Teacher Execute] ' . thamani_db_stmt_error($insStmt));
