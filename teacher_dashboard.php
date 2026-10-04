@@ -107,9 +107,10 @@ $availableClasses = [];
 $availableStreams = [];
 $availableSubjects = [];
 
+$sysStreams = get_system_streams($conn);
 if ($teacher['role'] === 'admin') {
     $availableClasses = ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'];
-    $availableStreams = ['Stream A', 'Stream B', 'Stream C', 'North', 'South', 'East', 'West', 'All Streams'];
+    $availableStreams = array_unique(array_merge($sysStreams, ['All Streams']));
     $availableSubjects = ['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History', 'Entrepreneurship', 'Computer Studies', 'Agriculture', 'Kiswahili', 'CRE', 'IRE', 'Fine Art', 'Literature in English', 'Commerce', 'Economics'];
 } else {
     foreach ($mySubjectAssignments as $sa) {
@@ -123,7 +124,7 @@ if ($teacher['role'] === 'admin') {
     }
     // Fallback defaults if teacher has no explicit assignments yet
     if (empty($availableClasses)) $availableClasses = ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'];
-    if (empty($availableStreams)) $availableStreams = ['Stream A', 'Stream B', 'Stream C', 'All Streams'];
+    if (empty($availableStreams)) $availableStreams = array_unique(array_merge($sysStreams, ['All Streams']));
     if (empty($availableSubjects)) $availableSubjects = ['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History'];
 }
 
@@ -1263,14 +1264,9 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream</label>
                             <select name="stream" id="ps_stream" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-brand-green">
-                                <option value="Stream A">Stream A</option>
-                                <option value="Stream B">Stream B</option>
-                                <option value="Stream C">Stream C</option>
-                                <option value="Stream D">Stream D</option>
-                                <option value="North">North</option>
-                                <option value="South">South</option>
-                                <option value="East">East</option>
-                                <option value="West">West</option>
+                                <?php foreach ($sysStreams as $strmOpt): ?>
+                                    <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                <?php endforeach; ?>
                                 <option value="All Streams">All Streams</option>
                             </select>
                         </div>

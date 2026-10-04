@@ -408,7 +408,37 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(student_id, window_id)
                     );
+
+                    CREATE TABLE IF NOT EXISTS school_streams (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        stream_name TEXT UNIQUE NOT NULL,
+                        stream_code TEXT,
+                        description TEXT,
+                        is_active INTEGER DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
+
+            try {
+                $stCheck = $this->pdo->query("SELECT COUNT(*) as cnt FROM school_streams");
+                $stRow = $stCheck ? $stCheck->fetch(PDO::FETCH_ASSOC) : null;
+                if (empty($stRow['cnt'])) {
+                    $defaultStreams = [
+                        ['name' => 'Stream A', 'code' => 'STR-A', 'desc' => 'Primary Stream A division'],
+                        ['name' => 'Stream B', 'code' => 'STR-B', 'desc' => 'Primary Stream B division'],
+                        ['name' => 'Stream C', 'code' => 'STR-C', 'desc' => 'Stream C division'],
+                        ['name' => 'Stream D', 'code' => 'STR-D', 'desc' => 'Stream D division'],
+                        ['name' => 'North', 'code' => 'NTH', 'desc' => 'North Wing Stream'],
+                        ['name' => 'South', 'code' => 'STH', 'desc' => 'South Wing Stream'],
+                        ['name' => 'East', 'code' => 'EST', 'desc' => 'East Wing Stream'],
+                        ['name' => 'West', 'code' => 'WST', 'desc' => 'West Wing Stream']
+                    ];
+                    $insSt = $this->pdo->prepare("INSERT INTO school_streams (stream_name, stream_code, description, is_active) VALUES (?, ?, ?, 1)");
+                    foreach ($defaultStreams as $ds) {
+                        try { $insSt->execute([$ds['name'], $ds['code'], $ds['desc']]); } catch (Exception $e) {}
+                    }
+                }
+            } catch (Exception $e) {}
 
             // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
             if ($this->driver === 'pgsql') {
@@ -801,6 +831,33 @@ if (!function_exists('thamani_db_prepare')) {
             return mysqli_fetch_assoc($result);
         }
         return $result instanceof ThamaniPolyfillResult ? $result->fetch_assoc() : null;
+    }
+
+    function get_system_streams($conn = null) {
+        if (!$conn) $conn = $GLOBALS['conn'];
+        $streams = [];
+        $res = thamani_db_query($conn, "SELECT stream_name FROM school_streams WHERE is_active = 1 ORDER BY id ASC");
+        if ($res) {
+            while ($r = thamani_db_fetch_assoc($res)) {
+                $streams[] = $r['stream_name'];
+            }
+        }
+        if (empty($streams)) {
+            $streams = ['Stream A', 'Stream B', 'Stream C', 'Stream D', 'North', 'South', 'East', 'West'];
+        }
+        return $streams;
+    }
+
+    function get_all_system_streams_details($conn = null) {
+        if (!$conn) $conn = $GLOBALS['conn'];
+        $streams = [];
+        $res = thamani_db_query($conn, "SELECT id, stream_name, stream_code, description, is_active, created_at FROM school_streams ORDER BY id ASC");
+        if ($res) {
+            while ($r = thamani_db_fetch_assoc($res)) {
+                $streams[] = $r;
+            }
+        }
+        return $streams;
     }
 }
 

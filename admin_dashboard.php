@@ -66,6 +66,9 @@ $allGradingScales = [];
 $gsRes = thamani_db_query($conn, "SELECT id, scale_name, min_score, max_score, grade, points, remark, education_level FROM grading_scales ORDER BY education_level ASC, min_score DESC");
 if ($gsRes) while ($r = thamani_db_fetch_assoc($gsRes)) $allGradingScales[] = $r;
 
+$allSystemStreamsDetails = get_all_system_streams_details($conn);
+$systemStreamsList = get_system_streams($conn);
+
 // ---------- Active Tab Handling ----------
 $allowedAdminTabs = [
     'tab-admin-overview',
@@ -1240,6 +1243,86 @@ if (!empty($_SESSION['admin_flash'])) {
                     </div>
                 </div>
 
+                <!-- 4. System Streams & Class Divisions Card -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
+                    <div class="flex flex-wrap justify-between items-center mb-6 pb-4 border-b border-gray-100 gap-3">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="layers" class="w-5 h-5 text-amber-600"></i> System Streams & Class Divisions Management
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Add new custom streams, edit existing stream names/codes, or toggle active system status across all forms and report cards.</p>
+                        </div>
+                        <button onclick="openModal('modal-add-stream');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5 shadow">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> + Add Custom Stream
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                    <th class="p-3.5">Stream Name</th>
+                                    <th class="p-3.5">Stream Code</th>
+                                    <th class="p-3.5">Description</th>
+                                    <th class="p-3.5">System Status</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 font-medium">
+                                <?php if (!empty($allSystemStreamsDetails)): ?>
+                                    <?php foreach ($allSystemStreamsDetails as $strmDetail): ?>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-3.5 font-bold text-gray-900 text-sm flex items-center gap-2">
+                                                <span class="w-2.5 h-2.5 rounded-full <?= !empty($strmDetail['is_active']) ? 'bg-green-500' : 'bg-gray-400' ?>"></span>
+                                                <?= htmlspecialchars($strmDetail['stream_name']) ?>
+                                            </td>
+                                            <td class="p-3.5 font-mono font-bold text-amber-900"><?= htmlspecialchars($strmDetail['stream_code'] ?: '—') ?></td>
+                                            <td class="p-3.5 text-gray-600"><?= htmlspecialchars($strmDetail['description'] ?: 'Standard class division stream') ?></td>
+                                            <td class="p-3.5">
+                                                <?php if (!empty($strmDetail['is_active'])): ?>
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-green-100 text-green-800 border border-green-300">
+                                                        🟢 ACTIVE
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-300">
+                                                        🔒 INACTIVE
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
+                                                <button type="button" onclick="editCustomStream(<?= htmlspecialchars(json_encode($strmDetail), ENT_QUOTES, 'UTF-8') ?>);" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-900 text-amber-400 hover:bg-gray-800 shadow-sm border border-gray-800">
+                                                    ✏️ Edit
+                                                </button>
+                                                <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                    <input type="hidden" name="action" value="toggle_stream_status">
+                                                    <input type="hidden" name="stream_id" value="<?= (int)$strmDetail['id'] ?>">
+                                                    <input type="hidden" name="status" value="<?= !empty($strmDetail['is_active']) ? 0 : 1 ?>">
+                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($strmDetail['is_active']) ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' ?>">
+                                                        <?= !empty($strmDetail['is_active']) ? 'Deactivate' : 'Activate' ?>
+                                                    </button>
+                                                </form>
+                                                <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Delete stream \'<?= htmlspecialchars($strmDetail['stream_name'], ENT_QUOTES) ?>\'?');">
+                                                    <input type="hidden" name="action" value="delete_stream">
+                                                    <input type="hidden" name="stream_id" value="<?= (int)$strmDetail['id'] ?>">
+                                                    <button type="submit" class="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="p-10 text-center text-gray-500">
+                                            No custom streams created yet. Click "+ Add Custom Stream" above.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
         </section>
@@ -1301,14 +1384,9 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <div>
                                     <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Stream <span class="text-amber-600">*</span></label>
                                     <select name="class_teacher_stream" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
-                                        <option value="Stream A">Stream A</option>
-                                        <option value="Stream B">Stream B</option>
-                                        <option value="Stream C">Stream C</option>
-                                        <option value="Stream D">Stream D</option>
-                                        <option value="North">North</option>
-                                        <option value="South">South</option>
-                                        <option value="East">East</option>
-                                        <option value="West">West</option>
+                                        <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                            <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                        <?php endforeach; ?>
                                         <option value="All Streams">All Streams</option>
                                     </select>
                                 </div>
@@ -1378,10 +1456,10 @@ if (!empty($_SESSION['admin_flash'])) {
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Streams Taught by this Teacher</label>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            <?php foreach (['Stream A', 'Stream B', 'Stream C', 'Stream D'] as $strmOpt): ?>
+                            <?php foreach ($systemStreamsList as $strmOpt): ?>
                                 <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 cursor-pointer">
-                                    <input type="checkbox" name="streams_taught[]" value="<?= $strmOpt ?>" checked class="text-amber-600 rounded focus:ring-amber-500">
-                                    <span class="font-medium text-gray-800"><?= $strmOpt ?></span>
+                                    <input type="checkbox" name="streams_taught[]" value="<?= htmlspecialchars($strmOpt) ?>" checked class="text-amber-600 rounded focus:ring-amber-500">
+                                    <span class="font-medium text-gray-800"><?= htmlspecialchars($strmOpt) ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
@@ -1461,14 +1539,9 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <div>
                                     <label class="block text-[11px] font-bold text-amber-900 uppercase">Assigned Stream</label>
                                     <select name="class_teacher_stream" id="edit_class_teacher_stream" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500">
-                                        <option value="Stream A">Stream A</option>
-                                        <option value="Stream B">Stream B</option>
-                                        <option value="Stream C">Stream C</option>
-                                        <option value="Stream D">Stream D</option>
-                                        <option value="North">North</option>
-                                        <option value="South">South</option>
-                                        <option value="East">East</option>
-                                        <option value="West">West</option>
+                                        <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                            <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                        <?php endforeach; ?>
                                         <option value="All Streams">All Streams</option>
                                     </select>
                                 </div>
@@ -1743,10 +1816,9 @@ if (!empty($_SESSION['admin_flash'])) {
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
                             <select name="stream" id="builder_stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
                                 <option value="All Streams">All Streams</option>
-                                <option value="North">North</option>
-                                <option value="South">South</option>
-                                <option value="East">East</option>
-                                <option value="West">West</option>
+                                <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                    <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -1831,10 +1903,9 @@ if (!empty($_SESSION['admin_flash'])) {
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Target Stream</label>
                             <select name="stream" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                 <option value="All Streams">All Streams</option>
-                                <option value="North">North</option>
-                                <option value="South">South</option>
-                                <option value="East">East</option>
-                                <option value="West">West</option>
+                                <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                    <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -1985,6 +2056,16 @@ if (!empty($_SESSION['admin_flash'])) {
 
         function openModal(id)  { document.getElementById(id)?.classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+        function editCustomStream(strm) {
+            if (!strm) return;
+            document.getElementById('edit-stream-id').value = strm.id || '';
+            document.getElementById('edit-stream-name').value = strm.stream_name || '';
+            document.getElementById('edit-stream-code').value = strm.stream_code || '';
+            document.getElementById('edit-stream-desc').value = strm.description || '';
+            document.getElementById('edit-stream-active').value = (strm.is_active == 1 || strm.is_active === true) ? '1' : '0';
+            openModal('modal-edit-stream');
+        }
 
         function switchAdminTab(tabId) {
             if (!document.getElementById(tabId)) return;
@@ -2750,14 +2831,9 @@ if (!empty($_SESSION['admin_flash'])) {
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream <span class="text-red-500">*</span></label>
                         <select name="stream" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
-                            <option value="Stream A">Stream A</option>
-                            <option value="Stream B">Stream B</option>
-                            <option value="Stream C">Stream C</option>
-                            <option value="Stream D">Stream D</option>
-                            <option value="North">North</option>
-                            <option value="South">South</option>
-                            <option value="East">East</option>
-                            <option value="West">West</option>
+                            <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                            <?php endforeach; ?>
                             <option value="All Streams">All Streams</option>
                         </select>
                     </div>
@@ -2829,6 +2905,89 @@ if (!empty($_SESSION['admin_flash'])) {
                 <div class="pt-4 flex gap-3">
                     <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Add Grade Rule</button>
                     <button type="button" onclick="closeModal('modal-add-grading-scale');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD CUSTOM STREAM -->
+    <div id="modal-add-stream" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="layers" class="w-5 h-5 text-amber-400"></i> Add New Custom Stream
+                </h3>
+                <button type="button" onclick="closeModal('modal-add-stream');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-4">
+                <input type="hidden" name="action" value="add_stream">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="stream_name" required placeholder="e.g. Stream E, Falcon, North-East" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream Code / Abbreviation</label>
+                    <input type="text" name="stream_code" placeholder="e.g. STR-E or FLC" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Description</label>
+                    <textarea name="description" rows="2" placeholder="e.g. Science Focus Stream for O-Level" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Save Stream</button>
+                    <button type="button" onclick="closeModal('modal-add-stream');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT CUSTOM STREAM -->
+    <div id="modal-edit-stream" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-amber-400"></i> Edit Stream Details
+                </h3>
+                <button type="button" onclick="closeModal('modal-edit-stream');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-4">
+                <input type="hidden" name="action" value="edit_stream">
+                <input type="hidden" name="stream_id" id="edit-stream-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="stream_name" id="edit-stream-name" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream Code / Abbreviation</label>
+                    <input type="text" name="stream_code" id="edit-stream-code" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Description</label>
+                    <textarea name="description" id="edit-stream-desc" rows="2" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Status</label>
+                    <select name="is_active" id="edit-stream-active" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="1">Active (Available across system)</option>
+                        <option value="0">Inactive (Hidden from dropdowns)</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Update Stream</button>
+                    <button type="button" onclick="closeModal('modal-edit-stream');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
                 </div>
             </form>
         </div>

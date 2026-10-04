@@ -99,7 +99,7 @@ $insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_c
 $insStmt = thamani_db_prepare($conn, $insertSql);
 
 if ($insStmt) {
-    thamani_db_stmt_bind_param($insStmt, "ssssisssiisss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $hash, $now);
+    thamani_db_stmt_bind_param($insStmt, "ssssisssiiss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $hash, $now);
     if (thamani_db_stmt_execute($insStmt)) {
         thamani_db_stmt_close($insStmt);
 

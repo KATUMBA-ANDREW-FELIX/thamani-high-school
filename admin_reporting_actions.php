@@ -158,6 +158,85 @@ switch ($action) {
             }
         }
         break;
+
+    case 'add_stream':
+        $streamName = trim($_POST['stream_name'] ?? '');
+        $streamCode = trim($_POST['stream_code'] ?? '');
+        $desc       = trim($_POST['description'] ?? '');
+
+        if ($streamName === '') {
+            $_SESSION['admin_flash'] = ['type' => 'error', 'message' => "Stream name is required."];
+            break;
+        }
+
+        $chk = thamani_db_prepare($conn, "SELECT id FROM school_streams WHERE stream_name = ? LIMIT 1");
+        if ($chk) {
+            thamani_db_stmt_bind_param($chk, "s", $streamName);
+            thamani_db_stmt_execute($chk);
+            $resC = thamani_db_stmt_get_result($chk);
+            if ($resC && thamani_db_fetch_assoc($resC)) {
+                thamani_db_stmt_close($chk);
+                $_SESSION['admin_flash'] = ['type' => 'error', 'message' => "Stream name '{$streamName}' already exists."];
+                break;
+            }
+            thamani_db_stmt_close($chk);
+        }
+
+        $ins = thamani_db_prepare($conn, "INSERT INTO school_streams (stream_name, stream_code, description, is_active) VALUES (?, ?, ?, 1)");
+        if ($ins) {
+            thamani_db_stmt_bind_param($ins, "sss", $streamName, $streamCode, $desc);
+            thamani_db_stmt_execute($ins);
+            thamani_db_stmt_close($ins);
+            $_SESSION['admin_flash'] = ['type' => 'success', 'message' => "Custom Stream '{$streamName}' created successfully! System-wide selection menus updated."];
+        }
+        break;
+
+    case 'edit_stream':
+        $id         = (int)($_POST['stream_id'] ?? 0);
+        $streamName = trim($_POST['stream_name'] ?? '');
+        $streamCode = trim($_POST['stream_code'] ?? '');
+        $desc       = trim($_POST['description'] ?? '');
+        $isActive   = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+
+        if ($id <= 0 || $streamName === '') {
+            $_SESSION['admin_flash'] = ['type' => 'error', 'message' => "Stream ID and name are required."];
+            break;
+        }
+
+        $upd = thamani_db_prepare($conn, "UPDATE school_streams SET stream_name = ?, stream_code = ?, description = ?, is_active = ? WHERE id = ?");
+        if ($upd) {
+            thamani_db_stmt_bind_param($upd, "sssii", $streamName, $streamCode, $desc, $isActive, $id);
+            thamani_db_stmt_execute($upd);
+            thamani_db_stmt_close($upd);
+            $_SESSION['admin_flash'] = ['type' => 'success', 'message' => "Stream '{$streamName}' updated successfully."];
+        }
+        break;
+
+    case 'toggle_stream_status':
+        $id     = (int)($_POST['stream_id'] ?? 0);
+        $status = (int)($_POST['status'] ?? 0);
+        $stmt   = thamani_db_prepare($conn, "UPDATE school_streams SET is_active = ? WHERE id = ?");
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, "ii", $status, $id);
+            thamani_db_stmt_execute($stmt);
+            thamani_db_stmt_close($stmt);
+            $msg = $status === 1 ? "Stream activated for system usage." : "Stream deactivated.";
+            $_SESSION['admin_flash'] = ['type' => 'success', 'message' => $msg];
+        }
+        break;
+
+    case 'delete_stream':
+        $id = (int)($_POST['stream_id'] ?? 0);
+        if ($id > 0) {
+            $stmt = thamani_db_prepare($conn, "DELETE FROM school_streams WHERE id = ?");
+            if ($stmt) {
+                thamani_db_stmt_bind_param($stmt, "i", $id);
+                thamani_db_stmt_execute($stmt);
+                thamani_db_stmt_close($stmt);
+                $_SESSION['admin_flash'] = ['type' => 'success', 'message' => "Custom stream removed."];
+            }
+        }
+        break;
 }
 
 header('Location: ' . $redirectTab);
