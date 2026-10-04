@@ -1993,7 +1993,9 @@ if (!empty($_SESSION['admin_flash'])) {
                 'tab-admin-alumni',
                 'tab-admin-calendar',
                 'tab-admin-gallery',
-                'tab-admin-timetables'
+                'tab-admin-timetables',
+                'tab-admin-roster',
+                'tab-admin-reporting'
             ];
 
             if (targetTab && validTabs.includes(targetTab)) {
