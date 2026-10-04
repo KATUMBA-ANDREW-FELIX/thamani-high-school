@@ -49,8 +49,15 @@ if (!$window) {
 }
 
 // Security Check 1: Window Open Check for non-admin
+$isAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
 if (!$isAdmin) {
     if (!$window || empty($window['is_open'])) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Permission Denied: Academic reporting window is currently CLOSED by Administration.']);
+            exit;
+        }
         $_SESSION['teacher_flash'] = [
             'type' => 'error',
             'message' => 'Permission Denied: Academic reporting window is currently CLOSED by Administration.'
@@ -108,6 +115,12 @@ if ($mode === 'class_comments') {
         }
     }
 
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => "Class teacher report comments updated for {$savedCount} student(s)."]);
+        exit;
+    }
+
     $_SESSION['teacher_flash'] = [
         'type' => 'success',
         'message' => "Class teacher report comments updated for {$savedCount} student(s)."
@@ -141,6 +154,11 @@ if (!$isAdmin) {
         $subjectMatchesDept = ($dept !== '' && (strpos($sub, $dept) !== false || strpos($dept, $sub) !== false || $dept === 'academic'));
 
         if (!in_array($classLevel, $classesTaughtArr, true) || !$subjectMatchesDept) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => "Permission Denied: You are not assigned to teach {$subject} in {$classLevel} ({$stream})."]);
+                exit;
+            }
             $_SESSION['teacher_flash'] = [
                 'type' => 'error',
                 'message' => "Permission Denied: You are not assigned to teach {$subject} in {$classLevel} ({$stream})."
@@ -222,6 +240,15 @@ foreach ($scoresArr as $sId => $rawScore) {
             $processedCount++;
         }
     }
+}
+
+if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'message' => "Academic marks for {$subject} ({$classLevel} - {$stream}) saved successfully for {$processedCount} student(s)."
+    ]);
+    exit;
 }
 
 $_SESSION['teacher_flash'] = [

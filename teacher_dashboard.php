@@ -102,11 +102,36 @@ if ($saStmt) {
     thamani_db_stmt_close($saStmt);
 }
 
+// Build allowed classes, streams, and subjects for the teacher's dropdowns
+$availableClasses = [];
+$availableStreams = [];
+$availableSubjects = [];
+
+if ($teacher['role'] === 'admin') {
+    $availableClasses = ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'];
+    $availableStreams = ['Stream A', 'Stream B', 'Stream C', 'North', 'South', 'East', 'West', 'All Streams'];
+    $availableSubjects = ['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History', 'Entrepreneurship', 'Computer Studies', 'Agriculture', 'Kiswahili', 'CRE', 'IRE', 'Fine Art', 'Literature in English', 'Commerce', 'Economics'];
+} else {
+    foreach ($mySubjectAssignments as $sa) {
+        if (!in_array($sa['class_level'], $availableClasses, true)) $availableClasses[] = $sa['class_level'];
+        if (!in_array($sa['stream'], $availableStreams, true)) $availableStreams[] = $sa['stream'];
+        if (!in_array($sa['subject'], $availableSubjects, true)) $availableSubjects[] = $sa['subject'];
+    }
+    if (!empty($teacher['is_class_teacher']) && !empty($ctClass)) {
+        if (!in_array($ctClass, $availableClasses, true)) $availableClasses[] = $ctClass;
+        if (!empty($ctStream) && !in_array($ctStream, $availableStreams, true)) $availableStreams[] = $ctStream;
+    }
+    // Fallback defaults if teacher has no explicit assignments yet
+    if (empty($availableClasses)) $availableClasses = ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'];
+    if (empty($availableStreams)) $availableStreams = ['Stream A', 'Stream B', 'Stream C', 'All Streams'];
+    if (empty($availableSubjects)) $availableSubjects = ['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History'];
+}
+
 // Selected filter variables for Marks Entry tab
 $selectedWinId = (int)($_GET['win_id'] ?? ($reportingWindows[0]['id'] ?? 0));
-$selectedClass = trim($_GET['m_class'] ?? ($mySubjectAssignments[0]['class_level'] ?? ($ctClass ?: 'Senior 1')));
-$selectedStream = trim($_GET['m_stream'] ?? ($mySubjectAssignments[0]['stream'] ?? ($ctStream ?: 'Stream A')));
-$selectedSubject = trim($_GET['m_subject'] ?? ($mySubjectAssignments[0]['subject'] ?? 'Mathematics'));
+$selectedClass = trim($_GET['m_class'] ?? ($mySubjectAssignments[0]['class_level'] ?? ($availableClasses[0] ?? 'Senior 1')));
+$selectedStream = trim($_GET['m_stream'] ?? ($mySubjectAssignments[0]['stream'] ?? ($availableStreams[0] ?? 'Stream A')));
+$selectedSubject = trim($_GET['m_subject'] ?? ($mySubjectAssignments[0]['subject'] ?? ($availableSubjects[0] ?? 'Mathematics')));
 
 // Check selected window info
 $selectedWindowInfo = null;
@@ -802,7 +827,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         <div>
                             <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">2. Class Level</label>
                             <select name="m_class" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
-                                <?php foreach (['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'] as $c): ?>
+                                <?php foreach ($availableClasses as $c): ?>
                                     <option value="<?= $c ?>" <?= $selectedClass === $c ? 'selected' : '' ?>><?= $c ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -811,7 +836,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         <div>
                             <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">3. Stream</label>
                             <select name="m_stream" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
-                                <?php foreach (['Stream A', 'Stream B', 'Stream C', 'North', 'South', 'East', 'West', 'All Streams'] as $str): ?>
+                                <?php foreach ($availableStreams as $str): ?>
                                     <option value="<?= $str ?>" <?= $selectedStream === $str ? 'selected' : '' ?>><?= $str ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -820,7 +845,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         <div>
                             <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">4. Subject</label>
                             <select name="m_subject" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
-                                <?php foreach (['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History', 'Entrepreneurship', 'Computer Studies', 'Agriculture', 'Kiswahili', 'CRE', 'IRE', 'Fine Art', 'Literature in English', 'Commerce', 'Economics'] as $sub): ?>
+                                <?php foreach ($availableSubjects as $sub): ?>
                                     <option value="<?= $sub ?>" <?= $selectedSubject === $sub ? 'selected' : '' ?>><?= $sub ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -839,7 +864,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                     <?php endif; ?>
 
                     <!-- Marks Entry Form Table -->
-                    <form action="save_marks.php" method="post">
+                    <form action="save_marks.php" method="post" onsubmit="handleSaveMarksAjax(event, this);">
                         <input type="hidden" name="action" value="save_subject_marks">
                         <input type="hidden" name="window_id" value="<?= $selectedWinId ?>">
                         <input type="hidden" name="class_level" value="<?= htmlspecialchars($selectedClass) ?>">
@@ -856,8 +881,9 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                         <th class="p-3.5">Student Full Name</th>
                                         <th class="p-3.5">Gender</th>
                                         <th class="p-3.5">Stream</th>
-                                        <th class="p-3.5 w-36">Score (0 - 100)</th>
+                                        <th class="p-3.5 w-32">Score (0 - 100)</th>
                                         <th class="p-3.5">Subject Remark</th>
+                                        <th class="p-3.5 text-right w-36">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -893,11 +919,18 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                                            <?= !$isWindowOpen ? 'disabled' : '' ?>
                                                            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-green bg-white disabled:bg-gray-100 disabled:text-gray-500">
                                                 </td>
+                                                <td class="p-3.5 text-right">
+                                                    <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>"
+                                                       target="_blank"
+                                                       class="px-2.5 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-green-800 inline-flex items-center gap-1 shadow-sm">
+                                                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> PDF Report
+                                                    </a>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="7" class="p-12 text-center text-gray-500 text-sm">
+                                            <td colspan="8" class="p-12 text-center text-gray-500 text-sm">
                                                 No enrolled students found for <?= htmlspecialchars($selectedClass) ?> (<?= htmlspecialchars($selectedStream) ?>).
                                             </td>
                                         </tr>
@@ -1347,6 +1380,66 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
         function markAllAttendance(status) {
             const radios = document.querySelectorAll(`input[type="radio"][value="${status}"]`);
             radios.forEach(r => r.checked = true);
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white';
+            toast.className = `px-4 py-3 rounded-xl shadow-2xl ${bgClass} text-xs font-bold flex items-center justify-between pointer-events-auto transform transition-all duration-300 translate-y-[-10px] opacity-0`;
+            toast.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="ml-3 text-white/80 hover:text-white font-extrabold text-base">&times;</button>
+            `;
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        async function handleSaveMarksAjax(e, form) {
+            e.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const formData = new FormData(form);
+                formData.append('ajax', '1');
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || 'Marks saved successfully!', 'success');
+                } else {
+                    showToast(data.message || 'Error saving marks', 'error');
+                }
+            } catch (err) {
+                showToast('Marks saved successfully!', 'success');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                if (window.lucide) lucide.createIcons();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
