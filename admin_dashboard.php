@@ -969,6 +969,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
