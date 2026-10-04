@@ -69,8 +69,8 @@ foreach ($teachers as $t) {
     thamani_db_stmt_close($stmt);
 
     if ($exists) {
-        $upd = thamani_db_prepare($conn, "UPDATE teachers SET full_name = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, password_hash = ? WHERE id = ?");
-        thamani_db_stmt_bind_param($upd, "ssisssiisi", $t['full_name'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['class_teacher_stream'], $t['classes_taught'], $t['can_view_enrollments'], $t['can_manage_duty_roster'], $t['password_hash'], $exists['id']);
+        $upd = thamani_db_prepare($conn, "UPDATE teachers SET full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, password_hash = ? WHERE id = ?");
+        thamani_db_stmt_bind_param($upd, "sssissisiisi", $t['full_name'], $t['email'], $t['department'], $t['is_class_teacher'], $t['class_teacher_of'], $t['class_teacher_stream'], $t['classes_taught'], $t['can_view_enrollments'], $t['can_manage_duty_roster'], $t['password_hash'], $exists['id']);
         thamani_db_stmt_execute($upd);
         thamani_db_stmt_close($upd);
     } else {
@@ -138,7 +138,7 @@ $students = [
         'acad_doc' => $dummyDocPath,
         'rec_doc' => $dummyDocPath,
         'med_doc' => $dummyDocPath,
-        'status' => 'Pending'
+        'status' => 'Enrolled'
     ],
     [
         'full_name' => 'Nakalema Brenda',
@@ -161,7 +161,7 @@ $students = [
         'acad_doc' => $dummyDocPath,
         'rec_doc' => null,
         'med_doc' => $dummyDocPath,
-        'status' => 'Pending'
+        'status' => 'Enrolled'
     ],
     [
         'full_name' => 'Kizito Joseph',
@@ -335,8 +335,8 @@ foreach ($students as $s) {
     thamani_db_stmt_close($stmt);
 
     if ($exists) {
-        $upd = thamani_db_prepare($conn, "UPDATE students SET full_name = ?, class_level = ?, stream = ?, status = ?, academic_doc_path = ?, recommendation_doc_path = ?, medical_doc_path = ? WHERE id = ?");
-        thamani_db_stmt_bind_param($upd, "sssssssi", $s['full_name'], $s['class'], $s['stream'], $s['status'], $s['acad_doc'], $s['rec_doc'], $s['med_doc'], $exists['id']);
+        $upd = thamani_db_prepare($conn, "UPDATE students SET full_name = ?, class_level = ?, stream = ?, status = ?, academic_doc_path = ?, recommendation_doc_path = ?, medical_doc_path = ?, password_hash = ?, account_active = 1 WHERE id = ?");
+        thamani_db_stmt_bind_param($upd, "ssssssssi", $s['full_name'], $s['class'], $s['stream'], $s['status'], $s['acad_doc'], $s['rec_doc'], $s['med_doc'], $validHash, $exists['id']);
         thamani_db_stmt_execute($upd);
         thamani_db_stmt_close($upd);
     } else {
@@ -345,15 +345,15 @@ foreach ($students as $s) {
             class_level, stream, guardian_name, guardian_relationship, guardian_phone,
             guardian_email, guardian_address, guardian_occupation, emergency_name,
             emergency_phone, medical_notes, academic_doc_path, recommendation_doc_path,
-            medical_doc_path, status, registered_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            medical_doc_path, status, password_hash, account_active, registered_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())");
 
-        thamani_db_stmt_bind_param($ins, "sssssssssssssssssssss",
+        thamani_db_stmt_bind_param($ins, "ssssssssssssssssssssss",
             $s['full_name'], $s['dob'], $s['gender'], $s['nationality'], $s['lin'], $s['prev_school'],
             $s['class'], $s['stream'], $s['gname'], $s['grel'], $s['gphone'],
             $s['gmail'], $s['gaddr'], $s['gocc'], $s['ename'],
             $s['ephone'], $s['med'], $s['acad_doc'], $s['rec_doc'],
-            $s['med_doc'], $s['status']
+            $s['med_doc'], $s['status'], $validHash
         );
         thamani_db_stmt_execute($ins);
         thamani_db_stmt_close($ins);

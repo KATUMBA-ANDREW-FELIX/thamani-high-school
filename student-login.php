@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql = "SELECT id, full_name, class_level, stream,
                        password_hash, must_change_password, account_active
                 FROM students
-                WHERE full_name = ? AND status = 'Enrolled'
+                WHERE (full_name = ? OR lin_number = ?) AND status = 'Enrolled'
                 LIMIT 2";
 
         $stmt = thamani_db_prepare($db, $sql);
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('[Student Login Prepare] ' . thamani_db_error($db));
             $errors[] = 'A system error occurred. Please try again.';
         } else {
-                      thamani_db_stmt_bind_param($stmt, "s", $name);
+            thamani_db_stmt_bind_param($stmt, "ss", $name, $name);
 
             if (!thamani_db_stmt_execute($stmt)) {
                 error_log('[Student Login Execute] ' . thamani_db_stmt_error($stmt));
