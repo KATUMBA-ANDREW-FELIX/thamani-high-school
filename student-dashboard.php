@@ -57,6 +57,92 @@ if ($studentClassNorm) {
 
 $timetableSlots = $timetable ? (json_decode($timetable['schedule_json'] ?: '[]', true) ?: []) : [];
 
+require_once 'grading_helper.php';
+
+// ---------- Fetch Published Academic Reports for Student ----------
+$studentId = (int)$student['id'];
+$publishedWindows = [];
+$pwRes = thamani_db_query($db, "SELECT id, title, academic_year, term, assessment_type, show_positions, created_at FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC");
+if ($pwRes) {
+    while ($r = thamani_db_fetch_assoc($pwRes)) {
+        $publishedWindows[] = $r;
+    }
+}
+
+$selectedWindowId = (int)($_GET['window_id'] ?? ($publishedWindows[0]['id'] ?? 0));
+$selectedWindow = null;
+foreach ($publishedWindows as $pw) {
+    if ((int)$pw['id'] === $selectedWindowId) {
+        $selectedWindow = $pw;
+        break;
+    }
+}
+if (!$selectedWindow && !empty($publishedWindows)) {
+    $selectedWindow = $publishedWindows[0];
+    $selectedWindowId = (int)$selectedWindow['id'];
+}
+
+$studentMarks = [];
+$totalScore = 0;
+$totalMax   = 0;
+$studentComment = ['class_teacher_comment' => '', 'head_teacher_comment' => ''];
+$streamRankText = 'N/A';
+
+if ($selectedWindow) {
+    // Fetch marks
+    $mStmt = thamani_db_prepare($db, "SELECT subject, score, max_score, comments FROM student_marks WHERE student_id = ? AND (window_id = ? OR (class_level = ? AND term = ?)) ORDER BY subject ASC");
+    if ($mStmt) {
+        thamani_db_stmt_bind_param($mStmt, "iiss", $studentId, $selectedWindowId, $studentClass, $selectedWindow['term']);
+        thamani_db_stmt_execute($mStmt);
+        $mRes = thamani_db_stmt_get_result($mStmt);
+        if ($mRes) {
+            while ($r = thamani_db_fetch_assoc($mRes)) {
+                $studentMarks[] = $r;
+                $totalScore += floatval($r['score']);
+                $totalMax   += floatval($r['max_score'] ?: 100);
+            }
+        }
+        thamani_db_stmt_close($mStmt);
+    }
+
+    // Fetch comments
+    $cStmt = thamani_db_prepare($db, "SELECT class_teacher_comment, head_teacher_comment FROM report_comments WHERE student_id = ? AND window_id = ? LIMIT 1");
+    if ($cStmt) {
+        thamani_db_stmt_bind_param($cStmt, "ii", $studentId, $selectedWindowId);
+        thamani_db_stmt_execute($cStmt);
+        $cRes = thamani_db_stmt_get_result($cStmt);
+        if ($cRes && $cr = thamani_db_fetch_assoc($cRes)) {
+            $studentComment = $cr;
+        }
+        thamani_db_stmt_close($cStmt);
+    }
+
+    // Compute rank if enabled
+    if (!empty($selectedWindow['show_positions'])) {
+        $streamTotals = [];
+        $allStreamStmt = thamani_db_prepare($db, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND (window_id = ? OR term = ?) GROUP BY student_id");
+        if ($allStreamStmt) {
+            thamani_db_stmt_bind_param($allStreamStmt, "sssis", $studentClass, $studentStream, $studentStream, $selectedWindowId, $selectedWindow['term']);
+            thamani_db_stmt_execute($allStreamStmt);
+            $asRes = thamani_db_stmt_get_result($allStreamStmt);
+            if ($asRes) {
+                while ($ar = thamani_db_fetch_assoc($asRes)) {
+                    $streamTotals[(int)$ar['student_id']] = floatval($ar['total_score']);
+                }
+            }
+            thamani_db_stmt_close($allStreamStmt);
+        }
+        if (!empty($streamTotals)) {
+            $ranksMap = calculate_stream_ranks($streamTotals);
+            $streamRankText = $ranksMap[$studentId] ?? 'N/A';
+        }
+    }
+}
+
+$edLevel = (strpos($studentClass, 'Senior 5') !== false || strpos($studentClass, 'Senior 6') !== false) ? 'A-Level' : 'O-Level';
+$averagePercent = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 1) : 0;
+$overallGradeInfo = calculate_grade_info($totalScore, $totalMax ?: 100, $edLevel);
+
 function formatSize($bytes) {
     $bytes = (int)$bytes;
     if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
@@ -248,34 +334,163 @@ function formatSize($bytes) {
         <!-- ============================================================ -->
         <!-- VIEW: REPORTS                                                 -->
         <!-- ============================================================ -->
+        <!-- ============================================================ -->
+        <!-- VIEW: REPORTS                                                 -->
+        <!-- ============================================================ -->
         <div id="view-reports" class="student-view hidden space-y-6">
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
-                <div class="w-16 h-16 mx-auto rounded-full bg-brand-maroon/10 text-brand-maroon flex items-center justify-center mb-4">
-                    <i data-lucide="file-bar-chart-2" class="w-8 h-8"></i>
+            <?php if (empty($publishedWindows)): ?>
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-brand-maroon/10 text-brand-maroon flex items-center justify-center mb-4">
+                        <i data-lucide="file-bar-chart-2" class="w-8 h-8"></i>
+                    </div>
+                    <span class="bg-amber-500 text-gray-950 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Awaiting Publication</span>
+                    <h2 class="text-2xl font-bold text-brand-green mt-3 mb-2">Academic Results Pending</h2>
+                    <p class="text-sm text-gray-500 max-w-xl mx-auto">
+                        Your term exam scores, subject grades, and teacher report comments are being processed. They will appear here as soon as published by the school administration.
+                    </p>
                 </div>
-                <span class="bg-brand-maroon text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Coming Soon</span>
-                <h2 class="text-2xl font-bold text-brand-green mt-3 mb-2">Academic Reports</h2>
-                <p class="text-sm text-gray-500 max-w-xl mx-auto">
-                    Your term results, exam scores, subject grades, averages, and teacher comments will appear here once the academic results module is published by the administration.
-                </p>
-                <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
-                    <div class="p-4 rounded-xl border border-gray-100 bg-gray-50">
-                        <i data-lucide="file-text" class="w-6 h-6 text-brand-maroon mb-2"></i>
-                        <div class="font-bold text-sm text-gray-800">Term Reports</div>
-                        <div class="text-xs text-gray-500 mt-1">Printable report cards by term</div>
+            <?php else: ?>
+                <!-- Window Selector & Print Header -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-brand-maroon tracking-wider">Select Assessment Window</span>
+                        <div class="flex items-center gap-3 mt-1">
+                            <form method="get" action="student-dashboard.php" class="flex items-center gap-2">
+                                <select name="window_id" onchange="this.form.submit();" class="px-4 py-2 border border-gray-300 rounded-xl text-sm font-bold text-brand-green focus:ring-2 focus:ring-brand-green">
+                                    <?php foreach ($publishedWindows as $pw): ?>
+                                        <option value="<?= $pw['id'] ?>" <?= $pw['id'] == $selectedWindowId ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($pw['title']) ?> (<?= htmlspecialchars($pw['term']) ?> <?= htmlspecialchars($pw['academic_year']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
+                        </div>
                     </div>
-                    <div class="p-4 rounded-xl border border-gray-100 bg-gray-50">
-                        <i data-lucide="trending-up" class="w-6 h-6 text-brand-green mb-2"></i>
-                        <div class="font-bold text-sm text-gray-800">Subject Grades</div>
-                        <div class="text-xs text-gray-500 mt-1">Per-subject performance</div>
+                    <?php if ($selectedWindow): ?>
+                        <a href="print_report_card.php?student_id=<?= $studentId ?>&window_id=<?= $selectedWindowId ?>" target="_blank"
+                           class="px-6 py-3 bg-brand-green hover:bg-brand-darkGreen text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md hover:-translate-y-0.5 transition-all">
+                            <i data-lucide="printer" class="w-4 h-4"></i> Download / Print Official PDF Report
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Overall Stat Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-gray-400 font-bold uppercase text-[10px]">Total Score</span>
+                        <div class="text-2xl font-black text-brand-green mt-1"><?= number_format($totalScore, 1) ?> / <?= number_format($totalMax, 0) ?></div>
+                        <div class="text-xs text-gray-500 mt-1"><?= count($studentMarks) ?> subjects recorded</div>
                     </div>
-                    <div class="p-4 rounded-xl border border-gray-100 bg-gray-50">
-                        <i data-lucide="message-square" class="w-6 h-6 text-brand-gold mb-2"></i>
-                        <div class="font-bold text-sm text-gray-800">Teacher Comments</div>
-                        <div class="text-xs text-gray-500 mt-1">Remarks from your teachers</div>
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-gray-400 font-bold uppercase text-[10px]">Overall Average</span>
+                        <div class="text-2xl font-black text-brand-maroon mt-1"><?= $averagePercent ?>%</div>
+                        <div class="text-xs text-brand-green font-bold mt-1">Grade: <?= htmlspecialchars($overallGradeInfo['grade']) ?> (<?= htmlspecialchars($overallGradeInfo['remark']) ?>)</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-gray-400 font-bold uppercase text-[10px]">Stream Rank Position</span>
+                        <div class="text-2xl font-black text-gray-900 mt-1"><?= htmlspecialchars($streamRankText) ?></div>
+                        <div class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($studentClass) ?> · <?= htmlspecialchars($studentStream) ?></div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Subject Performance Bar Graph -->
+                <?php if (!empty($studentMarks)): ?>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-gold"></i> Subject Score Comparison Graph
+                        </h3>
+                        <div class="space-y-3">
+                            <?php foreach ($studentMarks as $m): 
+                                $sc = floatval($m['score']);
+                                $mx = floatval($m['max_score'] ?: 100);
+                                $pct = ($mx > 0) ? min(100, max(0, ($sc / $mx) * 100)) : 0;
+                                $gi = calculate_grade_info($sc, $mx, $edLevel);
+                            ?>
+                                <div>
+                                    <div class="flex justify-between text-xs font-bold text-gray-800 mb-1">
+                                        <span><?= htmlspecialchars($m['subject']) ?></span>
+                                        <span><?= number_format($sc, 1) ?> / <?= number_format($mx, 0) ?> (<?= $pct ?>%) — <strong class="text-brand-green"><?= htmlspecialchars($gi['grade']) ?></strong></span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden border border-gray-200">
+                                        <div class="bg-brand-green h-full rounded-full transition-all" style="width: <?= $pct ?>%"></div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Detailed Subject Marks Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 bg-brand-green text-white font-bold text-sm flex justify-between items-center">
+                        <span class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-brand-gold"></i> Detailed Subject Breakdown</span>
+                        <span class="text-xs text-gray-200"><?= htmlspecialchars($selectedWindow['title'] ?? '') ?></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 font-bold text-gray-700 uppercase">
+                                    <th class="p-3">Subject</th>
+                                    <th class="p-3 text-center">Score</th>
+                                    <th class="p-3 text-center">Max Score</th>
+                                    <th class="p-3 text-center">% Score</th>
+                                    <th class="p-3 text-center">Grade</th>
+                                    <th class="p-3 text-center">Points</th>
+                                    <th class="p-3">Teacher Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <?php if (!empty($studentMarks)): ?>
+                                    <?php foreach ($studentMarks as $m): 
+                                        $sc = floatval($m['score']);
+                                        $mx = floatval($m['max_score'] ?: 100);
+                                        $gi = calculate_grade_info($sc, $mx, $edLevel);
+                                    ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="p-3 font-bold text-gray-900"><?= htmlspecialchars($m['subject']) ?></td>
+                                            <td class="p-3 text-center font-mono font-bold"><?= number_format($sc, 1) ?></td>
+                                            <td class="p-3 text-center font-mono text-gray-500"><?= number_format($mx, 0) ?></td>
+                                            <td class="p-3 text-center font-mono font-bold text-brand-green"><?= $gi['percent'] ?>%</td>
+                                            <td class="p-3 text-center">
+                                                <span class="px-2 py-0.5 rounded font-black text-xs bg-brand-lightGreen text-brand-green">
+                                                    <?= htmlspecialchars($gi['grade']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="p-3 text-center font-bold text-gray-700"><?= $gi['points'] ?></td>
+                                            <td class="p-3 text-gray-600 italic"><?= htmlspecialchars($m['comments'] ?: $gi['remark']) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="p-8 text-center text-gray-500">
+                                            No marks records found for this assessment window.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Report Remarks -->
+                <?php if (!empty($studentComment['class_teacher_comment']) || !empty($studentComment['head_teacher_comment'])): ?>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <?php if (!empty($studentComment['class_teacher_comment'])): ?>
+                            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-xs">
+                                <span class="font-bold text-amber-900 uppercase block mb-1">Class Teacher Remarks:</span>
+                                <p class="text-gray-800 italic"><?= htmlspecialchars($studentComment['class_teacher_comment']) ?></p>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($studentComment['head_teacher_comment'])): ?>
+                            <div class="bg-brand-lightGreen p-4 rounded-xl border border-brand-green/30 text-xs">
+                                <span class="font-bold text-brand-green uppercase block mb-1">Head Teacher Remarks:</span>
+                                <p class="text-gray-800 italic"><?= htmlspecialchars($studentComment['head_teacher_comment']) ?></p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+            <?php endif; ?>
         </div>
 
         <!-- ============================================================ -->

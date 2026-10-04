@@ -54,6 +54,18 @@ $allDutyRosters = [];
 $rdr = thamani_db_query($conn, "SELECT id, week_title, senior_duty_teacher, assistant_duty_teacher, primary_focus_area, notes, created_by, created_by_role, created_at FROM teacher_duty_rosters ORDER BY id ASC");
 if ($rdr) while ($r = thamani_db_fetch_assoc($rdr)) $allDutyRosters[] = $r;
 
+$allReportingWindows = [];
+$rwRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, created_at FROM reporting_windows ORDER BY id DESC");
+if ($rwRes) while ($r = thamani_db_fetch_assoc($rwRes)) $allReportingWindows[] = $r;
+
+$allSubjectAssignments = [];
+$saRes = thamani_db_query($conn, "SELECT tsa.id, tsa.teacher_id, tsa.subject, tsa.class_level, tsa.stream, t.full_name as teacher_name, t.staff_id FROM teacher_subject_assignments tsa LEFT JOIN teachers t ON tsa.teacher_id = t.id ORDER BY tsa.class_level ASC, tsa.stream ASC, tsa.subject ASC");
+if ($saRes) while ($r = thamani_db_fetch_assoc($saRes)) $allSubjectAssignments[] = $r;
+
+$allGradingScales = [];
+$gsRes = thamani_db_query($conn, "SELECT id, scale_name, min_score, max_score, grade, points, remark, education_level FROM grading_scales ORDER BY education_level ASC, min_score DESC");
+if ($gsRes) while ($r = thamani_db_fetch_assoc($gsRes)) $allGradingScales[] = $r;
+
 // ---------- Active Tab Handling ----------
 $allowedAdminTabs = [
     'tab-admin-overview',
@@ -63,7 +75,8 @@ $allowedAdminTabs = [
     'tab-admin-calendar',
     'tab-admin-gallery',
     'tab-admin-timetables',
-    'tab-admin-roster'
+    'tab-admin-roster',
+    'tab-admin-reporting'
 ];
 $activeAdminTab = $_GET['tab'] ?? $_GET['tab_id'] ?? '';
 if (!in_array($activeAdminTab, $allowedAdminTabs, true)) {
@@ -326,6 +339,9 @@ if (!empty($_SESSION['admin_flash'])) {
                 </button>
                 <button onclick="switchAdminTab('tab-admin-roster');" id="btn-tab-admin-roster" class="tab-btn <?= $activeAdminTab === 'tab-admin-roster' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="calendar-check" class="w-4 h-4"></i> TOD Duty Roster
+                </button>
+                <button onclick="switchAdminTab('tab-admin-reporting');" id="btn-tab-admin-reporting" class="tab-btn <?= $activeAdminTab === 'tab-admin-reporting' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="file-bar-chart-2" class="w-4 h-4 text-amber-500"></i> Academic Reporting Control
                 </button>
                 <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn <?= $activeAdminTab === 'tab-admin-gallery' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="image" class="w-4 h-4"></i> Gallery
@@ -953,9 +969,276 @@ if (!empty($_SESSION['admin_flash'])) {
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 9: ACADEMIC REPORTING CONTROL -->
+            <div id="tab-admin-reporting" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-reporting' ? '' : 'hidden' ?> space-y-8">
+
+                <!-- Header Action Banner -->
+                <div class="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 text-white p-8 rounded-3xl shadow-xl border-b-4 border-brand-gold">
+                    <div>
+                        <span class="bg-brand-gold text-gray-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block mb-2 shadow-sm">Academic Operations</span>
+                        <h2 class="text-2xl sm:text-3xl font-black text-white">Academic Reporting & Marks Control Center</h2>
+                        <p class="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">Open or lock marks entry windows for teachers, assign specific subject teachers per class & stream, set custom grading scales, and publish report cards.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2.5 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow-md flex items-center gap-2 transition-transform hover:-translate-y-0.5 active:scale-95">
+                            <i data-lucide="calendar-plus" class="w-4 h-4"></i> + Create Reporting Window
+                        </button>
+                        <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-2.5 bg-gray-800 text-white border border-amber-500/30 hover:bg-gray-700 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-amber-400"></i> + Assign Subject Teacher
+                        </button>
+                        <button onclick="openModal('modal-add-grading-scale');" class="px-4 py-2.5 bg-white text-gray-900 font-bold rounded-xl text-xs hover:bg-gray-100 shadow-md">
+                            <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i> + Configure Grade Rule
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. Exam Reporting Windows Card -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="lock" class="w-5 h-5 text-amber-600"></i> Reporting Windows & Marks Locking
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Control whether teachers can enter or edit marks for specific exams & terms.</p>
+                        </div>
+                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                            <i data-lucide="plus" class="w-4 h-4"></i> New Window
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                    <th class="p-3.5">Window Title</th>
+                                    <th class="p-3.5">Academic Term & Year</th>
+                                    <th class="p-3.5">Assessment Type</th>
+                                    <th class="p-3.5">Teacher Entry Status</th>
+                                    <th class="p-3.5">Student Publication</th>
+                                    <th class="p-3.5">Stream Rank Status</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 font-medium">
+                                <?php if (!empty($allReportingWindows)): ?>
+                                    <?php foreach ($allReportingWindows as $rw): ?>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-3.5 font-bold text-gray-900 text-sm"><?= htmlspecialchars($rw['title']) ?></td>
+                                            <td class="p-3.5 text-gray-700 font-semibold"><?= htmlspecialchars($rw['term']) ?> · <?= htmlspecialchars($rw['academic_year']) ?></td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded-lg bg-gray-200 font-bold text-gray-800 uppercase text-[10px]">
+                                                    <?= htmlspecialchars($rw['assessment_type']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <?php if (!empty($rw['is_open'])): ?>
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-green-100 text-green-800 border border-green-300">
+                                                        <span class="w-2 h-2 rounded-full bg-green-600 animate-ping"></span> 🟢 OPEN for Entry
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                                                        🔒 CLOSED & Locked
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <?php if (!empty($rw['is_published'])): ?>
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-300">
+                                                        📢 PUBLISHED to Students
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-300">
+                                                        Unpublished
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <?php if (!empty($rw['show_positions'])): ?>
+                                                    <span class="text-xs font-bold text-amber-700">📊 Positions Visible</span>
+                                                <?php else: ?>
+                                                    <span class="text-xs font-bold text-gray-400">Positions Hidden</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
+                                                <!-- Toggle Open/Close -->
+                                                <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                    <input type="hidden" name="action" value="toggle_window_open">
+                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                    <input type="hidden" name="status" value="<?= !empty($rw['is_open']) ? 0 : 1 ?>">
+                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_open']) ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' ?>">
+                                                        <?= !empty($rw['is_open']) ? '🔒 Close Window' : '🟢 Open Window' ?>
+                                                    </button>
+                                                </form>
+
+                                                <!-- Toggle Publish -->
+                                                <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                    <input type="hidden" name="action" value="toggle_window_published">
+                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                    <input type="hidden" name="status" value="<?= !empty($rw['is_published']) ? 0 : 1 ?>">
+                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_published']) ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' ?>">
+                                                        <?= !empty($rw['is_published']) ? 'Unpublish' : '📢 Publish Results' ?>
+                                                    </button>
+                                                </form>
+
+                                                <!-- Toggle Positions -->
+                                                <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                    <input type="hidden" name="action" value="toggle_show_positions">
+                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                    <input type="hidden" name="status" value="<?= !empty($rw['show_positions']) ? 0 : 1 ?>">
+                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
+                                                        <?= !empty($rw['show_positions']) ? 'Hide Ranks' : 'Show Ranks' ?>
+                                                    </button>
+                                                </form>
+
+                                                <!-- Delete -->
+                                                <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Delete this reporting window?');">
+                                                    <input type="hidden" name="action" value="delete_window">
+                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                    <button type="submit" class="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="p-10 text-center text-gray-500">
+                                            No reporting windows created yet. Click "+ Create Reporting Window" above.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- 2. Subject Teacher Allocations Card -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="user-check" class="w-5 h-5 text-amber-600"></i> Subject Teacher Allocations (Per Class & Stream)
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Assign teachers to specific subjects for individual classes & streams (e.g. Mathematics in S1 Stream A).</p>
+                        </div>
+                        <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Assign Teacher
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                    <th class="p-3.5">Class Level</th>
+                                    <th class="p-3.5">Stream</th>
+                                    <th class="p-3.5">Subject</th>
+                                    <th class="p-3.5">Assigned Teacher</th>
+                                    <th class="p-3.5">Staff ID</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 font-medium">
+                                <?php if (!empty($allSubjectAssignments)): ?>
+                                    <?php foreach ($allSubjectAssignments as $sa): ?>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-3.5 font-bold text-gray-900"><?= htmlspecialchars($sa['class_level']) ?></td>
+                                            <td class="p-3.5 font-bold text-brand-green"><?= htmlspecialchars($sa['stream']) ?></td>
+                                            <td class="p-3.5 font-black text-amber-700"><?= htmlspecialchars($sa['subject']) ?></td>
+                                            <td class="p-3.5 font-bold text-gray-800"><?= htmlspecialchars($sa['teacher_name'] ?: 'Unassigned Staff') ?></td>
+                                            <td class="p-3.5 font-mono text-gray-500"><?= htmlspecialchars($sa['staff_id'] ?: 'N/A') ?></td>
+                                            <td class="p-3.5 text-right">
+                                                <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Remove this subject assignment?');">
+                                                    <input type="hidden" name="action" value="delete_subject_assignment">
+                                                    <input type="hidden" name="assignment_id" value="<?= (int)$sa['id'] ?>">
+                                                    <button type="submit" class="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 font-bold rounded-lg text-xs border border-red-200">
+                                                        Remove Assignment
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="p-10 text-center text-gray-500">
+                                            No subject teacher assignments created yet. Click "+ Assign Subject Teacher" to link teachers to subjects.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. Customizable Grading Scales Card -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-5 h-5 text-amber-600"></i> Customizable Grading Scales Engine
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Configure mark percentage ranges, grades (e.g. D1–F9, A–F), points, and default remarks.</p>
+                        </div>
+                        <button onclick="openModal('modal-add-grading-scale');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Add Grade Rule
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                    <th class="p-3.5">Education Level</th>
+                                    <th class="p-3.5">Scale Name</th>
+                                    <th class="p-3.5 text-center">Score Range (%)</th>
+                                    <th class="p-3.5 text-center">Grade</th>
+                                    <th class="p-3.5 text-center">Points</th>
+                                    <th class="p-3.5">Default Remark</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 font-medium">
+                                <?php if (!empty($allGradingScales)): ?>
+                                    <?php foreach ($allGradingScales as $gs): ?>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-3.5 font-bold text-gray-900"><?= htmlspecialchars($gs['education_level']) ?></td>
+                                            <td class="p-3.5 font-semibold text-gray-700"><?= htmlspecialchars($gs['scale_name']) ?></td>
+                                            <td class="p-3.5 text-center font-mono font-bold text-brand-green"><?= $gs['min_score'] ?>% - <?= $gs['max_score'] ?>%</td>
+                                            <td class="p-3.5 text-center">
+                                                <span class="px-2.5 py-1 rounded bg-amber-100 text-amber-900 font-black">
+                                                    <?= htmlspecialchars($gs['grade']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5 text-center font-bold text-gray-800"><?= $gs['points'] ?></td>
+                                            <td class="p-3.5 text-gray-600 italic"><?= htmlspecialchars($gs['remark']) ?></td>
+                                            <td class="p-3.5 text-right">
+                                                <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Delete this grade boundary rule?');">
+                                                    <input type="hidden" name="action" value="delete_grading_scale">
+                                                    <input type="hidden" name="scale_id" value="<?= (int)$gs['id'] ?>">
+                                                    <button type="submit" class="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="p-10 text-center text-gray-500">
+                                            No custom grade rules saved. System is using default UNEB D1–F9 (O-Level) & A–F (A-Level) scales.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
         </section>
@@ -2292,5 +2575,220 @@ if (!empty($_SESSION['admin_flash'])) {
             openModal('modal-view-timetable-matrix');
         }
     </script>
+
+    <!-- MODAL: CREATE REPORTING WINDOW -->
+    <div id="modal-create-reporting-window" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-amber-400"></i> Create Reporting Window
+                </h3>
+                <button type="button" onclick="closeModal('modal-create-reporting-window');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-4">
+                <input type="hidden" name="action" value="create_window">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Window Title (Optional)</label>
+                    <input type="text" name="title" placeholder="e.g. Term III 2026 - End of Term Examinations" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Academic Year</label>
+                        <input type="text" name="academic_year" value="2026" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Term</label>
+                        <select name="term" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="Term I">Term I</option>
+                            <option value="Term II">Term II</option>
+                            <option value="Term III" selected>Term III</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Assessment Type</label>
+                    <select name="assessment_type" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="EOT">EOT (End of Term Exam)</option>
+                        <option value="MOT">MOT (Mid-Term Exam)</option>
+                        <option value="BOT">BOT (Beginning of Term Exam)</option>
+                        <option value="CBC_CONTINUOUS">CBC (Continuous Assessment 20%)</option>
+                        <option value="CBC_EXAM">CBC (End of Assessment 80%)</option>
+                        <option value="CUSTOM">Custom Assessment</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-gray-100">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800">
+                        <input type="checkbox" name="is_open" value="1" checked class="w-4 h-4 text-amber-500 rounded border-gray-300">
+                        <span>Open Window immediately for Teacher Marks Entry</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800">
+                        <input type="checkbox" name="is_published" value="1" class="w-4 h-4 text-amber-500 rounded border-gray-300">
+                        <span>Publish Results immediately to Student & Parent Portals</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-800">
+                        <input type="checkbox" name="show_positions" value="1" checked class="w-4 h-4 text-amber-500 rounded border-gray-300">
+                        <span>Show Student Stream Ranking Positions on Report Cards</span>
+                    </label>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Save & Initialize Window</button>
+                    <button type="button" onclick="closeModal('modal-create-reporting-window');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ASSIGN SUBJECT TEACHER -->
+    <div id="modal-assign-subject-teacher" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-5 h-5 text-amber-400"></i> Assign Subject Teacher
+                </h3>
+                <button type="button" onclick="closeModal('modal-assign-subject-teacher');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-4">
+                <input type="hidden" name="action" value="assign_subject_teacher">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Select Teacher <span class="text-red-500">*</span></label>
+                    <select name="teacher_id" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="">-- Choose Teacher --</option>
+                        <?php foreach ($allTeachers as $t): ?>
+                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['full_name']) ?> (<?= htmlspecialchars($t['staff_id']) ?> · <?= htmlspecialchars($t['department'] ?: 'General') ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Subject Name <span class="text-red-500">*</span></label>
+                    <select name="subject" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Biology">Biology</option>
+                        <option value="English Language">English Language</option>
+                        <option value="Literature in English">Literature in English</option>
+                        <option value="History">History</option>
+                        <option value="Geography">Geography</option>
+                        <option value="Christian Religious Education (CRE)">Christian Religious Education (CRE)</option>
+                        <option value="Islamic Religious Education (IRE)">Islamic Religious Education (IRE)</option>
+                        <option value="Agriculture">Agriculture</option>
+                        <option value="Computer Studies / ICT">Computer Studies / ICT</option>
+                        <option value="Luganda">Luganda</option>
+                        <option value="Fine Art">Fine Art</option>
+                        <option value="Commerce / Entrepreneurship">Commerce / Entrepreneurship</option>
+                        <option value="Sub-Mathematics">Sub-Mathematics (A-Level)</option>
+                        <option value="General Paper (GP)">General Paper (A-Level)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Class Level <span class="text-red-500">*</span></label>
+                        <select name="class_level" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="Senior 1">Senior 1</option>
+                            <option value="Senior 2">Senior 2</option>
+                            <option value="Senior 3">Senior 3</option>
+                            <option value="Senior 4">Senior 4</option>
+                            <option value="Senior 5">Senior 5</option>
+                            <option value="Senior 6">Senior 6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Stream <span class="text-red-500">*</span></label>
+                        <select name="stream" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="Stream A">Stream A</option>
+                            <option value="Stream B">Stream B</option>
+                            <option value="Stream C">Stream C</option>
+                            <option value="Stream D">Stream D</option>
+                            <option value="North">North</option>
+                            <option value="South">South</option>
+                            <option value="East">East</option>
+                            <option value="West">West</option>
+                            <option value="All Streams">All Streams</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Save Subject Assignment</button>
+                    <button type="button" onclick="closeModal('modal-assign-subject-teacher');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIGURE GRADE RULE -->
+    <div id="modal-add-grading-scale" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-amber-400"></i> Configure Grade Rule
+                </h3>
+                <button type="button" onclick="closeModal('modal-add-grading-scale');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-4">
+                <input type="hidden" name="action" value="save_grading_scale">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Education Level</label>
+                        <select name="education_level" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="O-Level">O-Level (S1–S4)</option>
+                            <option value="A-Level">A-Level (S5–S6)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Grade Code</label>
+                        <input type="text" name="grade" required placeholder="e.g. D1 or A" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Min Score (%)</label>
+                        <input type="number" step="0.1" name="min_score" required placeholder="e.g. 80" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Max Score (%)</label>
+                        <input type="number" step="0.1" name="max_score" required placeholder="e.g. 100" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Points Value</label>
+                        <input type="number" name="points" value="1" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Scale Name</label>
+                        <input type="text" name="scale_name" value="UNEB Standard" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Default Remark</label>
+                    <input type="text" name="remark" placeholder="e.g. Distinction 1 / Excellent" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-3 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow">Add Grade Rule</button>
+                    <button type="button" onclick="closeModal('modal-add-grading-scale');" class="px-5 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

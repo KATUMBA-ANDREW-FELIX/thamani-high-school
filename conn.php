@@ -366,6 +366,48 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         notes TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS reporting_windows (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        academic_year TEXT NOT NULL,
+                        term TEXT NOT NULL,
+                        assessment_type TEXT DEFAULT 'EOT',
+                        is_open INTEGER DEFAULT 1,
+                        is_published INTEGER DEFAULT 0,
+                        show_positions INTEGER DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS teacher_subject_assignments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        teacher_id INTEGER NOT NULL,
+                        subject TEXT NOT NULL,
+                        class_level TEXT NOT NULL,
+                        stream TEXT DEFAULT 'All Streams',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS grading_scales (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        scale_name TEXT DEFAULT 'O-Level Standard',
+                        min_score REAL NOT NULL,
+                        max_score REAL NOT NULL,
+                        grade TEXT NOT NULL,
+                        points INTEGER DEFAULT 1,
+                        remark TEXT,
+                        education_level TEXT DEFAULT 'O-Level'
+                    );
+
+                    CREATE TABLE IF NOT EXISTS report_comments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER NOT NULL,
+                        window_id INTEGER NOT NULL,
+                        class_teacher_comment TEXT,
+                        head_teacher_comment TEXT,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(student_id, window_id)
+                    );
                 ");
 
             // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
@@ -414,6 +456,10 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN academic_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN recommendation_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN medical_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN stream TEXT DEFAULT 'Stream A'"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN window_id INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN assessment_type TEXT DEFAULT 'EOT'"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN academic_year TEXT DEFAULT '2026'"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash

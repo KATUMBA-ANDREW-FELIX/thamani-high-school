@@ -77,6 +77,107 @@ if (!empty($teacher['is_class_teacher']) && $ctClass !== '') {
         }
     }
 }
+
+// Fetch Academic Reporting Windows
+$reportingWindows = [];
+$rwRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions FROM reporting_windows ORDER BY is_open DESC, academic_year DESC, term DESC, id DESC");
+if ($rwRes) {
+    while ($r = thamani_db_fetch_assoc($rwRes)) {
+        $reportingWindows[] = $r;
+    }
+}
+
+// Fetch teacher's assigned subjects
+$mySubjectAssignments = [];
+$saStmt = thamani_db_prepare($conn, "SELECT id, subject, class_level, stream FROM teacher_subject_assignments WHERE teacher_id = ? ORDER BY class_level ASC, stream ASC, subject ASC");
+if ($saStmt) {
+    thamani_db_stmt_bind_param($saStmt, "i", $teacher['id']);
+    thamani_db_stmt_execute($saStmt);
+    $saRes = thamani_db_stmt_get_result($saStmt);
+    if ($saRes) {
+        while ($r = thamani_db_fetch_assoc($saRes)) {
+            $mySubjectAssignments[] = $r;
+        }
+    }
+    thamani_db_stmt_close($saStmt);
+}
+
+// Selected filter variables for Marks Entry tab
+$selectedWinId = (int)($_GET['win_id'] ?? ($reportingWindows[0]['id'] ?? 0));
+$selectedClass = trim($_GET['m_class'] ?? ($mySubjectAssignments[0]['class_level'] ?? ($ctClass ?: 'Senior 1')));
+$selectedStream = trim($_GET['m_stream'] ?? ($mySubjectAssignments[0]['stream'] ?? ($ctStream ?: 'Stream A')));
+$selectedSubject = trim($_GET['m_subject'] ?? ($mySubjectAssignments[0]['subject'] ?? 'Mathematics'));
+
+// Check selected window info
+$selectedWindowInfo = null;
+foreach ($reportingWindows as $w) {
+    if ((int)$w['id'] === $selectedWinId) {
+        $selectedWindowInfo = $w;
+        break;
+    }
+}
+$isWindowOpen = $selectedWindowInfo ? (bool)$selectedWindowInfo['is_open'] : false;
+
+// Permission check for entering marks
+$canEnterMarks = false;
+if ($teacher['role'] === 'admin') {
+    $canEnterMarks = true;
+} else {
+    foreach ($mySubjectAssignments as $sa) {
+        if ($sa['class_level'] === $selectedClass && ($sa['stream'] === $selectedStream || $sa['stream'] === 'All Streams') && strcasecmp($sa['subject'], $selectedSubject) === 0) {
+            $canEnterMarks = true;
+            break;
+        }
+    }
+    // Class Teacher elevated permission override
+    if (!$canEnterMarks && !empty($teacher['is_class_teacher']) && $teacher['class_teacher_of'] === $selectedClass && ($teacher['class_teacher_stream'] === $selectedStream || $selectedStream === 'All Streams')) {
+        $canEnterMarks = true;
+    }
+}
+
+// Fetch students & existing marks for selected class/stream/subject/window
+$marksStudents = [];
+$existingMarksMap = [];
+if ($selectedClass !== '') {
+    $stStmt = thamani_db_prepare($conn, "SELECT id, full_name, lin_number, gender, class_level, stream FROM students WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND status = 'Enrolled' ORDER BY full_name ASC");
+    if ($stStmt) {
+        thamani_db_stmt_bind_param($stStmt, "sss", $selectedClass, $selectedStream, $selectedStream);
+        thamani_db_stmt_execute($stStmt);
+        $res = thamani_db_stmt_get_result($stStmt);
+        if ($res) {
+            while ($r = thamani_db_fetch_assoc($res)) {
+                $marksStudents[] = $r;
+            }
+        }
+        thamani_db_stmt_close($stStmt);
+    }
+
+    if ($selectedWinId > 0 && !empty($selectedSubject)) {
+        $mkStmt = thamani_db_prepare($conn, "SELECT student_id, score, remarks FROM student_marks WHERE window_id = ? AND subject = ?");
+        if ($mkStmt) {
+            thamani_db_stmt_bind_param($mkStmt, "is", $selectedWinId, $selectedSubject);
+            thamani_db_stmt_execute($mkStmt);
+            $mRes = thamani_db_stmt_get_result($mkStmt);
+            if ($mRes) {
+                while ($r = thamani_db_fetch_assoc($mRes)) {
+                    $existingMarksMap[(int)$r['student_id']] = $r;
+                }
+            }
+            thamani_db_stmt_close($mkStmt);
+        }
+    }
+}
+
+// Class Teacher Stream Results Sheet & Comments Data
+$ctComments = [];
+if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
+    $cmRes = thamani_db_query($conn, "SELECT student_id, class_teacher_comment, head_teacher_comment FROM report_comments WHERE window_id = {$selectedWinId}");
+    if ($cmRes) {
+        while ($cr = thamani_db_fetch_assoc($cmRes)) {
+            $ctComments[(int)$cr['student_id']] = $cr;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -260,6 +361,10 @@ if (!empty($teacher['is_class_teacher']) && $ctClass !== '') {
             <!-- Tabs -->
             <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-3 mb-8">
                 <button onclick="switchTeacherTab('tab-teacher-announcements');" id="btn-tab-teacher-announcements" class="tab-btn active px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 bg-brand-green text-white"><i data-lucide="megaphone" class="w-4 h-4"></i> Class Announcements & Timetables</button>
+                <button onclick="switchTeacherTab('tab-teacher-marks');" id="btn-tab-teacher-marks" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-brand-green bg-brand-lightGreen hover:bg-green-100"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Marks Entry Workstation</button>
+                <?php if (!empty($teacher['is_class_teacher'])): ?>
+                    <button onclick="switchTeacherTab('tab-teacher-results');" id="btn-tab-teacher-results" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-blue-900 bg-blue-50 hover:bg-blue-100"><i data-lucide="award" class="w-4 h-4 text-blue-600"></i> Stream Results & Comments</button>
+                <?php endif; ?>
                 <button onclick="switchTeacherTab('tab-teacher-schedule');" id="btn-tab-teacher-schedule" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-gray-700"><i data-lucide="clock" class="w-4 h-4"></i> Personal Teaching Schedule</button>
                 <?php if (!empty($teacher['is_class_teacher'])): ?>
                     <button onclick="switchTeacherTab('tab-teacher-class-attendance');" id="btn-tab-teacher-class-attendance" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 text-amber-900 bg-amber-50 hover:bg-amber-100"><i data-lucide="user-check" class="w-4 h-4 text-amber-600"></i> Class Stream Attendance</button>
@@ -626,6 +731,288 @@ if (!empty($teacher['is_class_teacher']) && $ctClass !== '') {
                                 <div class="mt-6 flex justify-end">
                                     <button type="submit" class="px-6 py-3 bg-brand-green text-white font-extrabold rounded-xl text-xs hover:bg-green-800 shadow-md flex items-center gap-2">
                                         <i data-lucide="check-circle" class="w-4 h-4"></i> Submit Stream Attendance Register
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- TAB: MARKS ENTRY WORKSTATION -->
+            <div id="tab-teacher-marks" class="teacher-tab-content hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <!-- Section Header -->
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-2xl font-bold text-brand-green flex items-center gap-2">
+                                    <i data-lucide="file-spreadsheet" class="w-6 h-6 text-brand-green"></i> Subject Marks Entry Workstation
+                                </h3>
+                                <?php if ($selectedWindowInfo): ?>
+                                    <?php if ($selectedWindowInfo['is_open']): ?>
+                                        <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1 border border-emerald-300">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-600 animate-ping"></span> OPEN FOR MARKS ENTRY
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="px-2.5 py-1 rounded-full bg-red-100 text-red-800 font-bold text-xs flex items-center gap-1 border border-red-300">
+                                            <i data-lucide="lock" class="w-3.5 h-3.5"></i> REPORTING WINDOW LOCKED
+                                        </span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Enter academic scores for students in your assigned subjects, class levels, and streams.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Subject Allocation Badges -->
+                    <?php if (!empty($mySubjectAssignments)): ?>
+                        <div class="mb-6 bg-emerald-50/70 p-4 rounded-xl border border-emerald-100">
+                            <span class="text-xs font-extrabold text-emerald-900 uppercase tracking-wider block mb-2">📌 Your Officially Assigned Teaching Allocations:</span>
+                            <div class="flex flex-wrap gap-2">
+                                <?php foreach ($mySubjectAssignments as $sa):
+                                    $isSelectedSA = ($sa['class_level'] === $selectedClass && $sa['stream'] === $selectedStream && strcasecmp($sa['subject'], $selectedSubject) === 0);
+                                ?>
+                                    <a href="teacher_dashboard.php?tab=tab-teacher-marks&win_id=<?= $selectedWinId ?>&m_class=<?= urlencode($sa['class_level']) ?>&m_stream=<?= urlencode($sa['stream']) ?>&m_subject=<?= urlencode($sa['subject']) ?>#tab-teacher-marks"
+                                       class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shadow-sm flex items-center gap-1.5 <?= $isSelectedSA ? 'bg-brand-green text-white border-brand-green ring-2 ring-brand-green/30' : 'bg-white text-gray-700 hover:bg-emerald-100 border-gray-200' ?>">
+                                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                        <span><?= htmlspecialchars($sa['subject']) ?></span>
+                                        <span class="opacity-75">· <?= htmlspecialchars($sa['class_level']) ?> (<?= htmlspecialchars($sa['stream']) ?>)</span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Filter Controls Bar -->
+                    <form method="get" action="teacher_dashboard.php" class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <input type="hidden" name="tab" value="tab-teacher-marks">
+                        
+                        <div>
+                            <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">1. Exam Window</label>
+                            <select name="win_id" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
+                                <?php foreach ($reportingWindows as $w): ?>
+                                    <option value="<?= $w['id'] ?>" <?= $selectedWinId === (int)$w['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($w['title']) ?> (Term <?= $w['term'] ?> <?= $w['academic_year'] ?>) <?= $w['is_open'] ? '— [OPEN]' : '— [LOCKED]' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">2. Class Level</label>
+                            <select name="m_class" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
+                                <?php foreach (['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4', 'Senior 5', 'Senior 6'] as $c): ?>
+                                    <option value="<?= $c ?>" <?= $selectedClass === $c ? 'selected' : '' ?>><?= $c ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">3. Stream</label>
+                            <select name="m_stream" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
+                                <?php foreach (['Stream A', 'Stream B', 'Stream C', 'North', 'South', 'East', 'West', 'All Streams'] as $str): ?>
+                                    <option value="<?= $str ?>" <?= $selectedStream === $str ? 'selected' : '' ?>><?= $str ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-extrabold text-gray-700 uppercase mb-1">4. Subject</label>
+                            <select name="m_subject" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white">
+                                <?php foreach (['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History', 'Entrepreneurship', 'Computer Studies', 'Agriculture', 'Kiswahili', 'CRE', 'IRE', 'Fine Art', 'Literature in English', 'Commerce', 'Economics'] as $sub): ?>
+                                    <option value="<?= $sub ?>" <?= $selectedSubject === $sub ? 'selected' : '' ?>><?= $sub ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </form>
+
+                    <!-- Lock Notice Banner -->
+                    <?php if (!$isWindowOpen): ?>
+                        <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-3 mb-6">
+                            <i data-lucide="lock" class="w-5 h-5 text-red-600 flex-shrink-0"></i>
+                            <div>
+                                <span class="font-extrabold text-sm block">Reporting Window Locked</span>
+                                <span>The selected exam window (<?= htmlspecialchars($selectedWindowInfo['title'] ?? 'Exam') ?>) is currently CLOSED by Admin. You can view existing marks but cannot save changes.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Marks Entry Form Table -->
+                    <form action="save_marks.php" method="post">
+                        <input type="hidden" name="action" value="save_subject_marks">
+                        <input type="hidden" name="window_id" value="<?= $selectedWinId ?>">
+                        <input type="hidden" name="class_level" value="<?= htmlspecialchars($selectedClass) ?>">
+                        <input type="hidden" name="stream" value="<?= htmlspecialchars($selectedStream) ?>">
+                        <input type="hidden" name="subject" value="<?= htmlspecialchars($selectedSubject) ?>">
+                        <input type="hidden" name="redirect_to" value="teacher_dashboard.php?tab=tab-teacher-marks&win_id=<?= $selectedWinId ?>&m_class=<?= urlencode($selectedClass) ?>&m_stream=<?= urlencode($selectedStream) ?>&m_subject=<?= urlencode($selectedSubject) ?>#tab-teacher-marks">
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-brand-green text-white font-bold">
+                                        <th class="p-3.5 w-12">#</th>
+                                        <th class="p-3.5">LIN / ID</th>
+                                        <th class="p-3.5">Student Full Name</th>
+                                        <th class="p-3.5">Gender</th>
+                                        <th class="p-3.5">Stream</th>
+                                        <th class="p-3.5 w-36">Score (0 - 100)</th>
+                                        <th class="p-3.5">Subject Remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <?php if (!empty($marksStudents)): ?>
+                                        <?php $mIdx = 1; foreach ($marksStudents as $st): 
+                                            $stId = (int)$st['id'];
+                                            $scoreVal = isset($existingMarksMap[$stId]) ? $existingMarksMap[$stId]['score'] : '';
+                                            $remarkVal = isset($existingMarksMap[$stId]) ? $existingMarksMap[$stId]['remarks'] : '';
+                                        ?>
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="p-3.5 font-bold text-gray-500"><?= $mIdx++ ?></td>
+                                                <td class="p-3.5 font-mono text-xs text-gray-600"><?= htmlspecialchars($st['lin_number'] ?: '—') ?></td>
+                                                <td class="p-3.5 font-bold text-gray-900"><?= htmlspecialchars($st['full_name']) ?></td>
+                                                <td class="p-3.5 text-xs text-gray-600"><?= htmlspecialchars($st['gender']) ?></td>
+                                                <td class="p-3.5">
+                                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-800 rounded font-semibold text-xs border border-gray-200">
+                                                        <?= htmlspecialchars($st['stream'] ?: 'Stream A') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <input type="number" min="0" max="100" step="0.5"
+                                                           name="marks[<?= $stId ?>]"
+                                                           value="<?= htmlspecialchars($scoreVal) ?>"
+                                                           placeholder="0 - 100"
+                                                           <?= !$isWindowOpen ? 'disabled' : '' ?>
+                                                           class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-brand-green bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <input type="text"
+                                                           name="remarks[<?= $stId ?>]"
+                                                           value="<?= htmlspecialchars($remarkVal) ?>"
+                                                           placeholder="e.g. Excellent progress, Good effort"
+                                                           <?= !$isWindowOpen ? 'disabled' : '' ?>
+                                                           class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-green bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="7" class="p-12 text-center text-gray-500 text-sm">
+                                                No enrolled students found for <?= htmlspecialchars($selectedClass) ?> (<?= htmlspecialchars($selectedStream) ?>).
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <?php if (!empty($marksStudents)): ?>
+                            <div class="mt-6 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Total Enrolled Students: <strong><?= count($marksStudents) ?></strong></span>
+                                <button type="submit" <?= !$isWindowOpen ? 'disabled' : '' ?>
+                                        class="px-6 py-3 bg-brand-green text-white font-extrabold rounded-xl text-xs hover:bg-green-800 shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i data-lucide="save" class="w-4 h-4"></i> Save Subject Marks & Remarks
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB: CLASS TEACHER STREAM RESULTS SHEET -->
+            <?php if (!empty($teacher['is_class_teacher'])): ?>
+                <div id="tab-teacher-results" class="teacher-tab-content hidden space-y-6">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                            <div>
+                                <h3 class="text-2xl font-bold text-blue-900 flex items-center gap-2">
+                                    <i data-lucide="award" class="w-6 h-6 text-blue-600"></i> Stream Results Sheet & Class Teacher Comments
+                                </h3>
+                                <p class="text-xs text-gray-500 mt-1">Review consolidated stream marks and write report card comments for <?= htmlspecialchars($ctClass) ?> (<?= htmlspecialchars($ctStream) ?>).</p>
+                            </div>
+                        </div>
+
+                        <!-- Reporting Window Selector -->
+                        <form method="get" action="teacher_dashboard.php" class="bg-blue-50/60 p-4 rounded-xl border border-blue-100 mb-6 flex flex-wrap items-center justify-between gap-4">
+                            <input type="hidden" name="tab" value="tab-teacher-results">
+                            <div class="flex items-center gap-3">
+                                <label class="text-xs font-extrabold text-blue-950 uppercase">Exam Window:</label>
+                                <select name="win_id" onchange="this.form.submit()" class="px-3 py-2 border border-blue-300 rounded-xl text-xs font-bold text-blue-950 bg-white focus:ring-2 focus:ring-blue-600">
+                                    <?php foreach ($reportingWindows as $w): ?>
+                                        <option value="<?= $w['id'] ?>" <?= $selectedWinId === (int)$w['id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($w['title']) ?> (Term <?= $w['term'] ?> <?= $w['academic_year'] ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <span class="text-xs font-bold text-blue-900">Class: <?= htmlspecialchars($ctClass) ?> · Stream: <?= htmlspecialchars($ctStream) ?></span>
+                        </form>
+
+                        <!-- Class Teacher Comments & Results Form -->
+                        <form action="save_marks.php" method="post">
+                            <input type="hidden" name="action" value="save_teacher_comments">
+                            <input type="hidden" name="window_id" value="<?= $selectedWinId ?>">
+                            <input type="hidden" name="redirect_to" value="teacher_dashboard.php?tab=tab-teacher-results&win_id=<?= $selectedWinId ?>#tab-teacher-results">
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm border-collapse">
+                                    <thead>
+                                        <tr class="bg-blue-900 text-white font-bold">
+                                            <th class="p-3.5 w-12">#</th>
+                                            <th class="p-3.5">LIN Number</th>
+                                            <th class="p-3.5">Student Full Name</th>
+                                            <th class="p-3.5">Stream</th>
+                                            <th class="p-3.5">Class Teacher General Comment</th>
+                                            <th class="p-3.5 text-right w-40">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <?php if (!empty($streamStudents)): ?>
+                                            <?php $ctIdx = 1; foreach ($streamStudents as $st):
+                                                $stId = (int)$st['id'];
+                                                $commVal = isset($ctComments[$stId]) ? $ctComments[$stId]['class_teacher_comment'] : '';
+                                            ?>
+                                                <tr class="hover:bg-blue-50/40">
+                                                    <td class="p-3.5 font-bold text-gray-500"><?= $ctIdx++ ?></td>
+                                                    <td class="p-3.5 font-mono text-xs text-gray-600"><?= htmlspecialchars($st['lin_number'] ?: '—') ?></td>
+                                                    <td class="p-3.5 font-bold text-gray-900"><?= htmlspecialchars($st['full_name']) ?></td>
+                                                    <td class="p-3.5">
+                                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-800 rounded font-semibold text-xs border border-gray-200">
+                                                            <?= htmlspecialchars($st['stream'] ?: 'Stream A') ?>
+                                                        </span>
+                                                    </td>
+                                                    <td class="p-3.5">
+                                                        <input type="text"
+                                                               name="comments[<?= $stId ?>]"
+                                                               value="<?= htmlspecialchars($commVal) ?>"
+                                                               placeholder="e.g. An attentive and hardworking student. High potential."
+                                                               class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-600 bg-white">
+                                                    </td>
+                                                    <td class="p-3.5 text-right">
+                                                        <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>"
+                                                           target="_blank"
+                                                           class="px-3 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-green-800 inline-flex items-center gap-1 shadow-sm">
+                                                            <i data-lucide="printer" class="w-3.5 h-3.5"></i> PDF Report
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="6" class="p-12 text-center text-gray-500 text-sm">
+                                                    No active students registered under your class stream (<?= htmlspecialchars($ctClass) ?> <?= htmlspecialchars($ctStream) ?>).
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <?php if (!empty($streamStudents)): ?>
+                                <div class="mt-6 flex justify-between items-center">
+                                    <span class="text-xs text-gray-500">Total Stream Students: <strong><?= count($streamStudents) ?></strong></span>
+                                    <button type="submit" class="px-6 py-3 bg-blue-900 text-white font-extrabold rounded-xl text-xs hover:bg-blue-950 shadow-md flex items-center gap-2">
+                                        <i data-lucide="save" class="w-4 h-4"></i> Save Class Teacher Comments
                                     </button>
                                 </div>
                             <?php endif; ?>

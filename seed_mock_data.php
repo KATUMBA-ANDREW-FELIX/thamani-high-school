@@ -406,41 +406,167 @@ foreach ($attendanceRecords as $att) {
 echo "✓ Student attendance mock records created.\n";
 
 // ----------------------------------------------------
-// 4. SUBJECT MARKS SEED DATA
+// 5. REPORTING SYSTEM SEED DATA (WINDOWS, ASSIGNMENTS, SCALES, MARKS, COMMENTS)
 // ----------------------------------------------------
-$term = 'Term III 2026';
-$marksData = [
-    ['name' => 'Kizito Joseph', 'subject' => 'Mathematics', 'score' => 88.5, 'max' => 100, 'comments' => 'Excellent problem solving'],
-    ['name' => 'Kizito Joseph', 'subject' => 'Physics', 'score' => 79.0, 'max' => 100, 'comments' => 'Good understanding of mechanics'],
-    ['name' => 'Babirye Sarah', 'subject' => 'Mathematics', 'score' => 92.0, 'max' => 100, 'comments' => 'Top student in class'],
-    ['name' => 'Babirye Sarah', 'subject' => 'Physics', 'score' => 84.5, 'max' => 100, 'comments' => 'Strong practical work'],
-    ['name' => 'Mwesigwa Daniel', 'subject' => 'Chemistry', 'score' => 76.0, 'max' => 100, 'comments' => 'Good stoichiometry lab work'],
-    ['name' => 'Akello Peace', 'subject' => 'Chemistry', 'score' => 85.0, 'max' => 100, 'comments' => 'Very attentive in class']
+
+// 5.1 Reporting Windows
+$rwRows = [
+    [
+        'title' => 'Term III 2026 End of Term Exams (EOT)',
+        'academic_year' => '2026',
+        'term' => '3',
+        'assessment_type' => 'EOT',
+        'is_open' => 1,
+        'is_published' => 1,
+        'show_positions' => 1
+    ],
+    [
+        'title' => 'Term III 2026 Mid-Term Examinations (MOT)',
+        'academic_year' => '2026',
+        'term' => '3',
+        'assessment_type' => 'MOT',
+        'is_open' => 0,
+        'is_published' => 1,
+        'show_positions' => 1
+    ],
+    [
+        'title' => 'Term II 2026 End of Term Exams (EOT)',
+        'academic_year' => '2026',
+        'term' => '2',
+        'assessment_type' => 'EOT',
+        'is_open' => 0,
+        'is_published' => 1,
+        'show_positions' => 1
+    ]
 ];
 
-foreach ($marksData as $mk) {
-    if (isset($studentMap[$mk['name']])) {
-        $st = $studentMap[$mk['name']];
-        $sid = (int)$st['id'];
-        $cLevel = $st['class_level'];
+$winIds = [];
+foreach ($rwRows as $rw) {
+    $cStmt = thamani_db_prepare($conn, "SELECT id FROM reporting_windows WHERE title = ? LIMIT 1");
+    thamani_db_stmt_bind_param($cStmt, "s", $rw['title']);
+    thamani_db_stmt_execute($cStmt);
+    $cRes = thamani_db_stmt_get_result($cStmt);
+    $rwExists = $cRes ? thamani_db_fetch_assoc($cRes) : null;
+    thamani_db_stmt_close($cStmt);
 
-        $check = thamani_db_prepare($conn, "SELECT id FROM student_marks WHERE student_id = ? AND subject = ? AND term = ? LIMIT 1");
-        thamani_db_stmt_bind_param($check, "iss", $sid, $mk['subject'], $term);
-        thamani_db_stmt_execute($check);
-        $mRes = thamani_db_stmt_get_result($check);
-        $mkExists = $mRes ? thamani_db_fetch_assoc($mRes) : null;
-        thamani_db_stmt_close($check);
+    if ($rwExists) {
+        $winIds[$rw['assessment_type'] . '_' . $rw['term']] = (int)$rwExists['id'];
+    } else {
+        $iStmt = thamani_db_prepare($conn, "INSERT INTO reporting_windows (title, academic_year, term, assessment_type, is_open, is_published, show_positions) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        thamani_db_stmt_bind_param($iStmt, "ssssiii", $rw['title'], $rw['academic_year'], $rw['term'], $rw['assessment_type'], $rw['is_open'], $rw['is_published'], $rw['show_positions']);
+        thamani_db_stmt_execute($iStmt);
+        $newId = thamani_db_insert_id($conn);
+        thamani_db_stmt_close($iStmt);
+        $winIds[$rw['assessment_type'] . '_' . $rw['term']] = (int)$newId;
+    }
+}
+echo "✓ Reporting windows seeded.\n";
 
-        if (!$mkExists) {
-            $insMk = thamani_db_prepare($conn, "INSERT INTO student_marks (student_id, class_level, subject, term, score, max_score, comments, recorded_by_teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
-            thamani_db_stmt_bind_param($insMk, "isssdds", $sid, $cLevel, $mk['subject'], $term, $mk['score'], $mk['max'], $mk['comments']);
-            thamani_db_stmt_execute($insMk);
-            thamani_db_stmt_close($insMk);
+$primaryWinId = $winIds['EOT_3'] ?? 1;
+
+// 5.2 Teacher Subject Allocations
+$teacherAllocations = [
+    ['staff_id' => 'TSC-2026-001', 'subject' => 'Mathematics', 'class' => 'Senior 1', 'stream' => 'Stream A'],
+    ['staff_id' => 'TSC-2026-001', 'subject' => 'English Language', 'class' => 'Senior 1', 'stream' => 'Stream A'],
+    ['staff_id' => 'TSC-2026-001', 'subject' => 'Physics', 'class' => 'Senior 3', 'stream' => 'Stream B'],
+    ['staff_id' => 'TSC-2026-002', 'subject' => 'Physics', 'class' => 'Senior 1', 'stream' => 'Stream A'],
+    ['staff_id' => 'TSC-2026-002', 'subject' => 'Chemistry', 'class' => 'Senior 1', 'stream' => 'Stream A'],
+    ['staff_id' => 'TSC-2026-003', 'subject' => 'Biology', 'class' => 'Senior 1', 'stream' => 'Stream A'],
+    ['staff_id' => 'TSC-2026-003', 'subject' => 'Chemistry', 'class' => 'Senior 2', 'stream' => 'Stream B']
+];
+
+foreach ($teacherAllocations as $alloc) {
+    $tRes = thamani_db_query($conn, "SELECT id FROM teachers WHERE staff_id = '{$alloc['staff_id']}' LIMIT 1");
+    if ($tRes && $tr = thamani_db_fetch_assoc($tRes)) {
+        $tId = (int)$tr['id'];
+        $chkA = thamani_db_prepare($conn, "SELECT id FROM teacher_subject_assignments WHERE teacher_id = ? AND subject = ? AND class_level = ? AND stream = ? LIMIT 1");
+        thamani_db_stmt_bind_param($chkA, "isss", $tId, $alloc['subject'], $alloc['class'], $alloc['stream']);
+        thamani_db_stmt_execute($chkA);
+        $resA = thamani_db_stmt_get_result($chkA);
+        $aExists = $resA ? thamani_db_fetch_assoc($resA) : null;
+        thamani_db_stmt_close($chkA);
+
+        if (!$aExists) {
+            $insA = thamani_db_prepare($conn, "INSERT INTO teacher_subject_assignments (teacher_id, subject, class_level, stream) VALUES (?, ?, ?, ?)");
+            thamani_db_stmt_bind_param($insA, "isss", $tId, $alloc['subject'], $alloc['class'], $alloc['stream']);
+            thamani_db_stmt_execute($insA);
+            thamani_db_stmt_close($insA);
         }
     }
 }
-echo "✓ Subject academic marks mock records created.\n";
+echo "✓ Teacher subject allocations seeded.\n";
+
+// 5.3 UNEB O-Level & A-Level Grading Scales
+$gradingRules = [
+    ['O-Level Standard', 85, 100, 'D1', 1, 'Distinction 1', 'O-Level'],
+    ['O-Level Standard', 75, 84.99, 'D2', 2, 'Distinction 2', 'O-Level'],
+    ['O-Level Standard', 65, 74.99, 'C3', 3, 'Credit 3', 'O-Level'],
+    ['O-Level Standard', 60, 64.99, 'C4', 4, 'Credit 4', 'O-Level'],
+    ['O-Level Standard', 55, 59.99, 'C5', 5, 'Credit 5', 'O-Level'],
+    ['O-Level Standard', 50, 54.99, 'C6', 6, 'Credit 6', 'O-Level'],
+    ['O-Level Standard', 45, 49.99, 'P7', 7, 'Pass 7', 'O-Level'],
+    ['O-Level Standard', 40, 44.99, 'P8', 8, 'Pass 8', 'O-Level'],
+    ['O-Level Standard', 0, 39.99, 'F9', 9, 'Fail 9', 'O-Level']
+];
+
+foreach ($gradingRules as $rule) {
+    $chkG = thamani_db_prepare($conn, "SELECT id FROM grading_scales WHERE scale_name = ? AND grade = ? AND education_level = ? LIMIT 1");
+    thamani_db_stmt_bind_param($chkG, "sss", $rule[0], $rule[3], $rule[6]);
+    thamani_db_stmt_execute($chkG);
+    $resG = thamani_db_stmt_get_result($chkG);
+    $gExists = $resG ? thamani_db_fetch_assoc($resG) : null;
+    thamani_db_stmt_close($chkG);
+
+    if (!$gExists) {
+        $insG = thamani_db_prepare($conn, "INSERT INTO grading_scales (scale_name, min_score, max_score, grade, points, remark, education_level) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        thamani_db_stmt_bind_param($insG, "sddsiss", $rule[0], $rule[1], $rule[2], $rule[3], $rule[4], $rule[5], $rule[6]);
+        thamani_db_stmt_execute($insG);
+        thamani_db_stmt_close($insG);
+    }
+}
+echo "✓ UNEB grading scales seeded.\n";
+
+// 5.4 Seed Marks across subjects for Enrolled Senior 1 Students
+$s1StudentsRes = thamani_db_query($conn, "SELECT id, full_name, class_level, stream FROM students WHERE class_level = 'Senior 1' AND status = 'Enrolled'");
+if ($s1StudentsRes) {
+    $subjectsList = ['Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology', 'Geography', 'History', 'Commerce'];
+    while ($st = thamani_db_fetch_assoc($s1StudentsRes)) {
+        $stId = (int)$st['id'];
+        $cLevel = $st['class_level'];
+        $stream = $st['stream'] ?: 'Stream A';
+
+        // Deterministic realistic scores for each student
+        $baseSeed = $stId * 13;
+        foreach ($subjectsList as $subIdx => $sub) {
+            $score = 65 + (($baseSeed + $subIdx * 7) % 32);
+            if ($score > 98) $score = 98;
+            $remark = $score >= 80 ? 'Outstanding performance' : ($score >= 65 ? 'Good effort' : 'Requires steady practice');
+
+            // Insert into student_marks with window_id, stream, assessment_type
+            $chkM = thamani_db_query($conn, "SELECT id FROM student_marks WHERE student_id = {$stId} AND window_id = {$primaryWinId} AND subject = '{$sub}' LIMIT 1");
+            if ($chkM && !thamani_db_fetch_assoc($chkM)) {
+                $insM = thamani_db_prepare($conn, "INSERT INTO student_marks (student_id, class_level, stream, subject, term, window_id, assessment_type, academic_year, score, max_score, comments, recorded_by_teacher_id) VALUES (?, ?, ?, ?, 'Term III 2026', ?, 'EOT', '2026', ?, 100.00, ?, 1)");
+                thamani_db_stmt_bind_param($insM, "isssids", $stId, $cLevel, $stream, $sub, $primaryWinId, $score, $remark);
+                thamani_db_stmt_execute($insM);
+                thamani_db_stmt_close($insM);
+            }
+        }
+
+        // Seed Class Teacher comment
+        $chkC = thamani_db_query($conn, "SELECT id FROM report_comments WHERE student_id = {$stId} AND window_id = {$primaryWinId} LIMIT 1");
+        if ($chkC && !thamani_db_fetch_assoc($chkC)) {
+            $ctComm = "An attentive and disciplined student with great academic potential. Recommended to maintain this consistency.";
+            $hmComm = "Promising results. Keep aiming for academic excellence.";
+            $insC = thamani_db_prepare($conn, "INSERT INTO report_comments (student_id, window_id, class_teacher_comment, head_teacher_comment) VALUES (?, ?, ?, ?)");
+            thamani_db_stmt_bind_param($insC, "iiss", $stId, $primaryWinId, $ctComm, $hmComm);
+            thamani_db_stmt_execute($insC);
+            thamani_db_stmt_close($insC);
+        }
+    }
+}
+echo "✓ Comprehensive student marks & report comments seeded.\n";
 
 echo "\n======================================================\n";
 echo "SUCCESS: All mock data seeded successfully!\n";
 echo "======================================================\n";
+
