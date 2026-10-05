@@ -45,7 +45,7 @@
                     <a href="library.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Library</a>
                     <a href="gallery.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Gallery</a>
                     <a href="calendar.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Calendar & Fees</a>
-                    <a href="alumni.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Alumni</a>
+                    <a href="alumni.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Achievements &amp; Alumni</a>
                     <a href="map.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white hover:border-gray-900">Campus Map</a>
                 </div>
             </div>

@@ -145,7 +145,7 @@ $photosPayload = json_encode(array_map(function($p) {
                     <a href="library.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Library</a>
                     <a href="gallery.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-white bg-brand-green">Gallery</a>
                     <a href="calendar.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
-                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Achievements & Alumni</a>
                     <a href="map.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Campus Map</a>
                 </div>
                 <div class="hidden md:flex items-center space-x-2">

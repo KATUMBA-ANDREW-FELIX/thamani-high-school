@@ -83,7 +83,7 @@ if ($isStudent) {
                     <a href="library.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Library</a>
                     <a href="gallery.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
                     <a href="calendar.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
-                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Achievements & Alumni</a>
                 </div>
 
                 <!-- Right-side Actions: Smart Dashboard & Logout Controls or Unified Login Button -->
@@ -125,7 +125,7 @@ if ($isStudent) {
             <a href="library.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Digital Library</a>
             <a href="gallery.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Gallery</a>
             <a href="calendar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Calendar & Fees</a>
-            <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Alumni</a>
+            <a href="alumni.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Achievements & Alumni</a>
             <?php if ($isLoggedIn): ?>
                 <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
                     <a href="<?= $dashboardLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-green text-center flex items-center justify-center gap-2">
@@ -241,7 +241,7 @@ if ($isStudent) {
                         <li><a href="enrollment.php" class="hover:text-brand-gold transition-colors">Student Enrollment</a></li>
                         <li><a href="library.php" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
                         <li><a href="calendar.php" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
-                        <li><a href="alumni.php" class="hover:text-brand-gold transition-colors">Alumni Network</a></li>
+                        <li><a href="alumni.php" class="hover:text-brand-gold transition-colors">Achievements & Alumni Association</a></li>
                         <li><a href="teacher-login.php" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
                     </ul>
                 </div>
