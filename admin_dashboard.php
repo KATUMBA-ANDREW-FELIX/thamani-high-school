@@ -1079,10 +1079,16 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <?php else: ?>
                                                     <span class="block text-xs font-bold text-gray-400">Ranks Hidden</span>
                                                 <?php endif; ?>
-                                                <?php if (isset($rw['show_points']) && empty($rw['show_points'])): ?>
-                                                    <span class="block text-[10px] font-black text-red-600 uppercase">🚫 Points Column Disabled</span>
+                                                <?php 
+                                                $disabledStr = isset($rw['disabled_points_levels']) ? trim($rw['disabled_points_levels']) : '';
+                                                $isAllDisabled = isset($rw['show_points']) && (int)$rw['show_points'] === 0;
+                                                ?>
+                                                <?php if ($isAllDisabled): ?>
+                                                    <span class="block text-[10px] font-black text-red-600 uppercase">🚫 Points Disabled (All)</span>
+                                                <?php elseif ($disabledStr !== ''): ?>
+                                                    <span class="block text-[10px] font-black text-amber-700 uppercase" title="Disabled for: <?= htmlspecialchars($disabledStr) ?>">⚠️ Points Off: <?= htmlspecialchars($disabledStr) ?></span>
                                                 <?php else: ?>
-                                                    <span class="block text-[10px] font-bold text-green-700 uppercase">✓ Points Shown</span>
+                                                    <span class="block text-[10px] font-bold text-green-700 uppercase">✓ Points Shown (All)</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
@@ -1090,6 +1096,13 @@ if (!empty($_SESSION['admin_flash'])) {
                                                 <a href="view_window_reports.php?window_id=<?= (int)$rw['id'] ?>" class="px-3 py-1.5 bg-amber-500 text-gray-950 font-black rounded-lg text-xs hover:bg-amber-400 shadow-sm inline-flex items-center gap-1 transition-all">
                                                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Reports
                                                 </a>
+
+                                                <!-- Configure Points per Level Modal Trigger -->
+                                                <button type="button" 
+                                                        onclick="openPointsConfigModal(<?= (int)$rw['id'] ?>, '<?= htmlspecialchars(addslashes($rw['title']), ENT_QUOTES) ?>', <?= (int)($rw['show_points'] ?? 1) ?>, '<?= htmlspecialchars(addslashes($rw['disabled_points_levels'] ?? ''), ENT_QUOTES) ?>')" 
+                                                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-900 text-amber-400 hover:bg-gray-800 shadow-sm inline-flex items-center gap-1 transition-all">
+                                                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Points per Level
+                                                </button>
 
                                                 <!-- Toggle Open/Close -->
                                                 <form action="admin_reporting_actions.php" method="post" class="inline">
@@ -1118,16 +1131,6 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <input type="hidden" name="status" value="<?= !empty($rw['show_positions']) ? 0 : 1 ?>">
                                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
                                                         <?= !empty($rw['show_positions']) ? 'Hide Ranks' : 'Show Ranks' ?>
-                                                    </button>
-                                                </form>
-
-                                                <!-- Toggle Points Column -->
-                                                <form action="admin_reporting_actions.php" method="post" class="inline">
-                                                    <input type="hidden" name="action" value="toggle_show_points">
-                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
-                                                    <input type="hidden" name="status" value="<?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 1 : 0 ?>">
-                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border <?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-gray-200 text-gray-700 border-gray-300 hover:bg-gray-300' ?>">
-                                                        <?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 'Enable Points' : 'Disable Points' ?>
                                                     </button>
                                                 </form>
 
@@ -3025,5 +3028,124 @@ if (!empty($_SESSION['admin_flash'])) {
             </form>
         </div>
     </div>
+
+    <!-- MODAL: CONFIGURE POINTS COLUMN BY LEVEL -->
+    <div id="modal-configure-points" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-amber-400"></i> Configure Points Column by Level
+                    </h3>
+                    <p class="text-xs text-amber-400 font-medium" id="points-modal-window-title">Window Details</p>
+                </div>
+                <button type="button" onclick="closeModal('modal-configure-points');" class="text-gray-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form action="admin_reporting_actions.php" method="post" class="p-6 space-y-5">
+                <input type="hidden" name="action" value="update_level_points_config">
+                <input type="hidden" name="window_id" id="points-modal-window-id" value="0">
+                <input type="hidden" name="preset" id="points-modal-preset" value="custom">
+
+                <div>
+                    <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Quick Presets</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button type="button" onclick="setPointsPreset('all_enabled')" class="px-3 py-2.5 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl font-bold hover:bg-emerald-100 text-left flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> Enable All Levels
+                        </button>
+                        <button type="button" onclick="setPointsPreset('all_disabled')" class="px-3 py-2.5 bg-rose-50 text-rose-900 border border-rose-300 rounded-xl font-bold hover:bg-rose-100 text-left flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="slash" class="w-4 h-4 text-rose-600"></i> Disable All Levels
+                        </button>
+                        <button type="button" onclick="setPointsPreset('o_level_disabled')" class="px-3 py-2.5 bg-amber-50 text-amber-900 border border-amber-300 rounded-xl font-bold hover:bg-amber-100 text-left flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="ban" class="w-4 h-4 text-amber-600"></i> Disable O-Level (S1-S4)
+                        </button>
+                        <button type="button" onclick="setPointsPreset('a_level_disabled')" class="px-3 py-2.5 bg-amber-50 text-amber-900 border border-amber-300 rounded-xl font-bold hover:bg-amber-100 text-left flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="ban" class="w-4 h-4 text-amber-600"></i> Disable A-Level (S5-S6)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4">
+                    <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1">Custom Per-Class Points Control</label>
+                    <p class="text-[11px] text-gray-500 mb-3">Check the box for classes where the <strong>Points / Aggregates column should be DISABLED</strong> on report cards:</p>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 1" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.1 Points</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 2" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.2 Points</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 3" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.3 Points</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 4" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.4 Points</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 5" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.5 Points</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer font-extrabold text-gray-800">
+                            <input type="checkbox" name="disabled_levels[]" value="Senior 6" class="points-level-checkbox w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                            <span>Disable S.6 Points</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                    <button type="button" onclick="closeModal('modal-configure-points');" class="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-200">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2.5 bg-amber-500 text-gray-950 font-black rounded-xl text-xs hover:bg-amber-400 shadow-md">
+                        Save Level Rules
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openPointsConfigModal(windowId, windowTitle, showPoints, disabledLevelsStr) {
+            document.getElementById('points-modal-window-id').value = windowId;
+            document.getElementById('points-modal-window-title').innerText = 'Target: ' + windowTitle;
+            document.getElementById('points-modal-preset').value = 'custom';
+            
+            var disabledArr = (disabledLevelsStr || '').split(',').map(function(s){ return s.trim(); });
+            var checkboxes = document.querySelectorAll('.points-level-checkbox');
+            checkboxes.forEach(function(cb) {
+                if (showPoints === 0) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = disabledArr.indexOf(cb.value) !== -1 || 
+                                  (disabledArr.indexOf('O-Level') !== -1 && ['Senior 1','Senior 2','Senior 3','Senior 4'].indexOf(cb.value) !== -1) ||
+                                  (disabledArr.indexOf('A-Level') !== -1 && ['Senior 5','Senior 6'].indexOf(cb.value) !== -1);
+                }
+            });
+            
+            openModal('modal-configure-points');
+        }
+
+        function setPointsPreset(preset) {
+            document.getElementById('points-modal-preset').value = preset;
+            var checkboxes = document.querySelectorAll('.points-level-checkbox');
+            checkboxes.forEach(function(cb) {
+                if (preset === 'all_enabled') {
+                    cb.checked = false;
+                } else if (preset === 'all_disabled') {
+                    cb.checked = true;
+                } else if (preset === 'o_level_disabled') {
+                    cb.checked = ['Senior 1','Senior 2','Senior 3','Senior 4'].indexOf(cb.value) !== -1;
+                } else if (preset === 'a_level_disabled') {
+                    cb.checked = ['Senior 5','Senior 6'].indexOf(cb.value) !== -1;
+                }
+            });
+        }
+    </script>
 </body>
 </html>

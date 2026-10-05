@@ -95,6 +95,49 @@ switch ($action) {
         }
         break;
 
+    case 'update_level_points_config':
+        $id = (int)($_POST['window_id'] ?? 0);
+        $preset = trim($_POST['preset'] ?? 'custom');
+        $disabledLevels = $_POST['disabled_levels'] ?? [];
+
+        $showPoints = 1;
+        $disabledStr = '';
+
+        if ($preset === 'all_enabled') {
+            $showPoints = 1;
+            $disabledStr = '';
+        } else if ($preset === 'all_disabled') {
+            $showPoints = 0;
+            $disabledStr = '';
+        } else if ($preset === 'o_level_disabled') {
+            $showPoints = 1;
+            $disabledStr = 'Senior 1,Senior 2,Senior 3,Senior 4';
+        } else if ($preset === 'a_level_disabled') {
+            $showPoints = 1;
+            $disabledStr = 'Senior 5,Senior 6';
+        } else {
+            $showPoints = 1;
+            if (is_array($disabledLevels)) {
+                $cleanLevels = array_filter(array_map('trim', $disabledLevels));
+                $disabledStr = implode(',', $cleanLevels);
+                if (count($cleanLevels) >= 6) {
+                    $showPoints = 0;
+                    $disabledStr = '';
+                }
+            } else if (is_string($disabledLevels)) {
+                $disabledStr = trim($disabledLevels);
+            }
+        }
+
+        $stmt = thamani_db_prepare($conn, "UPDATE reporting_windows SET show_points = ?, disabled_points_levels = ? WHERE id = ?");
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, "isi", $showPoints, $disabledStr, $id);
+            thamani_db_stmt_execute($stmt);
+            thamani_db_stmt_close($stmt);
+            $_SESSION['admin_flash'] = ['type' => 'success', 'message' => "Points column configuration by class level updated."];
+        }
+        break;
+
     case 'delete_window':
         $id = (int)($_POST['window_id'] ?? 0);
         if ($id > 0) {

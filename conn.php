@@ -377,6 +377,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_published INTEGER DEFAULT 0,
                         show_positions INTEGER DEFAULT 1,
                         show_points INTEGER DEFAULT 1,
+                        disabled_points_levels TEXT DEFAULT '',
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
@@ -474,6 +475,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     ");
                 } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS show_points INT DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
@@ -493,6 +495,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN assessment_type TEXT DEFAULT 'EOT'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN academic_year TEXT DEFAULT '2026'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN show_points INTEGER DEFAULT 1"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash
@@ -861,6 +864,41 @@ if (!function_exists('thamani_db_prepare')) {
             }
         }
         return $streams;
+    }
+
+    if (!function_exists('isPointsEnabledForLevel')) {
+        function isPointsEnabledForLevel($windowRow, $classLevel) {
+            if (!$windowRow) return true;
+            
+            $globalShowPoints = isset($windowRow['show_points']) ? (int)$windowRow['show_points'] : 1;
+            if ($globalShowPoints === 0) {
+                return false;
+            }
+            
+            $disabledStr = isset($windowRow['disabled_points_levels']) ? trim($windowRow['disabled_points_levels']) : '';
+            if ($disabledStr === '') {
+                return true;
+            }
+            
+            $disabledList = array_map('trim', explode(',', $disabledStr));
+            $classLevelTrimmed = trim($classLevel);
+            
+            if (in_array($classLevelTrimmed, $disabledList, true)) {
+                return false;
+            }
+            
+            $isOLevel = in_array($classLevelTrimmed, ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'], true);
+            $isALevel = in_array($classLevelTrimmed, ['Senior 5', 'Senior 6'], true);
+            
+            if ($isOLevel && in_array('O-Level', $disabledList, true)) {
+                return false;
+            }
+            if ($isALevel && in_array('A-Level', $disabledList, true)) {
+                return false;
+            }
+            
+            return true;
+        }
     }
 }
 

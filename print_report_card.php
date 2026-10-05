@@ -51,7 +51,7 @@ if (!$student) {
 // Fetch Window details
 $window = null;
 if ($windowId > 0) {
-    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points FROM reporting_windows WHERE id = ? LIMIT 1");
+    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, disabled_points_levels FROM reporting_windows WHERE id = ? LIMIT 1");
     if ($wStmt) {
         thamani_db_stmt_bind_param($wStmt, "i", $windowId);
         thamani_db_stmt_execute($wStmt);
@@ -62,7 +62,7 @@ if ($windowId > 0) {
 }
 
 if (!$window) {
-    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC LIMIT 1");
+    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, disabled_points_levels FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC LIMIT 1");
     if ($wRes) $window = thamani_db_fetch_assoc($wRes);
 }
 
@@ -78,6 +78,7 @@ $windowId  = (int)$window['id'];
 $class     = $student['class_level'];
 $stream    = $student['stream'];
 $edLevel   = (strpos($class, 'Senior 5') !== false || strpos($class, 'Senior 6') !== false) ? 'A-Level' : 'O-Level';
+$showPoints = isPointsEnabledForLevel($window, $class);
 
 // Formatted Short Class & Stream e.g. S.1/STREAM A
 $shortClass = preg_replace('/Senior\s*/i', 'S.', $class);

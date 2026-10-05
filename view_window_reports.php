@@ -27,7 +27,7 @@ $filterStream = trim($_GET['stream'] ?? 'ALL');
 // 1. Fetch Window details
 $window = null;
 if ($windowId > 0) {
-    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, created_at FROM reporting_windows WHERE id = ? LIMIT 1");
+    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, disabled_points_levels, created_at FROM reporting_windows WHERE id = ? LIMIT 1");
     if ($wStmt) {
         thamani_db_stmt_bind_param($wStmt, "i", $windowId);
         thamani_db_stmt_execute($wStmt);
@@ -38,7 +38,7 @@ if ($windowId > 0) {
 }
 
 if (!$window) {
-    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, created_at FROM reporting_windows ORDER BY id DESC LIMIT 1");
+    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, disabled_points_levels, created_at FROM reporting_windows ORDER BY id DESC LIMIT 1");
     if ($wRes) $window = thamani_db_fetch_assoc($wRes);
 }
 
@@ -316,6 +316,7 @@ $backUrl = $isAdmin ? 'admin_dashboard.php?tab=tab-admin-reporting#tab-admin-rep
                     $classTotalStudents += count($sStudents);
                 }
             }
+            $isClassPointsEnabled = isPointsEnabledForLevel($window, $cName);
         ?>
             <section class="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-gray-200/90 shadow-sm">
                 
@@ -331,6 +332,15 @@ $backUrl = $isAdmin ? 'admin_dashboard.php?tab=tab-admin-reporting#tab-admin-rep
                                 <span class="text-xs font-extrabold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                                     <?= (strpos($cName, 'Senior 5') !== false || strpos($cName, 'Senior 6') !== false) ? 'A-Level Curriculum' : 'O-Level Curriculum (New CBC & UNEB)' ?>
                                 </span>
+                                <?php if ($isClassPointsEnabled): ?>
+                                    <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i> Points Enabled
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                        <i data-lucide="slash" class="w-3.5 h-3.5 text-rose-600"></i> Points Disabled
+                                    </span>
+                                <?php endif; ?>
                             </h2>
                             <p class="text-xs text-gray-500 mt-0.5 font-medium">
                                 Organized by Stream divisions · <?= $classTotalStudents ?> Enrolled Students Total
