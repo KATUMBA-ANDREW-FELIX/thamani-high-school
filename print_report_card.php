@@ -51,7 +51,7 @@ if (!$student) {
 // Fetch Window details
 $window = null;
 if ($windowId > 0) {
-    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions FROM reporting_windows WHERE id = ? LIMIT 1");
+    $wStmt = thamani_db_prepare($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points FROM reporting_windows WHERE id = ? LIMIT 1");
     if ($wStmt) {
         thamani_db_stmt_bind_param($wStmt, "i", $windowId);
         thamani_db_stmt_execute($wStmt);
@@ -62,7 +62,7 @@ if ($windowId > 0) {
 }
 
 if (!$window) {
-    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC LIMIT 1");
+    $wRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC LIMIT 1");
     if ($wRes) $window = thamani_db_fetch_assoc($wRes);
 }
 
@@ -209,10 +209,14 @@ foreach ($marks as $m) {
 
 $avgScore = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 2) : 0;
 
+$showPoints = !isset($window['show_points']) || (int)$window['show_points'] === 1;
+
 // O-Level Aggregates (best 8 subjects) & Division Calculation
 $totalAggregatesText = 'N/A';
 $divisionText = 'N/A';
-if ($edLevel === 'O-Level' && count($allPoints) >= 8) {
+if (!$showPoints) {
+    $totalAggregatesText = 'Disabled';
+} elseif ($edLevel === 'O-Level' && count($allPoints) >= 8) {
     sort($allPoints);
     $best8 = array_slice($allPoints, 0, 8);
     $sumAgg = array_sum($best8);
@@ -527,8 +531,10 @@ if (!empty($window['assessment_type'])) {
                 <tr>
                     <th style="width: 32%; text-align: left; padding-left: 8px;">SUBJECT</th>
                     <th style="width: 13%;">MARKS (%)</th>
-                    <th style="width: 18%;">SCORES<br>(AGGREGATES)</th>
-                    <th style="width: 25%;">SUBJECT TEACHER'S COMMENTS</th>
+                    <?php if ($showPoints): ?>
+                        <th style="width: 18%;">SCORES<br>(AGGREGATES)</th>
+                    <?php endif; ?>
+                    <th style="width: <?= $showPoints ? '25%' : '43%' ?>;">SUBJECT TEACHER'S COMMENTS</th>
                     <th style="width: 12%;">TEACHER INITIALS</th>
                 </tr>
             </thead>
@@ -543,14 +549,16 @@ if (!empty($window['assessment_type'])) {
                         <tr>
                             <td class="text-left" style="padding-left: 8px; font-weight: 800;"><?= strtoupper(htmlspecialchars($m['subject'])) ?></td>
                             <td class="text-center font-mono"><?= number_format($sc, 0) ?></td>
-                            <td class="text-center font-mono" style="font-weight: 900; font-size: 12px;"><?= htmlspecialchars($gi['grade']) ?></td>
+                            <?php if ($showPoints): ?>
+                                <td class="text-center font-mono" style="font-weight: 900; font-size: 12px;"><?= htmlspecialchars($gi['grade']) ?></td>
+                            <?php endif; ?>
                             <td class="text-left" style="font-weight: bold; color: #222; text-transform: capitalize;"><?= htmlspecialchars($m['comments'] ?: strtolower($gi['remark'])) ?></td>
                             <td class="text-center font-mono"><?= htmlspecialchars($tInitials) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" class="text-center" style="padding: 20px; font-weight: normal; color: #666;">
+                        <td colspan="<?= $showPoints ? 5 : 4 ?>" class="text-center" style="padding: 20px; font-weight: normal; color: #666;">
                             No academic marks entered for this student in this term yet.
                         </td>
                     </tr>
@@ -559,7 +567,9 @@ if (!empty($window['assessment_type'])) {
                 <tr style="background-color: #f9f9f9; font-weight: 900;">
                     <td class="text-center" style="font-size: 12px; font-weight: 900;">TOTAL</td>
                     <td class="text-center font-mono" style="font-size: 12px; font-weight: 900;"><?= number_format($totalScore, 0) ?></td>
-                    <td class="text-center" style="font-size: 12px; font-weight: 900;">STATE</td>
+                    <?php if ($showPoints): ?>
+                        <td class="text-center" style="font-size: 12px; font-weight: 900;">STATE</td>
+                    <?php endif; ?>
                     <td colspan="2" class="text-left" style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #1A472A; padding-left: 8px;">
                         <?= $avgScore >= 50 ? 'PASSED / PROMOTED' : 'REQUIRES MORE EFFORT' ?>
                     </td>

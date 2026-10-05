@@ -964,6 +964,9 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                 </h3>
                                 <p class="text-xs text-gray-500 mt-1">Review consolidated stream marks and write report card comments for <?= htmlspecialchars($ctClass) ?> (<?= htmlspecialchars($ctStream) ?>).</p>
                             </div>
+                            <a href="view_window_reports.php?window_id=<?= $selectedWinId ?>" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> View All Class & Stream Reports
+                            </a>
                         </div>
 
                         <!-- Reporting Window Selector -->

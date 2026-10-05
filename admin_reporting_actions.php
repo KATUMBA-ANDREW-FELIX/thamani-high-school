@@ -82,6 +82,19 @@ switch ($action) {
         }
         break;
 
+    case 'toggle_show_points':
+        $id     = (int)($_POST['window_id'] ?? 0);
+        $status = (int)($_POST['status'] ?? 0);
+        $stmt   = thamani_db_prepare($conn, "UPDATE reporting_windows SET show_points = ? WHERE id = ?");
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, "ii", $status, $id);
+            thamani_db_stmt_execute($stmt);
+            thamani_db_stmt_close($stmt);
+            $msg = $status === 1 ? "Points / Aggregates column set to SHOW on report cards." : "Points / Aggregates column DISABLED & HIDDEN from report cards.";
+            $_SESSION['admin_flash'] = ['type' => 'success', 'message' => $msg];
+        }
+        break;
+
     case 'delete_window':
         $id = (int)($_POST['window_id'] ?? 0);
         if ($id > 0) {

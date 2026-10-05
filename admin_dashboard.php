@@ -55,7 +55,7 @@ $rdr = thamani_db_query($conn, "SELECT id, week_title, senior_duty_teacher, assi
 if ($rdr) while ($r = thamani_db_fetch_assoc($rdr)) $allDutyRosters[] = $r;
 
 $allReportingWindows = [];
-$rwRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, created_at FROM reporting_windows ORDER BY id DESC");
+$rwRes = thamani_db_query($conn, "SELECT id, title, academic_year, term, assessment_type, is_open, is_published, show_positions, show_points, created_at FROM reporting_windows ORDER BY id DESC");
 if ($rwRes) while ($r = thamani_db_fetch_assoc($rwRes)) $allReportingWindows[] = $r;
 
 $allSubjectAssignments = [];
@@ -988,7 +988,10 @@ if (!empty($_SESSION['admin_flash'])) {
                         <p class="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">Open or lock marks entry windows for teachers, assign specific subject teachers per class & stream, set custom grading scales, and publish report cards.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2.5 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow-md flex items-center gap-2 transition-transform hover:-translate-y-0.5 active:scale-95">
+                        <a href="view_window_reports.php" class="px-4 py-2.5 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow-md flex items-center gap-2 transition-transform hover:-translate-y-0.5 active:scale-95">
+                            <i data-lucide="folder-open" class="w-4 h-4"></i> View Class & Stream Reports
+                        </a>
+                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2.5 bg-gray-800 text-amber-400 border border-amber-500/30 font-bold rounded-xl text-xs hover:bg-gray-700 flex items-center gap-2 shadow-md">
                             <i data-lucide="calendar-plus" class="w-4 h-4"></i> + Create Reporting Window
                         </button>
                         <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-2.5 bg-gray-800 text-white border border-amber-500/30 hover:bg-gray-700 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md">
@@ -1009,9 +1012,14 @@ if (!empty($_SESSION['admin_flash'])) {
                             </h3>
                             <p class="text-xs text-gray-500 mt-1">Control whether teachers can enter or edit marks for specific exams & terms.</p>
                         </div>
-                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
-                            <i data-lucide="plus" class="w-4 h-4"></i> New Window
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <a href="view_window_reports.php" class="px-4 py-2 bg-amber-500 text-gray-950 font-black rounded-xl text-xs hover:bg-amber-400 flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> View All Window Reports
+                            </a>
+                            <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                                <i data-lucide="plus" class="w-4 h-4"></i> New Window
+                            </button>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -1031,7 +1039,12 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <?php if (!empty($allReportingWindows)): ?>
                                     <?php foreach ($allReportingWindows as $rw): ?>
                                         <tr class="hover:bg-gray-50 transition-colors">
-                                            <td class="p-3.5 font-bold text-gray-900 text-sm"><?= htmlspecialchars($rw['title']) ?></td>
+                                            <td class="p-3.5 font-bold text-gray-900 text-sm">
+                                                <a href="view_window_reports.php?window_id=<?= (int)$rw['id'] ?>" class="text-gray-900 hover:text-amber-600 transition-colors flex items-center gap-1.5 font-black group">
+                                                    <i data-lucide="folder-open" class="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform"></i>
+                                                    <span><?= htmlspecialchars($rw['title']) ?></span>
+                                                </a>
+                                            </td>
                                             <td class="p-3.5 text-gray-700 font-semibold"><?= htmlspecialchars($rw['term']) ?> · <?= htmlspecialchars($rw['academic_year']) ?></td>
                                             <td class="p-3.5">
                                                 <span class="px-2.5 py-1 rounded-lg bg-gray-200 font-bold text-gray-800 uppercase text-[10px]">
@@ -1062,19 +1075,29 @@ if (!empty($_SESSION['admin_flash'])) {
                                             </td>
                                             <td class="p-3.5">
                                                 <?php if (!empty($rw['show_positions'])): ?>
-                                                    <span class="text-xs font-bold text-amber-700">📊 Positions Visible</span>
+                                                    <span class="block text-xs font-bold text-amber-700">📊 Ranks Visible</span>
                                                 <?php else: ?>
-                                                    <span class="text-xs font-bold text-gray-400">Positions Hidden</span>
+                                                    <span class="block text-xs font-bold text-gray-400">Ranks Hidden</span>
+                                                <?php endif; ?>
+                                                <?php if (isset($rw['show_points']) && empty($rw['show_points'])): ?>
+                                                    <span class="block text-[10px] font-black text-red-600 uppercase">🚫 Points Column Disabled</span>
+                                                <?php else: ?>
+                                                    <span class="block text-[10px] font-bold text-green-700 uppercase">✓ Points Shown</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
+                                                <!-- View Reports -->
+                                                <a href="view_window_reports.php?window_id=<?= (int)$rw['id'] ?>" class="px-3 py-1.5 bg-amber-500 text-gray-950 font-black rounded-lg text-xs hover:bg-amber-400 shadow-sm inline-flex items-center gap-1 transition-all">
+                                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Reports
+                                                </a>
+
                                                 <!-- Toggle Open/Close -->
                                                 <form action="admin_reporting_actions.php" method="post" class="inline">
                                                     <input type="hidden" name="action" value="toggle_window_open">
                                                     <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
                                                     <input type="hidden" name="status" value="<?= !empty($rw['is_open']) ? 0 : 1 ?>">
                                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_open']) ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' ?>">
-                                                        <?= !empty($rw['is_open']) ? '🔒 Close Window' : '🟢 Open Window' ?>
+                                                        <?= !empty($rw['is_open']) ? '🔒 Close' : '🟢 Open' ?>
                                                     </button>
                                                 </form>
 
@@ -1084,7 +1107,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
                                                     <input type="hidden" name="status" value="<?= !empty($rw['is_published']) ? 0 : 1 ?>">
                                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_published']) ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' ?>">
-                                                        <?= !empty($rw['is_published']) ? 'Unpublish' : '📢 Publish Results' ?>
+                                                        <?= !empty($rw['is_published']) ? 'Unpublish' : '📢 Publish' ?>
                                                     </button>
                                                 </form>
 
@@ -1095,6 +1118,16 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <input type="hidden" name="status" value="<?= !empty($rw['show_positions']) ? 0 : 1 ?>">
                                                     <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
                                                         <?= !empty($rw['show_positions']) ? 'Hide Ranks' : 'Show Ranks' ?>
+                                                    </button>
+                                                </form>
+
+                                                <!-- Toggle Points Column -->
+                                                <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                    <input type="hidden" name="action" value="toggle_show_points">
+                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                    <input type="hidden" name="status" value="<?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 1 : 0 ?>">
+                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border <?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-gray-200 text-gray-700 border-gray-300 hover:bg-gray-300' ?>">
+                                                        <?= (isset($rw['show_points']) && $rw['show_points'] == 0) ? 'Enable Points' : 'Disable Points' ?>
                                                     </button>
                                                 </form>
 

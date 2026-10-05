@@ -376,6 +376,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_open INTEGER DEFAULT 1,
                         is_published INTEGER DEFAULT 0,
                         show_positions INTEGER DEFAULT 1,
+                        show_points INTEGER DEFAULT 1,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
@@ -472,6 +473,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         );
                     ");
                 } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS show_points INT DEFAULT 1"); } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
@@ -490,6 +492,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN window_id INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN assessment_type TEXT DEFAULT 'EOT'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN academic_year TEXT DEFAULT '2026'"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN show_points INTEGER DEFAULT 1"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash
