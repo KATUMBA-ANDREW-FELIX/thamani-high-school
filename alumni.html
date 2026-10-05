@@ -291,9 +291,18 @@
                 <a href="alumni.php" id="navlink-alumni" class="active" aria-current="page">Achievements &amp; Alumni</a>
                 <a href="map.php" id="navlink-map">Campus Map</a>
             </div>
-            <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileMenu();">
-                <i data-lucide="menu"></i>
-            </button>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <?php if (!empty($viewerName)): ?>
+                    <span style="font-size:12px; color:var(--body); display:none;" class="hide-sm">Signed in as <strong style="color:var(--green-700);"><?= htmlspecialchars($viewerName) ?></strong></span>
+                    <a href="<?= $backLink ?>" class="btn btn--gold" style="padding:8px 14px; font-size:12.5px;"><i data-lucide="layout-dashboard"></i> Back to Dashboard</a>
+                    <a href="<?= $logoutLink ?>" class="btn btn--dark" style="padding:8px 14px; font-size:12.5px; width:auto; background:var(--green-900);"><i data-lucide="log-out"></i> Logout</a>
+                <?php else: ?>
+                    <a href="login.php" class="btn btn--gold" style="padding:8px 14px; font-size:12.5px;"><i data-lucide="log-in"></i> Portal Login</a>
+                <?php endif; ?>
+                <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileMenu();">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
         </div>
         <div class="mobile-menu" id="mobile-menu">
             <a href="home.php">Home</a>
@@ -303,6 +312,12 @@
             <a href="calendar.php">Calendar &amp; Fees</a>
             <a href="alumni.php" class="active">Achievements &amp; Alumni</a>
             <a href="map.php">Campus Map</a>
+            <?php if (!empty($viewerName)): ?>
+                <a href="<?= $backLink ?>" style="color:var(--green-700); font-weight:600;">Back to Dashboard (<?= htmlspecialchars($viewerName) ?>)</a>
+                <a href="<?= $logoutLink ?>" style="color:#800000; font-weight:600;">Logout</a>
+            <?php else: ?>
+                <a href="login.php" style="color:var(--green-700); font-weight:600;">Portal Login</a>
+            <?php endif; ?>
         </div>
     </nav>
 

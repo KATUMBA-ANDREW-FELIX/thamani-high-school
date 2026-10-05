@@ -14,6 +14,28 @@ session_start();
 /** @var mysqli $conn */
 require_once __DIR__ . '/conn.php';
 
+$isAdmin   = !empty($_SESSION['admin_id']);
+$isTeacher = !empty($_SESSION['teacher_id']);
+$isStudent = !empty($_SESSION['student_id']);
+
+if ($isAdmin) {
+    $backLink   = 'admin_dashboard.php';
+    $logoutLink = 'admin_logout.php';
+    $viewerName = $_SESSION['admin_name'] ?? 'Admin';
+} elseif ($isTeacher) {
+    $backLink   = 'teacher_dashboard.php';
+    $logoutLink = 'teacher_logout.php';
+    $viewerName = $_SESSION['teacher_name'] ?? 'Teacher';
+} elseif ($isStudent) {
+    $backLink   = 'student-dashboard.php';
+    $logoutLink = 'student_logout.php';
+    $viewerName = $_SESSION['student_name'] ?? 'Student';
+} else {
+    $backLink   = 'home.php';
+    $logoutLink = null;
+    $viewerName = null;
+}
+
 $errors  = [];
 $success = false;
 

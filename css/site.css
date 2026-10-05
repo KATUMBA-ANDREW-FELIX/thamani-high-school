@@ -1,0 +1,73 @@
+/* Thamani High School — shared public-site chrome (header/footer).
+   Uses its own class names so it works regardless of which Tailwind
+   utilities survived the purge in css/tailwind.min.css. */
+
+.site-topbar { background: #800000; background: var(--site-maroon, #800000); color: #fff; font-size: 12px; font-weight: 500; }
+.site-topbar-inner { max-width: 80rem; margin: 0 auto; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.site-topbar-pill { background: #D4AF37; color: #1A472A; padding: 2px 10px; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 10px; white-space: nowrap; }
+.site-topbar-contact { display: none; }
+@media (min-width: 640px) { .site-topbar-contact { display: inline; } }
+
+.site-nav { position: sticky; top: 0; z-index: 50; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); }
+.site-nav-inner { max-width: 80rem; margin: 0 auto; padding: 0 16px; height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+@media (min-width: 640px) { .site-nav-inner, .site-topbar-inner, .site-footer-inner { padding-left: 24px; padding-right: 24px; } }
+@media (min-width: 1024px) { .site-nav-inner, .site-topbar-inner, .site-footer-inner { padding-left: 32px; padding-right: 32px; } }
+
+.site-brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; text-decoration: none; }
+.site-brand img { height: 48px; width: auto; }
+.site-brand-name { display: block; font-size: 24px; line-height: 1.2; font-weight: 700; letter-spacing: -.025em; color: #1A472A; }
+.site-brand-sub { display: block; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #800000; }
+@media (max-width: 420px) { .site-brand-name { font-size: 19px; } .site-brand img { height: 40px; } }
+
+.site-links { display: none; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; }
+.site-link { padding: 8px 12px; border-radius: 6px; color: #374151; text-decoration: none; white-space: nowrap; transition: color .15s, background-color .15s; }
+.site-link:hover { color: #1A472A; }
+.site-link.is-active { background: #1A472A; color: #fff; font-weight: 700; }
+
+.site-actions { display: none; align-items: center; gap: 8px; }
+.site-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,.12); transition: background-color .15s; white-space: nowrap; }
+.site-btn svg { width: 16px; height: 16px; }
+.site-btn--green { background: #1A472A; }
+.site-btn--green:hover { background: #0f2d1a; }
+.site-btn--green svg { color: #D4AF37; }
+.site-btn--maroon { background: #800000; }
+.site-btn--maroon:hover { background: #7f1d1d; }
+
+.site-toggle { display: inline-flex; align-items: center; justify-content: center; padding: 8px; border-radius: 6px; color: #374151; background: none; border: 0; cursor: pointer; }
+.site-toggle:hover { color: #1A472A; background: #f3f4f6; }
+.site-toggle svg { width: 24px; height: 24px; }
+
+.site-mobile { border-top: 1px solid #e5e7eb; background: #fff; padding: 8px 16px 16px; }
+.site-mobile[hidden] { display: none; }
+.site-mobile a.site-mobile-link { display: block; padding: 8px 12px; margin-top: 4px; border-radius: 6px; font-size: 16px; font-weight: 500; color: #1f2937; text-decoration: none; }
+.site-mobile a.site-mobile-link:hover { background: #E8F5E9; }
+.site-mobile a.site-mobile-link.is-active { background: #1A472A; color: #fff; }
+.site-mobile-actions { margin-top: 8px; padding-top: 10px; border-top: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 8px; }
+.site-mobile-actions .site-btn { justify-content: center; padding: 10px; font-size: 14px; }
+.site-mobile-who { font-size: 12px; color: #4b5563; padding: 0 4px; }
+
+@media (min-width: 768px) { .site-actions { display: flex; } }
+@media (min-width: 1280px) {
+    .site-links { display: flex; }
+    .site-toggle { display: none; }
+    .site-mobile { display: none !important; }
+}
+
+/* Footer */
+.site-footer { background: #1A472A; color: #fff; padding: 64px 0 40px; margin-top: auto; border-top: 4px solid #D4AF37; }
+.site-footer-inner { max-width: 80rem; margin: 0 auto; padding: 0 16px; }
+.site-footer-grid { display: grid; grid-template-columns: 1fr; gap: 40px; margin-bottom: 48px; }
+@media (min-width: 768px) { .site-footer-grid { grid-template-columns: repeat(3, 1fr); } }
+.site-footer h3 { font-size: 24px; font-weight: 700; margin: 0 0 16px; color: #fff; display: flex; align-items: center; gap: 8px; line-height: 1.3; }
+.site-footer h3 img { height: 40px; width: auto; }
+.site-footer p { color: #d1d5db; font-size: 14px; line-height: 1.625; margin: 0 0 24px; }
+.site-footer ul { list-style: none; margin: 0; padding: 0; color: #d1d5db; font-size: 14px; }
+.site-footer li { margin-bottom: 12px; }
+.site-footer li.site-footer-contact { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.site-footer li svg { width: 20px; height: 20px; color: #D4AF37; flex-shrink: 0; }
+.site-footer a { color: inherit; text-decoration: none; transition: color .15s; }
+.site-footer a:hover { color: #D4AF37; }
+.site-social { display: flex; gap: 20px; color: #D4AF37; }
+.site-social svg { width: 24px; height: 24px; fill: currentColor; cursor: pointer; transition: color .15s; }
+.site-social svg:hover { color: #fff; }
+.site-footer-bottom { padding-top: 32px; border-top: 1px solid #0f2d1a; color: #9ca3af; font-size: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
