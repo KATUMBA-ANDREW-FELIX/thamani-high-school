@@ -30,6 +30,29 @@ $allStudents = [];
 $rs = thamani_db_query($conn, "SELECT id, full_name, date_of_birth, gender, nationality, lin_number, previous_school, class_level, stream, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_address, guardian_occupation, emergency_name, emergency_phone, medical_notes, academic_doc_path, recommendation_doc_path, medical_doc_path, status, registered_at FROM students ORDER BY registered_at DESC");
 if ($rs) while ($r = thamani_db_fetch_assoc($rs)) $allStudents[] = $r;
 
+$feesClasses = [
+    'Senior 1' => 'Senior One',
+    'Senior 2' => 'Senior Two',
+    'Senior 3' => 'Senior Three',
+    'Senior 4' => 'Senior Four',
+    'Senior 5' => 'Senior Five',
+    'Senior 6' => 'Senior Six',
+];
+$requestedFeesClass = $_GET['fees_class'] ?? 'Senior 1';
+$feesSelectedClass = is_string($requestedFeesClass) && isset($feesClasses[$requestedFeesClass])
+    ? $requestedFeesClass
+    : 'Senior 1';
+$feesStudents = [];
+$feesStudentsQuery = thamani_db_query(
+    $conn,
+    "SELECT id, full_name, class_level, stream, lin_number, status FROM students WHERE class_level = '{$feesSelectedClass}' ORDER BY full_name ASC"
+);
+if ($feesStudentsQuery) {
+    while ($r = thamani_db_fetch_assoc($feesStudentsQuery)) $feesStudents[] = $r;
+} else {
+    error_log('Fees section student query failed: ' . thamani_db_error($conn));
+}
+
 $allAlumni = [];
 $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email FROM alumni ORDER BY id DESC");
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
@@ -74,6 +97,7 @@ $allowedAdminTabs = [
     'tab-admin-overview',
     'tab-admin-teachers',
     'tab-admin-enrollment',
+    'tab-admin-fees',
     'tab-admin-alumni',
     'tab-admin-calendar',
     'tab-admin-gallery',
@@ -330,6 +354,9 @@ if (!empty($_SESSION['admin_flash'])) {
                 </button>
                 <button onclick="switchAdminTab('tab-admin-enrollment');" id="btn-tab-admin-enrollment" class="tab-btn <?= $activeAdminTab === 'tab-admin-enrollment' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> Enrollments (<?= $totalStudents ?>)
+                </button>
+                <button onclick="switchAdminTab('tab-admin-fees');" id="btn-tab-admin-fees" class="tab-btn <?= $activeAdminTab === 'tab-admin-fees' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="wallet-cards" class="w-4 h-4"></i> Fees
                 </button>
                 <button onclick="switchAdminTab('tab-admin-alumni');" id="btn-tab-admin-alumni" class="tab-btn <?= $activeAdminTab === 'tab-admin-alumni' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="graduation-cap" class="w-4 h-4"></i> Alumni (<?= $totalAlumni ?>)
@@ -632,6 +659,167 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SCHOOL FEES -->
+            <div id="tab-admin-fees" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-fees' ? '' : 'hidden' ?> space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="wallet-cards" class="w-6 h-6 text-amber-600"></i> School Fees
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Set a class fee amount and review individual students by class.</p>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> UI preview — changes are not saved yet
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+                        <div class="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                    <i data-lucide="settings-2" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-extrabold text-gray-900">Set class fee amount</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Choose the class and enter the standard fee amount in UGX.</p>
+                                </div>
+                            </div>
+                            <form onsubmit="showFeesUiNotice(event);" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                                <label class="block">
+                                    <span class="block text-xs font-bold text-gray-600 mb-1.5">Class</span>
+                                    <select name="fees_class" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                        <?php foreach ($feesClasses as $classValue => $classLabel): ?>
+                                            <option value="<?= htmlspecialchars($classValue) ?>" <?= $feesSelectedClass === $classValue ? 'selected' : '' ?>><?= htmlspecialchars($classLabel) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <label class="block">
+                                    <span class="block text-xs font-bold text-gray-600 mb-1.5">School fee (UGX)</span>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">UGX</span>
+                                        <input type="number" min="0" step="1000" placeholder="e.g. 850000" class="w-full pl-12 pr-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                </label>
+                                <button type="submit" class="inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-gray-900 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 shadow-sm transition-colors">
+                                    <i data-lucide="save" class="w-4 h-4"></i> Save class fee
+                                </button>
+                            </form>
+                        </div>
+                        <div class="rounded-2xl bg-gray-950 text-white p-5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Selected class</span>
+                                    <i data-lucide="graduation-cap" class="w-5 h-5 text-amber-400"></i>
+                                </div>
+                                <div class="text-2xl font-black mt-3"><?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?></div>
+                            </div>
+                            <div class="mt-5 pt-4 border-t border-gray-800">
+                                <span class="text-xs text-gray-400">Students listed</span>
+                                <div class="text-2xl font-black text-amber-400 mt-1"><?= count($feesStudents) ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fees-ui-notice" class="hidden mb-5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm font-semibold" role="status">
+                        The fees interface is ready. Saving fee amounts will be connected in the next step.
+                    </div>
+
+                    <form method="get" action="admin_dashboard.php" class="flex flex-wrap items-end justify-between gap-4 mb-4">
+                        <input type="hidden" name="tab" value="tab-admin-fees">
+                        <div>
+                            <label for="fees-class-filter" class="block text-xs font-bold text-gray-600 mb-1.5">View students in</label>
+                            <select id="fees-class-filter" name="fees_class" class="min-w-52 px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                <?php foreach ($feesClasses as $classValue => $classLabel): ?>
+                                    <option value="<?= htmlspecialchars($classValue) ?>" <?= $feesSelectedClass === $classValue ? 'selected' : '' ?>><?= htmlspecialchars($classLabel) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="ml-2 px-4 py-2.5 bg-amber-500 text-gray-950 font-extrabold rounded-xl text-xs hover:bg-amber-400 shadow-sm transition-colors">Show class</button>
+                        </div>
+                        <p class="text-xs text-gray-500">Showing students whose class is <?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?>.</p>
+                    </form>
+
+                    <div class="overflow-x-auto rounded-xl border border-gray-200">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                                    <th class="p-3.5">#</th>
+                                    <th class="p-3.5">Student</th>
+                                    <th class="p-3.5">Class & Stream</th>
+                                    <th class="p-3.5">LIN / UNEB Index</th>
+                                    <th class="p-3.5">School fee</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <?php if (!$feesStudentsQuery): ?>
+                                    <tr><td colspan="7" class="p-10 text-center text-red-700 text-sm font-semibold">Student records could not be loaded. Please try again later.</td></tr>
+                                <?php elseif (empty($feesStudents)): ?>
+                                    <tr><td colspan="7" class="p-10 text-center text-gray-500 text-sm">No students found in <?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?>.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($feesStudents as $index => $student): ?>
+                                        <?php
+                                            $studentStatus = $student['status'] ?: 'Pending';
+                                            $studentStatusClass = $studentStatus === 'Enrolled' ? 'bg-green-100 text-green-800' : ($studentStatus === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800');
+                                        ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="p-3.5 font-mono text-xs text-gray-400"><?= $index + 1 ?></td>
+                                            <td class="p-3.5">
+                                                <div class="font-bold text-gray-900"><?= htmlspecialchars($student['full_name']) ?></div>
+                                                <div class="text-xs text-gray-500">Student #<?= (int)$student['id'] ?></div>
+                                            </td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded bg-gray-100 text-gray-800 font-bold text-xs">
+                                                    <?= htmlspecialchars($student['class_level']) ?> · <?= htmlspecialchars($student['stream'] ?? '') ?>
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5 font-mono text-xs text-amber-700 font-bold"><?= htmlspecialchars($student['lin_number'] ?? '') ?></td>
+                                            <td class="p-3.5 text-sm font-bold text-gray-500">Not set</td>
+                                            <td class="p-3.5">
+                                                <span class="text-xs font-bold px-2.5 py-1 rounded-full uppercase <?= $studentStatusClass ?>"><?= htmlspecialchars($studentStatus) ?></span>
+                                            </td>
+                                            <td class="p-3.5 text-right">
+                                                <button type="button" onclick='openStudentFeeModal(<?= (int)$student['id'] ?>, <?= json_encode($student['full_name'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) ?>);' class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm whitespace-nowrap">
+                                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Update fees
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="modal-student-fees" class="hidden fixed inset-0 z-[100] bg-gray-950/60 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="student-fees-modal-title">
+                    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
+                        <div class="flex items-start justify-between gap-4 p-5 border-b border-gray-100">
+                            <div>
+                                <h3 id="student-fees-modal-title" class="text-lg font-black text-gray-900">Update student fees</h3>
+                                <p id="student-fees-modal-name" class="text-sm text-gray-500 mt-1"></p>
+                            </div>
+                            <button type="button" onclick="closeModal('modal-student-fees');" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Close">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <form onsubmit="showFeesUiNotice(event); closeModal('modal-student-fees');" class="p-5">
+                            <input type="hidden" id="student-fees-modal-id">
+                            <label class="block">
+                                <span class="block text-xs font-bold text-gray-600 mb-1.5">School fee amount (UGX)</span>
+                                <input type="number" min="0" step="1000" placeholder="Enter student fee amount" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </label>
+                            <div class="flex justify-end gap-2 mt-5">
+                                <button type="button" onclick="closeModal('modal-student-fees');" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-gray-950 bg-amber-500 hover:bg-amber-400">
+                                    <i data-lucide="save" class="w-4 h-4"></i> Save student fee
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -2093,6 +2281,17 @@ if (!empty($_SESSION['admin_flash'])) {
         function openModal(id)  { document.getElementById(id)?.classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
+        function showFeesUiNotice(event) {
+            event.preventDefault();
+            document.getElementById('fees-ui-notice')?.classList.remove('hidden');
+        }
+
+        function openStudentFeeModal(studentId, studentName) {
+            document.getElementById('student-fees-modal-id').value = studentId;
+            document.getElementById('student-fees-modal-name').textContent = studentName;
+            openModal('modal-student-fees');
+        }
+
         function editCustomStream(strm) {
             if (!strm) return;
             document.getElementById('edit-stream-id').value = strm.id || '';
@@ -2148,6 +2347,7 @@ if (!empty($_SESSION['admin_flash'])) {
                 'tab-admin-overview',
                 'tab-admin-teachers',
                 'tab-admin-enrollment',
+                'tab-admin-fees',
                 'tab-admin-alumni',
                 'tab-admin-calendar',
                 'tab-admin-gallery',
