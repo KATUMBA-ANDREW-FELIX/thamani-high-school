@@ -273,7 +273,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
 
                 <div class="hidden md:flex items-center space-x-3">
                     <span class="text-sm text-gray-600 hidden lg:inline">
-                        Signed in as <strong class="text-brand-green"><?= htmlspecialchars($teacher['name']) ?></strong>
+                        Signed in as <strong class="text-brand-green"><?= htmlspecialchars($teacher['name'] ?? '') ?></strong>
                     </span>
                     <a href="home.php"
                        class="px-4 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5 shadow-sm">
@@ -314,13 +314,13 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
 
             <!-- Welcome Strip -->
             <div class="mb-6 text-sm text-gray-600">
-                <?= $greeting ?>, <strong class="text-brand-green"><?= htmlspecialchars($teacher['name']) ?></strong>
-                · Staff ID: <strong class="text-brand-green"><?= htmlspecialchars($teacher['staff_id']) ?></strong>
+                <?= $greeting ?>, <strong class="text-brand-green"><?= htmlspecialchars($teacher['name'] ?? '') ?></strong>
+                · Staff ID: <strong class="text-brand-green"><?= htmlspecialchars($teacher['staff_id'] ?? '') ?></strong>
                 <?php if (!empty($teacher['department'])): ?>
-                    · Department: <strong class="text-brand-green"><?= htmlspecialchars($teacher['department']) ?></strong>
+                    · Department: <strong class="text-brand-green"><?= htmlspecialchars($teacher['department'] ?? '') ?></strong>
                 <?php endif; ?>
                 <?php if (!empty($teacher['classes_taught'])): ?>
-                    · Classes Taught: <strong class="text-brand-green"><?= htmlspecialchars($teacher['classes_taught']) ?></strong>
+                    · Classes Taught: <strong class="text-brand-green"><?= htmlspecialchars($teacher['classes_taught'] ?? '') ?></strong>
                 <?php endif; ?>
                 · Last login: <?= date('d M Y, g:ia', $_SESSION['teacher_logged_in_at']) ?>
             </div>

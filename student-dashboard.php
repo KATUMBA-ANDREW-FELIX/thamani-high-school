@@ -201,7 +201,7 @@ function formatSize($bytes) {
                 </a>
                 <div class="hidden md:flex items-center space-x-3">
                     <span class="text-sm text-gray-600 hidden lg:inline">
-                        Signed in as <strong class="text-brand-green"><?= htmlspecialchars($student['name']) ?></strong>
+                        Signed in as <strong class="text-brand-green"><?= htmlspecialchars($student['name'] ?? '') ?></strong>
                     </span>
                     <a href="home.php"
                        class="px-4 py-2 rounded-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-brand-green hover:text-white transition-colors flex items-center gap-1.5 shadow-sm">
@@ -225,9 +225,9 @@ function formatSize($bytes) {
         <!-- Welcome Banner -->
         <div class="bg-brand-green text-white p-8 rounded-2xl shadow-lg mb-8">
             <span class="bg-brand-gold text-brand-green px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Student Dashboard</span>
-            <h1 class="text-3xl font-bold mt-3"><?= $greeting ?>, <?= htmlspecialchars($student['name']) ?></h1>
+            <h1 class="text-3xl font-bold mt-3"><?= $greeting ?>, <?= htmlspecialchars($student['name'] ?? '') ?></h1>
             <p class="text-sm text-gray-200 mt-2">
-                Class: <strong><?= htmlspecialchars($student['class']) ?> <?= htmlspecialchars($student['stream']) ?></strong>
+                Class: <strong><?= htmlspecialchars($student['class'] ?? '') ?> <?= htmlspecialchars($student['stream'] ?? '') ?></strong>
                 · Last login: <?= date('d M Y, g:ia', $_SESSION['student_logged_in_at']) ?>
             </p>
         </div>
@@ -637,7 +637,7 @@ function formatSize($bytes) {
 
     <footer class="bg-brand-green text-white pt-10 pb-8 mt-auto border-t-4 border-brand-gold">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-300 text-sm">
-            © 2026 Thamani Academy. All rights reserved. — Signed in as <?= htmlspecialchars($student['name']) ?>
+            © 2026 Thamani Academy. All rights reserved. — Signed in as <?= htmlspecialchars($student['name'] ?? '') ?>
         </div>
     </footer>
 
