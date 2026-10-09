@@ -311,12 +311,12 @@ if (!empty($_SESSION['admin_flash'])) {
             <div class="flex flex-wrap justify-between items-center mb-10 gap-6 bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 text-white p-8 md:p-10 rounded-3xl shadow-xl border-b-4 border-brand-gold">
                 <div class="max-w-2xl">
                     <span class="bg-brand-gold text-gray-950 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block mb-2 shadow-sm">Admin Control Panel</span>
-                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white"><?= $greeting ?>, <?= htmlspecialchars($admin['name']) ?></h1>
+                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white"><?= $greeting ?>, <?= htmlspecialchars((string)($admin['name'] ?? 'System Administrator')) ?></h1>
                     <p class="text-sm text-gray-300 mt-2 leading-relaxed">Manage school operations seamlessly: student enrollments, teacher directory, alumni network, digital library, and academic schedules.</p>
                     <div class="flex items-center gap-4 text-xs text-gray-400 mt-4 pt-3 border-t border-gray-800">
-                        <span>Admin ID: <strong class="text-amber-400 font-mono"><?= htmlspecialchars($admin['admin_id']) ?></strong></span>
+                        <span>Admin ID: <strong class="text-amber-400 font-mono"><?= htmlspecialchars((string)($admin['admin_id'] ?? 'ADM-2026-001')) ?></strong></span>
                         <span>·</span>
-                        <span>Last login: <strong class="text-gray-200"><?= date('d M Y, g:ia', $_SESSION['admin_logged_in_at']) ?></strong></span>
+                        <span>Last login: <strong class="text-gray-200"><?= !empty($_SESSION['admin_logged_in_at']) ? date('d M Y, g:ia', (int)$_SESSION['admin_logged_in_at']) : date('d M Y') ?></strong></span>
                     </div>
                 </div>
                 <div class="flex gap-3 flex-wrap items-center">

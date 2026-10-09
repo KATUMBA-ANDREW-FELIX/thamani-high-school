@@ -23,9 +23,9 @@ function require_admin_password_changed(): void {
 
 function current_admin(): array {
     return [
-        'id'       => $_SESSION['admin_id']        ?? null,
-        'admin_id' => $_SESSION['admin_admin_id']  ?? null,
-        'name'     => $_SESSION['admin_name']      ?? null,
-        'email'    => $_SESSION['admin_email']     ?? null,
+        'id'       => (string)($_SESSION['admin_id'] ?? ''),
+        'admin_id' => (string)($_SESSION['admin_code'] ?? $_SESSION['admin_admin_id'] ?? 'ADM-2026-001'),
+        'name'     => (string)($_SESSION['admin_name'] ?? 'System Administrator'),
+        'email'    => (string)($_SESSION['admin_email'] ?? 'admin@thamani.ac.ug'),
     ];
 }
