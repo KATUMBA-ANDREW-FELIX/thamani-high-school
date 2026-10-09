@@ -28,12 +28,12 @@
     <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center">
-                    <a href="home.php" class="-ml-3 flex-shrink-0 flex items-center gap-3 group">
-                        <img class="h-12 w-auto transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
-                        <div class="flex flex-col">
-                            <span class="text-2xl font-black tracking-tight text-gray-900">Thamani High School</span>
-                            <span class="text-[11px] font-bold text-brand-gold tracking-widest uppercase flex items-center gap-1">
+                <div class="flex items-center min-w-0 flex-1 mr-2">
+                    <a href="home.php" class="-ml-3 flex-shrink-0 flex items-center gap-2 sm:gap-3 min-w-0 group">
+                        <img class="h-9 sm:h-12 w-auto shrink-0 transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-gray-900 truncate leading-tight">Thamani High School</span>
+                            <span class="text-[9px] sm:text-[11px] font-bold text-brand-gold tracking-widest uppercase flex items-center gap-1 truncate">
                                 Kakiri Main Campus
                             </span>
                         </div>

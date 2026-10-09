@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---------- 2. Allowed values (server-side whitelist) ----------
     $allowedClasses = ['Senior 1','Senior 2','Senior 3','Senior 4','Senior 5','Senior 6'];
-    $allowedStreams = ['North','South','East','West'];
+    $allowedStreams = get_system_streams($conn);
     $allowedGenders = ['Male','Female'];
     $allowedRels    = ['Father','Mother','Uncle','Aunt','Sibling','Guardian','Other'];
 
@@ -304,6 +304,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
 
                 if (thamani_db_stmt_execute($stmt)) {
+                    $newStudentId = thamani_db_insert_id($conn);
+                    if ($newStudentId) {
+                        $generatedPayCode = generate_student_pay_code($conn, $newStudentId, $class_level, $stream, date('Y-m-d'));
+                        $escPc = thamani_db_real_escape_string($conn, $generatedPayCode);
+                        thamani_db_query($conn, "UPDATE students SET pay_code = '{$escPc}' WHERE id = {$newStudentId}");
+                        
+                        $defClassFee = (str_contains($class_level, 'Senior 5') || str_contains($class_level, 'Senior 6')) ? 950000.0 : 850000.0;
+                        if (function_exists('thamani_get_class_fee')) {
+                            $defClassFee = thamani_get_class_fee($conn, $class_level);
+                        }
+                        
+                        $insFee = thamani_db_prepare($conn, "INSERT INTO student_fees (student_id, class_level, term, total_fee, paid_amount, balance, status, pay_code) VALUES (?, ?, 'Term III 2026', ?, 0, ?, 'UNPAID', ?)");
+                        if ($insFee) {
+                            thamani_db_stmt_bind_param($insFee, "isdds", $newStudentId, $class_level, $defClassFee, $defClassFee, $generatedPayCode);
+                            thamani_db_stmt_execute($insFee);
+                            thamani_db_stmt_close($insFee);
+                        }
+                    }
                     $success = true;
                     $_POST   = []; // clear form so it renders empty after success
                 } else {

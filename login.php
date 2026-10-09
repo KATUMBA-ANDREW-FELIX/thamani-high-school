@@ -204,23 +204,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 
     <!-- Top Announcement Bar -->
-    <div class="bg-brand-maroon text-white text-xs py-2 px-4 text-center font-medium">
-        <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span>📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
-            <span class="bg-brand-gold text-brand-green px-2.5 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Unified Portal Login</span>
+    <div class="bg-brand-maroon text-white text-xs py-2 px-3 sm:px-4 text-center font-medium">
+        <div class="max-w-7xl mx-auto w-full flex justify-between items-center gap-2">
+            <span class="truncate max-w-[210px] sm:max-w-none text-[11px] sm:text-xs">📍 Kakiri Main Campus, Wakiso</span>
+            <span class="hidden md:inline text-xs">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
+            <span class="bg-brand-gold text-brand-green px-2 py-0.5 rounded font-extrabold uppercase tracking-wider text-[10px] shrink-0 whitespace-nowrap">Unified Portal Login</span>
         </div>
     </div>
 
     <!-- Main Navigation Bar -->
     <nav class="sticky top-0 z-50 bg-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20 items-center">
-                <a href="home.php" class="flex items-center gap-3">
-                    <img class="h-12 w-auto" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
-                    <div class="flex flex-col">
-                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
-                        <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase">Unified Portal Login</span>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 sm:h-20 items-center">
+                <a href="home.php" class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+                    <img class="h-9 sm:h-12 w-auto shrink-0" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-base sm:text-xl lg:text-2xl font-bold tracking-tight text-brand-green truncate leading-tight">Thamani High School</span>
+                        <span class="text-[9px] sm:text-[10px] font-semibold text-brand-maroon tracking-widest uppercase truncate">Unified Portal Login</span>
                     </div>
                 </a>
                 <div>

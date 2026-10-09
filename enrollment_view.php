@@ -193,13 +193,15 @@ $backLink = $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php';
     <nav class="sticky top-0 z-50 bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
-                <a href="<?= $backLink ?>" class="flex items-center gap-3">
-                    <img class="h-12 w-auto" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
-                    <div class="flex flex-col">
-                        <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
-                        <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
-                    </div>
-                </a>
+                <div class="flex items-center min-w-0 flex-1 mr-2">
+                    <a href="<?= $backLink ?>" class="flex-shrink-0 flex items-center gap-2 sm:gap-3 min-w-0">
+                        <img class="h-9 sm:h-12 w-auto shrink-0 transition-transform hover:scale-105" src="thamani-logo.png" alt="Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-brand-green truncate leading-tight">Thamani High School</span>
+                            <span class="text-[9px] sm:text-[10px] font-semibold text-brand-maroon tracking-widest uppercase truncate"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
+                        </div>
+                    </a>
+                </div>
                 <div class="hidden lg:flex items-center space-x-2">
                     <a href="<?= $backLink ?>" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-brand-green transition-colors">Dashboard</a>
                     <a href="enrollment_view.php" class="px-3 py-2 rounded-md text-sm font-medium text-white bg-brand-green">Enrollment Registry</a>

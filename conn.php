@@ -419,6 +419,63 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         is_active INTEGER DEFAULT 1,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS bank_integrations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        bank_code TEXT UNIQUE NOT NULL,
+                        bank_name TEXT NOT NULL,
+                        account_number TEXT,
+                        api_endpoint TEXT,
+                        api_key TEXT,
+                        secret_key TEXT,
+                        webhook_url TEXT,
+                        webhook_secret TEXT,
+                        environment TEXT DEFAULT 'sandbox',
+                        is_active INTEGER DEFAULT 1,
+                        last_sync_at DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS student_fees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER UNIQUE NOT NULL,
+                        class_level TEXT,
+                        term TEXT DEFAULT 'Term III 2026',
+                        total_fee REAL DEFAULT 0,
+                        paid_amount REAL DEFAULT 0,
+                        balance REAL DEFAULT 0,
+                        status TEXT DEFAULT 'UNPAID',
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bank_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_ref TEXT UNIQUE NOT NULL,
+                        student_id INTEGER,
+                        lin_number TEXT,
+                        student_name TEXT,
+                        bank_code TEXT NOT NULL,
+                        payment_channel TEXT,
+                        amount REAL NOT NULL,
+                        payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        receipt_number TEXT,
+                        raw_payload TEXT,
+                        status TEXT DEFAULT 'SUCCESS',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS school_settings (
+                        setting_key TEXT UNIQUE NOT NULL,
+                        setting_value TEXT,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS class_fee_rates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        class_level TEXT UNIQUE NOT NULL,
+                        fee_amount REAL NOT NULL DEFAULT 850000,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
 
             try {
@@ -439,6 +496,107 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     foreach ($defaultStreams as $ds) {
                         try { $insSt->execute([$ds['name'], $ds['code'], $ds['desc']]); } catch (Exception $e) {}
                     }
+                }
+            } catch (Exception $e) {}
+
+            try {
+                $frCheck = $this->pdo->query("SELECT COUNT(*) as cnt FROM class_fee_rates");
+                $frRow = $frCheck ? $frCheck->fetch(PDO::FETCH_ASSOC) : null;
+                if (empty($frRow['cnt'])) {
+                    $defaultClassFees = [
+                        'Senior 1' => 850000,
+                        'Senior 2' => 850000,
+                        'Senior 3' => 850000,
+                        'Senior 4' => 850000,
+                        'Senior 5' => 950000,
+                        'Senior 6' => 950000
+                    ];
+                    $insFR = $this->pdo->prepare("INSERT INTO class_fee_rates (class_level, fee_amount) VALUES (?, ?)");
+                    foreach ($defaultClassFees as $cLvl => $amt) {
+                        try { $insFR->execute([$cLvl, $amt]); } catch (Exception $e) {}
+                    }
+                }
+            } catch (Exception $e) {}
+
+            try {
+                $bkCheck = $this->pdo->query("SELECT COUNT(*) as cnt FROM bank_integrations");
+                $bkRow = $bkCheck ? $bkCheck->fetch(PDO::FETCH_ASSOC) : null;
+                if (empty($bkRow['cnt'])) {
+                    $defaultBanks = [
+                        [
+                            'code' => 'CENTENARY',
+                            'name' => 'Centenary Bank Uganda',
+                            'account' => '3100045892',
+                            'endpoint' => 'https://api.centenarybank.co.ug/v2/payments',
+                            'key' => 'CENT-API-KEY-998124',
+                            'secret' => 'CENT-SEC-KEY-771239',
+                            'env' => 'production',
+                            'active' => 1
+                        ],
+                        [
+                            'code' => 'STANBIC',
+                            'name' => 'Stanbic Bank Uganda (FlexiPay)',
+                            'account' => '9030018872201',
+                            'endpoint' => 'https://flexipay.stanbicbank.co.ug/api/v1/collections',
+                            'key' => 'STAN-FLEX-KEY-441029',
+                            'secret' => 'STAN-SEC-KEY-881920',
+                            'env' => 'production',
+                            'active' => 1
+                        ],
+                        [
+                            'code' => 'EQUITY',
+                            'name' => 'Equity Bank Uganda',
+                            'account' => '103420088192',
+                            'endpoint' => 'https://api.equitybankgroup.com/ug/v1/payments',
+                            'key' => 'EQ-UG-KEY-102938',
+                            'secret' => 'EQ-SEC-KEY-492019',
+                            'env' => 'sandbox',
+                            'active' => 1
+                        ],
+                        [
+                            'code' => 'MTN_MOMO',
+                            'name' => 'MTN MoMo Pay (Merchant 670912)',
+                            'account' => '670912',
+                            'endpoint' => 'https://sandbox.momodeveloper.mtn.com/collection/v1_0',
+                            'key' => 'MTN-MOMO-KEY-392019',
+                            'secret' => 'MTN-SEC-KEY-882910',
+                            'env' => 'sandbox',
+                            'active' => 1
+                        ],
+                        [
+                            'code' => 'AIRTEL_MONEY',
+                            'name' => 'Airtel Money Pay (Merchant 440182)',
+                            'account' => '440182',
+                            'endpoint' => 'https://openapi.airtel.africa/merchant/v1/payments',
+                            'key' => 'AIRTEL-MONEY-KEY-551029',
+                            'secret' => 'AIRTEL-SEC-KEY-771920',
+                            'env' => 'sandbox',
+                            'active' => 1
+                        ],
+                        [
+                            'code' => 'SCHOOLPAY',
+                            'name' => 'SchoolPay Uganda (PegPay Aggregator)',
+                            'account' => 'SCHPAY-UG-8802',
+                            'endpoint' => 'https://api.schoolpay.co.ug/v1/collections/reconcile',
+                            'key' => 'SCHPAY-KEY-991823',
+                            'secret' => 'SCHPAY-SEC-771209',
+                            'env' => 'production',
+                            'active' => 1
+                        ]
+                    ];
+                    $insBk = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, environment, is_active, last_sync_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))");
+                    foreach ($defaultBanks as $b) {
+                        try {
+                            $insBk->execute([$b['code'], $b['name'], $b['account'], $b['endpoint'], $b['key'], $b['secret'], $b['env'], $b['active']]);
+                        } catch (Exception $e) {}
+                    }
+                }
+
+                // Ensure SchoolPay integration exists in existing databases
+                $spCheck = $this->pdo->query("SELECT COUNT(*) FROM bank_integrations WHERE bank_code = 'SCHOOLPAY'");
+                if ($spCheck && $spCheck->fetchColumn() == 0) {
+                    $insSp = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, webhook_url, environment, is_active, last_sync_at) VALUES ('SCHOOLPAY', 'SchoolPay Uganda (PegPay Aggregator)', 'SCHPAY-UG-8802', 'https://api.schoolpay.co.ug/v1/collections/reconcile', 'SCHPAY-KEY-991823', 'SCHPAY-SEC-771209', 'http://localhost:8080/admin_fees_actions.php?webhook=1&bank=SCHOOLPAY', 'production', 1, datetime('now'))");
+                    $insSp->execute();
                 }
             } catch (Exception $e) {}
 
@@ -476,6 +634,8 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS show_points INT DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN IF NOT EXISTS webhook_url TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN IF NOT EXISTS webhook_secret TEXT"); } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
@@ -496,6 +656,8 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE student_marks ADD COLUMN academic_year TEXT DEFAULT '2026'"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN show_points INTEGER DEFAULT 1"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN webhook_url TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN webhook_secret TEXT"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash
@@ -706,6 +868,17 @@ if (!function_exists('thamani_db_prepare')) {
         return $connection->error ?? '';
     }
 
+    function thamani_db_real_escape_string($connection = null, $str = '') {
+        if (is_string($connection) && $str === '') {
+            $str = $connection;
+            $connection = null;
+        }
+        if (function_exists('mysqli_real_escape_string')) {
+            return mysqli_real_escape_string($connection, $str);
+        }
+        return addslashes($str);
+    }
+
     function thamani_db_insert_id($connection = null) {
         global $conn;
         $connection = $connection ?: $conn;
@@ -900,6 +1073,144 @@ if (!function_exists('thamani_db_prepare')) {
             return true;
         }
     }
+
+    if (!function_exists('thamani_get_setting')) {
+        function thamani_get_setting($conn, string $key, string $default = ''): string {
+            $stmt = thamani_db_prepare($conn, "SELECT setting_value FROM school_settings WHERE setting_key = ? LIMIT 1");
+            if ($stmt) {
+                thamani_db_stmt_bind_param($stmt, "s", $key);
+                thamani_db_stmt_execute($stmt);
+                $res = thamani_db_stmt_get_result($stmt);
+                if ($res && $row = thamani_db_fetch_assoc($res)) {
+                    thamani_db_stmt_close($stmt);
+                    return (string)$row['setting_value'];
+                }
+                thamani_db_stmt_close($stmt);
+            }
+            return $default;
+        }
+    }
+
+    if (!function_exists('thamani_set_setting')) {
+        function thamani_set_setting($conn, string $key, string $value): bool {
+            $existing = thamani_get_setting($conn, $key, '__NOT_SET__');
+            if ($existing !== '__NOT_SET__') {
+                $stmt = thamani_db_prepare($conn, "UPDATE school_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?");
+                if ($stmt) {
+                    thamani_db_stmt_bind_param($stmt, "ss", $value, $key);
+                    $ok = thamani_db_stmt_execute($stmt);
+                    thamani_db_stmt_close($stmt);
+                    return $ok;
+                }
+            } else {
+                $stmt = thamani_db_prepare($conn, "INSERT INTO school_settings (setting_key, setting_value) VALUES (?, ?)");
+                if ($stmt) {
+                    thamani_db_stmt_bind_param($stmt, "ss", $key, $value);
+                    $ok = thamani_db_stmt_execute($stmt);
+                    thamani_db_stmt_close($stmt);
+                    return $ok;
+                }
+            }
+            return false;
+        }
+    }
+
+    if (!function_exists('thamani_get_class_fee')) {
+        function thamani_get_class_fee($conn, string $classLevel): float {
+            $stmt = thamani_db_prepare($conn, "SELECT fee_amount FROM class_fee_rates WHERE class_level = ? LIMIT 1");
+            if ($stmt) {
+                thamani_db_stmt_bind_param($stmt, "s", $classLevel);
+                thamani_db_stmt_execute($stmt);
+                $res = thamani_db_stmt_get_result($stmt);
+                if ($res && $row = thamani_db_fetch_assoc($res)) {
+                    thamani_db_stmt_close($stmt);
+                    return (float)$row['fee_amount'];
+                }
+                thamani_db_stmt_close($stmt);
+            }
+            return (str_contains($classLevel, 'A-Level') || str_contains($classLevel, 'Senior 5') || str_contains($classLevel, 'Senior 6')) ? 950000.0 : 850000.0;
+        }
+    }
+
+    if (!function_exists('thamani_set_class_fee')) {
+        function thamani_set_class_fee($conn, string $classLevel, float $amount): bool {
+            $stmtCheck = thamani_db_prepare($conn, "SELECT id FROM class_fee_rates WHERE class_level = ? LIMIT 1");
+            $exists = false;
+            if ($stmtCheck) {
+                thamani_db_stmt_bind_param($stmtCheck, "s", $classLevel);
+                thamani_db_stmt_execute($stmtCheck);
+                $res = thamani_db_stmt_get_result($stmtCheck);
+                if ($res && thamani_db_fetch_assoc($res)) {
+                    $exists = true;
+                }
+                thamani_db_stmt_close($stmtCheck);
+            }
+
+            if ($exists) {
+                $stmt = thamani_db_prepare($conn, "UPDATE class_fee_rates SET fee_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE class_level = ?");
+                if ($stmt) {
+                    thamani_db_stmt_bind_param($stmt, "ds", $amount, $classLevel);
+                    $ok = thamani_db_stmt_execute($stmt);
+                    thamani_db_stmt_close($stmt);
+                    return $ok;
+                }
+            } else {
+                $stmt = thamani_db_prepare($conn, "INSERT INTO class_fee_rates (class_level, fee_amount) VALUES (?, ?)");
+                if ($stmt) {
+                    thamani_db_stmt_bind_param($stmt, "sd", $classLevel, $amount);
+                    $ok = thamani_db_stmt_execute($stmt);
+                    thamani_db_stmt_close($stmt);
+                    return $ok;
+                }
+            }
+        }
+    }
+
+    if (!function_exists('generate_student_pay_code')) {
+        function generate_student_pay_code($conn, $studentId, $classLevel = '', $stream = '', $registeredAt = '') {
+            if (!$conn) $conn = $GLOBALS['conn'];
+
+            $yearStr = !empty($registeredAt) ? date('y', strtotime($registeredAt)) : date('y');
+
+            $streamCode = 'hmg';
+            if (!empty($stream)) {
+                $stRes = thamani_db_query($conn, "SELECT stream_code FROM school_streams WHERE stream_name = '" . thamani_db_real_escape_string($conn, $stream) . "' LIMIT 1");
+                if ($stRes && ($stRow = thamani_db_fetch_assoc($stRes)) && !empty($stRow['stream_code'])) {
+                    $streamCode = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $stRow['stream_code']));
+                } else {
+                    $streamCode = strtolower(substr(preg_replace('/[^a-zA-Z0-9]/', '', $stream), 0, 3)) ?: 'hmg';
+                }
+            }
+
+            $letter = chr(97 + (($studentId - 1) % 26));
+            $seqCode = (int)$studentId . $letter;
+
+            return strtolower($seqCode . '/' . $streamCode . '/' . $yearStr);
+        }
+    }
+
+    if (!function_exists('ensure_student_pay_codes')) {
+        function ensure_student_pay_codes($conn = null) {
+            if (!$conn) $conn = $GLOBALS['conn'];
+
+            @thamani_db_query($conn, "ALTER TABLE students ADD COLUMN pay_code TEXT");
+            @thamani_db_query($conn, "ALTER TABLE student_fees ADD COLUMN pay_code TEXT");
+
+            $res = thamani_db_query($conn, "SELECT id, full_name, class_level, stream, registered_at, pay_code FROM students WHERE pay_code IS NULL OR pay_code = '' ORDER BY id ASC");
+            if ($res) {
+                while ($st = thamani_db_fetch_assoc($res)) {
+                    $payCode = generate_student_pay_code($conn, $st['id'], $st['class_level'], $st['stream'], $st['registered_at']);
+                    $sId = (int)$st['id'];
+                    $escapedPc = thamani_db_real_escape_string($conn, $payCode);
+
+                    thamani_db_query($conn, "UPDATE students SET pay_code = '{$escapedPc}' WHERE id = {$sId}");
+                    thamani_db_query($conn, "UPDATE student_fees SET pay_code = '{$escapedPc}' WHERE student_id = {$sId}");
+                }
+            }
+        }
+    }
+
+    ensure_student_pay_codes($conn);
 }
 
 return $conn;

@@ -151,12 +151,12 @@ $totalAll    = (int)$totalAllRow['c'];
     <nav class="sticky top-0 z-50 bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
-                <div class="flex items-center">
-                    <a href="<?= $backLink ?>" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
-                        <div class="flex flex-col">
-                            <span class="text-2xl font-bold tracking-tight text-brand-green">Thamani High School</span>
-                            <span class="text-[10px] font-semibold text-brand-maroon tracking-widest uppercase"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
+                <div class="flex items-center min-w-0 flex-1 mr-2">
+                    <a href="<?= $backLink ?>" class="flex-shrink-0 flex items-center gap-2 sm:gap-3 min-w-0">
+                        <img class="h-9 sm:h-12 w-auto shrink-0 transition-transform hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-brand-green truncate leading-tight">Thamani High School</span>
+                            <span class="text-[9px] sm:text-[10px] font-semibold text-brand-maroon tracking-widest uppercase truncate"><?= $isAdmin ? 'Admin Control Panel' : 'Teacher Portal' ?></span>
                         </div>
                     </a>
                 </div>

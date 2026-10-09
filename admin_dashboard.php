@@ -53,6 +53,69 @@ if ($feesStudentsQuery) {
     error_log('Fees section student query failed: ' . thamani_db_error($conn));
 }
 
+// ---------- Bank Integrations & Fee Engine Data Queries ----------
+$classFeesLocked = thamani_get_setting($conn, 'class_fees_locked', '0') === '1';
+$allBankIntegrations = [];
+$rBk = thamani_db_query($conn, "SELECT id, bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, webhook_url, webhook_secret, environment, is_active, last_sync_at FROM bank_integrations ORDER BY id ASC");
+if ($rBk) while ($r = thamani_db_fetch_assoc($rBk)) $allBankIntegrations[] = $r;
+
+$allClassFeeRates = [];
+$rCFR = thamani_db_query($conn, "SELECT class_level, fee_amount FROM class_fee_rates");
+if ($rCFR) {
+    while ($r = thamani_db_fetch_assoc($rCFR)) {
+        $allClassFeeRates[$r['class_level']] = (float)$r['fee_amount'];
+    }
+}
+
+$classStudentCounts = [];
+$rSC = thamani_db_query($conn, "SELECT class_level, COUNT(*) as cnt FROM students GROUP BY class_level");
+if ($rSC) {
+    while ($r = thamani_db_fetch_assoc($rSC)) {
+        $classStudentCounts[$r['class_level']] = (int)$r['cnt'];
+    }
+}
+
+$allBankTransactions = [];
+$rTx = thamani_db_query($conn, "SELECT id, transaction_ref, student_id, lin_number, student_name, bank_code, payment_channel, amount, payment_date, receipt_number, status FROM bank_transactions ORDER BY payment_date DESC LIMIT 100");
+if ($rTx) while ($r = thamani_db_fetch_assoc($rTx)) $allBankTransactions[] = $r;
+
+// Student Fee Ledger (Joined with Students Table)
+$allStudentFeeAccounts = [];
+$rFeeAcc = thamani_db_query($conn, "
+    SELECT s.id as student_id, s.full_name, s.lin_number, s.pay_code, s.class_level, s.stream, s.status as student_status,
+           sf.id as fee_id, sf.term, sf.total_fee, sf.paid_amount, sf.balance, sf.status as fee_status, sf.updated_at
+    FROM students s
+    LEFT JOIN student_fees sf ON s.id = sf.student_id
+    ORDER BY s.class_level ASC, s.full_name ASC
+");
+if ($rFeeAcc) while ($r = thamani_db_fetch_assoc($rFeeAcc)) $allStudentFeeAccounts[] = $r;
+
+// Fee Summary KPIs
+$totalExpectedFees = 0.0;
+$totalCollectedFees = 0.0;
+$totalOutstandingFees = 0.0;
+$fullyPaidCount = 0;
+$partialPaidCount = 0;
+$unpaidCount = 0;
+
+foreach ($allStudentFeeAccounts as $fa) {
+    $cLevel = $fa['class_level'];
+    $dFee = (str_contains($cLevel, 'A-Level') || str_contains($cLevel, 'Senior 5') || str_contains($cLevel, 'Senior 6')) ? 950000.0 : 850000.0;
+    
+    $tf = ($fa['total_fee'] !== null && (float)$fa['total_fee'] > 0) ? (float)$fa['total_fee'] : $dFee;
+    $pa = (float)($fa['paid_amount'] ?? 0);
+    $bal = max(0.0, $tf - $pa);
+    $st = $bal <= 0 && $tf > 0 ? 'PAID' : ($pa > 0 ? 'PARTIAL' : 'UNPAID');
+
+    $totalExpectedFees += $tf;
+    $totalCollectedFees += $pa;
+    $totalOutstandingFees += $bal;
+
+    if ($st === 'PAID') $fullyPaidCount++;
+    elseif ($st === 'PARTIAL') $partialPaidCount++;
+    else $unpaidCount++;
+}
+
 $allAlumni = [];
 $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email FROM alumni ORDER BY id DESC");
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
@@ -174,25 +237,25 @@ if (!empty($_SESSION['admin_flash'])) {
     </script>
 
     <!-- Top Announcement Bar -->
-    <div class="bg-gray-950 text-white text-xs py-2.5 px-6 border-b border-brand-gold/30">
-        <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <span class="flex items-center gap-2">📍 THAMANI HIGH SCHOOL - Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hidden sm:inline text-gray-300">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
-            <span class="bg-brand-gold text-gray-950 px-3 py-0.5 rounded-full font-extrabold uppercase tracking-wider text-[10px] shadow-sm">Admin Session</span>
+    <div class="bg-gray-950 text-white text-xs py-2 px-3 sm:px-6 border-b border-brand-gold/30">
+        <div class="max-w-7xl mx-auto w-full flex justify-between items-center gap-2">
+            <span class="truncate max-w-[210px] sm:max-w-none text-[11px] sm:text-xs">📍 Kakiri Main Campus, Wakiso</span>
+            <span class="hidden md:inline text-gray-300">📞 Enquiries: +256 414 123 456 | ✉️ info@thamani.ac.ug</span>
+            <span class="bg-brand-gold text-gray-950 px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wider text-[10px] shadow-sm shrink-0 whitespace-nowrap">Admin Session</span>
         </div>
     </div>
 
     <!-- Main Clean Header Navigation Bar -->
     <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center">
-                    <a href="admin_dashboard.php" class="-ml-3 flex-shrink-0 flex items-center gap-3 group">
-                        <img class="h-12 w-auto transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
-                        <div class="flex flex-col">
-                            <span class="text-2xl font-black tracking-tight text-gray-900">Thamani High School</span>
-                            <span class="text-[11px] font-bold text-brand-gold tracking-widest uppercase flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-ping"></span>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 sm:h-20 items-center">
+                <div class="flex items-center min-w-0 flex-1 mr-2">
+                    <a href="admin_dashboard.php" class="flex items-center gap-2 sm:gap-3 min-w-0 group">
+                        <img class="h-9 sm:h-12 w-auto shrink-0 transition-transform group-hover:scale-105" src="thamani-logo.png" alt="Thamani High School Logo" onerror="this.src='favicon.svg'">
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-gray-900 truncate leading-tight">Thamani High School</span>
+                            <span class="text-[9px] sm:text-[11px] font-bold text-amber-600 tracking-widest uppercase flex items-center gap-1 truncate">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-ping shrink-0"></span>
                                 Admin Control Panel
                             </span>
                         </div>
@@ -663,166 +726,529 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
             </div>
 
-            <!-- TAB: SCHOOL FEES -->
+            <!-- TAB: SCHOOL FEES & BANK API INTEGRATION -->
             <div id="tab-admin-fees" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-fees' ? '' : 'hidden' ?> space-y-6">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                
+                <!-- 1. Top Section: Bank API Integration Hub -->
+                <div class="bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 text-white p-6 rounded-3xl shadow-xl border-b-4 border-amber-500">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
                         <div>
-                            <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
-                                <i data-lucide="wallet-cards" class="w-6 h-6 text-amber-600"></i> School Fees
+                            <span class="bg-amber-500 text-gray-950 px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-wider inline-block mb-1 shadow-sm">Direct Bank API Telemetry Engine</span>
+                            <h3 class="text-2xl font-black text-white flex items-center gap-2">
+                                <i data-lucide="landmark" class="w-7 h-7 text-amber-400"></i> Bank API Live Telemetry & Fee Ledger
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">Set a class fee amount and review individual students by class.</p>
+                            <p class="text-xs text-gray-300 mt-1">Read-only real-time feed connected to Ugandan bank APIs (Centenary, Stanbic, Equity, MTN MoMo, Airtel). All student fee deposits, paid amounts, and balances update automatically from bank transactions.</p>
                         </div>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
-                            <i data-lucide="info" class="w-3.5 h-3.5"></i> UI preview — changes are not saved yet
-                        </span>
-                    </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" onclick="openAddBankModal();" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all hover:scale-105">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Bank / Webhook
+                            </button>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-                        <div class="lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
-                            <div class="flex items-start gap-3 mb-4">
-                                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                                    <i data-lucide="settings-2" class="w-5 h-5"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-extrabold text-gray-900">Set class fee amount</h4>
-                                    <p class="text-xs text-gray-500 mt-1">Choose the class and enter the standard fee amount in UGX.</p>
-                                </div>
-                            </div>
-                            <form onsubmit="showFeesUiNotice(event);" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-                                <label class="block">
-                                    <span class="block text-xs font-bold text-gray-600 mb-1.5">Class</span>
-                                    <select name="fees_class" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                                        <?php foreach ($feesClasses as $classValue => $classLabel): ?>
-                                            <option value="<?= htmlspecialchars($classValue) ?>" <?= $feesSelectedClass === $classValue ? 'selected' : '' ?>><?= htmlspecialchars($classLabel) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </label>
-                                <label class="block">
-                                    <span class="block text-xs font-bold text-gray-600 mb-1.5">School fee (UGX)</span>
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">UGX</span>
-                                        <input type="number" min="0" step="1000" placeholder="e.g. 850000" class="w-full pl-12 pr-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                                    </div>
-                                </label>
-                                <button type="submit" class="inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-gray-900 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 shadow-sm transition-colors">
-                                    <i data-lucide="save" class="w-4 h-4"></i> Save class fee
+                            <?php if ($classFeesLocked): ?>
+                                <span class="px-3.5 py-2.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i> Class Fees Locked
+                                </span>
+                                <form action="admin_fees_actions.php" method="post" class="inline">
+                                    <input type="hidden" name="action" value="unlock_fees_structure">
+                                    <button type="submit" class="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-300 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow border border-gray-700 transition-all">
+                                        <i data-lucide="unlock" class="w-4 h-4"></i> Unlock Fees
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <span class="px-3.5 py-2.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="unlock" class="w-4 h-4 text-amber-400"></i> Fee Structure Unlocked
+                                </span>
+                                <form action="admin_fees_actions.php" method="post" class="inline" onsubmit="return confirm('Lock in class fees for all classes? When locked, class fee rates become read-only to preserve financial auditing integrity.');">
+                                    <input type="hidden" name="action" value="lock_fees_structure">
+                                    <button type="submit" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all">
+                                        <i data-lucide="lock" class="w-4 h-4"></i> Lock In Class Fees
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+
+                            <form action="admin_fees_actions.php" method="post" class="inline">
+                                <input type="hidden" name="action" value="pull_all_bank_feeds">
+                                <button type="submit" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 text-gray-950 font-black rounded-xl text-xs hover:from-amber-400 hover:to-amber-300 shadow-md flex items-center gap-1.5 transition-all hover:scale-[1.02]">
+                                    <i data-lucide="download-cloud" class="w-4 h-4"></i> Pull &amp; Reconcile Everything From Bank Feeds
                                 </button>
                             </form>
                         </div>
-                        <div class="rounded-2xl bg-gray-950 text-white p-5 flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Selected class</span>
-                                    <i data-lucide="graduation-cap" class="w-5 h-5 text-amber-400"></i>
+                    </div>
+
+                    <!-- Connected Bank API & Webhook Cards Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <?php 
+                        $bankStyleMap = [
+                            'SCHOOLPAY' => ['bg' => 'bg-purple-950/80 border-purple-500/50', 'text' => 'text-purple-400', 'badge' => 'bg-purple-500/20 text-purple-300'],
+                            'CENTENARY' => ['bg' => 'bg-emerald-950/80 border-emerald-500/50', 'text' => 'text-emerald-400', 'badge' => 'bg-emerald-500/20 text-emerald-300'],
+                            'STANBIC'   => ['bg' => 'bg-blue-950/80 border-blue-500/50', 'text' => 'text-blue-400', 'badge' => 'bg-blue-500/20 text-blue-300'],
+                            'EQUITY'    => ['bg' => 'bg-red-950/80 border-red-500/50', 'text' => 'text-red-400', 'badge' => 'bg-red-500/20 text-red-300'],
+                            'MTN_MOMO'  => ['bg' => 'bg-yellow-950/80 border-yellow-500/50', 'text' => 'text-yellow-400', 'badge' => 'bg-yellow-500/20 text-yellow-300'],
+                            'AIRTEL_MONEY' => ['bg' => 'bg-rose-950/80 border-rose-500/50', 'text' => 'text-rose-400', 'badge' => 'bg-rose-500/20 text-rose-300'],
+                        ];
+                        ?>
+                        <?php foreach ($allBankIntegrations as $bk): ?>
+                            <?php 
+                                $code = $bk['bank_code'];
+                                $style = $bankStyleMap[$code] ?? ['bg' => 'bg-slate-900/90 border-slate-700', 'text' => 'text-amber-400', 'badge' => 'bg-slate-800 text-amber-300'];
+                                $isActive = (int)$bk['is_active'] === 1;
+                                $whUrl = !empty($bk['webhook_url']) ? $bk['webhook_url'] : "http://localhost:8080/admin_fees_actions.php?webhook=1&bank=" . urlencode($code);
+                            ?>
+                            <div class="rounded-2xl p-4 border <?= $style['bg'] ?> flex flex-col justify-between space-y-3 relative shadow-md">
+                                <div>
+                                    <div class="flex items-center justify-between gap-1 mb-2">
+                                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md <?= $style['badge'] ?>">
+                                            <?= htmlspecialchars($bk['bank_code']) ?>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold shrink-0 <?= $isActive ? 'text-emerald-400' : 'text-gray-400' ?>">
+                                            <span class="w-2 h-2 rounded-full <?= $isActive ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500' ?>"></span>
+                                            <?= $isActive ? strtoupper($bk['environment']) : 'OFF' ?>
+                                        </span>
+                                    </div>
+                                    <h4 class="font-extrabold text-xs text-white truncate" title="<?= htmlspecialchars($bk['bank_name']) ?>"><?= htmlspecialchars($bk['bank_name']) ?></h4>
+                                    <div class="text-[11px] font-mono text-gray-300 mt-1 truncate">Acc: <strong><?= htmlspecialchars($bk['account_number'] ?: '—') ?></strong></div>
+
+                                    <!-- Webhook Callback URL Box -->
+                                    <div class="mt-2.5 bg-black/50 p-2 rounded-xl border border-white/10 text-[10px] font-mono text-amber-300 flex items-center justify-between gap-1 overflow-hidden">
+                                        <span class="truncate" title="<?= htmlspecialchars($whUrl) ?>">🔗 <?= htmlspecialchars($whUrl) ?></span>
+                                        <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($whUrl, ENT_QUOTES) ?>'); alert('Webhook URL for <?= htmlspecialchars($bk['bank_code'], ENT_QUOTES) ?> copied to clipboard!');" class="text-amber-400 hover:text-white shrink-0 p-1 rounded hover:bg-white/10" title="Copy Webhook URL">
+                                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="text-2xl font-black mt-3"><?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?></div>
+
+                                <div class="pt-3 border-t border-white/10 space-y-2">
+                                    <div class="text-[10px] text-gray-400 flex justify-between">
+                                        <span>Last Sync:</span>
+                                        <span class="font-mono text-gray-300 truncate"><?= $bk['last_sync_at'] ? date('H:i, d M', strtotime($bk['last_sync_at'])) : 'Never' ?></span>
+                                    </div>
+
+                                    <div class="flex items-center gap-1.5 pt-1">
+                                        <button type="button" onclick="openConfigureBankModal(<?= htmlspecialchars(json_encode($bk), ENT_QUOTES, 'UTF-8') ?>);" class="flex-grow py-1.5 px-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-bold text-center transition-colors">
+                                            ⚙️ Edit
+                                        </button>
+
+                                        <form action="admin_fees_actions.php" method="post" class="inline">
+                                            <input type="hidden" name="action" value="toggle_bank_status">
+                                            <input type="hidden" name="bank_code" value="<?= htmlspecialchars($bk['bank_code']) ?>">
+                                            <input type="hidden" name="status" value="<?= $isActive ? 0 : 1 ?>">
+                                            <button type="submit" class="px-2 py-1.5 rounded-lg text-[11px] font-bold border <?= $isActive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/40' : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40' ?>" title="<?= $isActive ? 'Deactivate Bank API' : 'Activate Bank API' ?>">
+                                                <?= $isActive ? 'ON' : 'OFF' ?>
+                                            </button>
+                                        </form>
+
+                                        <form action="admin_fees_actions.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to DELETE bank integration <?= htmlspecialchars($bk['bank_code']) ?>?');">
+                                            <input type="hidden" name="action" value="delete_bank_integration">
+                                            <input type="hidden" name="bank_code" value="<?= htmlspecialchars($bk['bank_code']) ?>">
+                                            <button type="submit" class="p-1.5 rounded-lg text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/40" title="Delete Bank Integration">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mt-5 pt-4 border-t border-gray-800">
-                                <span class="text-xs text-gray-400">Students listed</span>
-                                <div class="text-2xl font-black text-amber-400 mt-1"><?= count($feesStudents) ?></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="fees-ui-notice" class="hidden mb-5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm font-semibold" role="status">
-                        The fees interface is ready. Saving fee amounts will be connected in the next step.
-                    </div>
-
-                    <form method="get" action="admin_dashboard.php" class="flex flex-wrap items-end justify-between gap-4 mb-4">
-                        <input type="hidden" name="tab" value="tab-admin-fees">
-                        <div>
-                            <label for="fees-class-filter" class="block text-xs font-bold text-gray-600 mb-1.5">View students in</label>
-                            <select id="fees-class-filter" name="fees_class" class="min-w-52 px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                                <?php foreach ($feesClasses as $classValue => $classLabel): ?>
-                                    <option value="<?= htmlspecialchars($classValue) ?>" <?= $feesSelectedClass === $classValue ? 'selected' : '' ?>><?= htmlspecialchars($classLabel) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" class="ml-2 px-4 py-2.5 bg-amber-500 text-gray-950 font-extrabold rounded-xl text-xs hover:bg-amber-400 shadow-sm transition-colors">Show class</button>
-                        </div>
-                        <p class="text-xs text-gray-500">Showing students whose class is <?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?>.</p>
-                    </form>
-
-                    <div class="overflow-x-auto rounded-xl border border-gray-200">
-                        <table class="w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
-                                    <th class="p-3.5">#</th>
-                                    <th class="p-3.5">Student</th>
-                                    <th class="p-3.5">Class & Stream</th>
-                                    <th class="p-3.5">LIN / UNEB Index</th>
-                                    <th class="p-3.5">School fee</th>
-                                    <th class="p-3.5">Status</th>
-                                    <th class="p-3.5 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <?php if (!$feesStudentsQuery): ?>
-                                    <tr><td colspan="7" class="p-10 text-center text-red-700 text-sm font-semibold">Student records could not be loaded. Please try again later.</td></tr>
-                                <?php elseif (empty($feesStudents)): ?>
-                                    <tr><td colspan="7" class="p-10 text-center text-gray-500 text-sm">No students found in <?= htmlspecialchars($feesClasses[$feesSelectedClass]) ?>.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($feesStudents as $index => $student): ?>
-                                        <?php
-                                            $studentStatus = $student['status'] ?: 'Pending';
-                                            $studentStatusClass = $studentStatus === 'Enrolled' ? 'bg-green-100 text-green-800' : ($studentStatus === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800');
-                                        ?>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="p-3.5 font-mono text-xs text-gray-400"><?= $index + 1 ?></td>
-                                            <td class="p-3.5">
-                                                <div class="font-bold text-gray-900"><?= htmlspecialchars($student['full_name']) ?></div>
-                                                <div class="text-xs text-gray-500">Student #<?= (int)$student['id'] ?></div>
-                                            </td>
-                                            <td class="p-3.5">
-                                                <span class="px-2.5 py-1 rounded bg-gray-100 text-gray-800 font-bold text-xs">
-                                                    <?= htmlspecialchars($student['class_level']) ?> · <?= htmlspecialchars($student['stream'] ?? '') ?>
-                                                </span>
-                                            </td>
-                                            <td class="p-3.5 font-mono text-xs text-amber-700 font-bold"><?= htmlspecialchars($student['lin_number'] ?? '') ?></td>
-                                            <td class="p-3.5 text-sm font-bold text-gray-500">Not set</td>
-                                            <td class="p-3.5">
-                                                <span class="text-xs font-bold px-2.5 py-1 rounded-full uppercase <?= $studentStatusClass ?>"><?= htmlspecialchars($studentStatus) ?></span>
-                                            </td>
-                                            <td class="p-3.5 text-right">
-                                                <button type="button" onclick='openStudentFeeModal(<?= (int)$student['id'] ?>, <?= json_encode($student['full_name'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) ?>);' class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm whitespace-nowrap">
-                                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Update fees
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
-                <div id="modal-student-fees" class="hidden fixed inset-0 z-[100] bg-gray-950/60 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="student-fees-modal-title">
-                    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
-                        <div class="flex items-start justify-between gap-4 p-5 border-b border-gray-100">
-                            <div>
-                                <h3 id="student-fees-modal-title" class="text-lg font-black text-gray-900">Update student fees</h3>
-                                <p id="student-fees-modal-name" class="text-sm text-gray-500 mt-1"></p>
-                            </div>
-                            <button type="button" onclick="closeModal('modal-student-fees');" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Close">
-                                <i data-lucide="x" class="w-5 h-5"></i>
-                            </button>
+                <!-- 2. Real-time Fee Collection Summary KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Total Expected Fees</span>
+                            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">UGX</div>
                         </div>
-                        <form onsubmit="showFeesUiNotice(event); closeModal('modal-student-fees');" class="p-5">
-                            <input type="hidden" id="student-fees-modal-id">
-                            <label class="block">
-                                <span class="block text-xs font-bold text-gray-600 mb-1.5">School fee amount (UGX)</span>
-                                <input type="number" min="0" step="1000" placeholder="Enter student fee amount" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                            </label>
-                            <div class="flex justify-end gap-2 mt-5">
-                                <button type="button" onclick="closeModal('modal-student-fees');" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
-                                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-gray-950 bg-amber-500 hover:bg-amber-400">
-                                    <i data-lucide="save" class="w-4 h-4"></i> Save student fee
-                                </button>
+                        <div class="text-2xl font-black text-gray-900 font-mono">UGX <?= number_format($totalExpectedFees) ?></div>
+                        <div class="text-xs text-gray-500 mt-2">Term III 2026 Total Ledger</div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm bg-emerald-50/20 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">Collected via Banks</span>
+                            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
                             </div>
-                        </form>
+                        </div>
+                        <div class="text-2xl font-black text-emerald-700 font-mono">UGX <?= number_format($totalCollectedFees) ?></div>
+                        <div class="text-xs text-emerald-800 font-bold mt-2 flex items-center gap-1">
+                            <?php $collRate = $totalExpectedFees > 0 ? round(($totalCollectedFees / $totalExpectedFees) * 100, 1) : 0; ?>
+                            <span><?= $collRate ?>% Collection Rate</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm bg-rose-50/20 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-extrabold text-rose-800 uppercase tracking-wider">Outstanding Balance</span>
+                            <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-black text-rose-700 font-mono">UGX <?= number_format($totalOutstandingFees) ?></div>
+                        <div class="text-xs text-rose-800 font-bold mt-2"><?= $unpaidCount ?> Unpaid / Overdue Students</div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Payment Status Breakdown</span>
+                            <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                                <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 font-mono text-sm font-black">
+                            <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800" title="Fully Paid"><?= $fullyPaidCount ?> Paid</span>
+                            <span class="px-2 py-1 rounded bg-amber-100 text-amber-800" title="Partial Payment"><?= $partialPaidCount ?> Partial</span>
+                            <span class="px-2 py-1 rounded bg-rose-100 text-rose-800" title="Unpaid"><?= $unpaidCount ?> Unpaid</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3 flex">
+                            <?php $totalSt = max(1, count($allStudentFeeAccounts)); ?>
+                            <div class="bg-emerald-500 h-full" style="width: <?= round(($fullyPaidCount/$totalSt)*100) ?>%"></div>
+                            <div class="bg-amber-500 h-full" style="width: <?= round(($partialPaidCount/$totalSt)*100) ?>%"></div>
+                            <div class="bg-rose-500 h-full" style="width: <?= round(($unpaidCount/$totalSt)*100) ?>%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Class Fee Setter & Rates Grid Section -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80 space-y-5">
+                    <div class="flex flex-wrap items-center justify-between pb-4 border-b border-gray-200 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                <i data-lucide="sliders" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-gray-900 text-lg">Set Class Fee Rates Overview &amp; Adjuster</h4>
+                                <p class="text-xs text-gray-500 mt-0.5">Configure default term fees per class level (S1 to S6). Fee changes apply uniformly across all students in that class level.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <button type="button" onclick="openModal('modal-annual-class-transition');" class="px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all hover:scale-[1.02]">
+                                <i data-lucide="arrow-up-circle" class="w-4 h-4 text-purple-300"></i> Annual Class Transition &amp; Promotion
+                            </button>
+
+                            <?php if ($classFeesLocked): ?>
+                                <span class="px-3.5 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-xs">
+                                    <i data-lucide="lock" class="w-4 h-4 text-emerald-700"></i> Fee Rates Locked
+                                </span>
+                            <?php else: ?>
+                                <span class="px-3.5 py-2 bg-amber-100 text-amber-900 border border-amber-300 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-xs">
+                                    <i data-lucide="edit-3" class="w-4 h-4 text-amber-700"></i> Fee Rates Unlocked
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- 6 Class Level Cards Responsive Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <?php foreach ($feesClasses as $cVal => $cLbl): ?>
+                            <?php 
+                                $currentFee = $allClassFeeRates[$cVal] ?? (str_contains($cVal, 'Senior 5') || str_contains($cVal, 'Senior 6') ? 950000.0 : 850000.0);
+                                $stCount = $classStudentCounts[$cVal] ?? 0;
+                                $projectedRev = $currentFee * $stCount;
+                            ?>
+                            <div class="rounded-2xl p-4 border border-gray-200 bg-white hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+                                <div>
+                                    <div class="flex items-center justify-between gap-1 mb-2">
+                                        <span class="text-xs font-black text-gray-900 uppercase tracking-wide truncate" title="<?= htmlspecialchars($cLbl) ?>"><?= htmlspecialchars($cLbl) ?></span>
+                                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80 shrink-0 whitespace-nowrap">
+                                            <?= $stCount ?> Enrolled
+                                        </span>
+                                    </div>
+                                    <div class="text-lg font-black text-gray-900 font-mono tracking-tight">
+                                        UGX <?= number_format($currentFee) ?>
+                                    </div>
+                                    <div class="text-[11px] font-medium text-gray-400">per student / term</div>
+
+                                    <div class="mt-2.5 bg-slate-50 p-2 rounded-xl border border-slate-200/80 text-[11px] font-mono text-slate-600 flex justify-between items-center">
+                                        <span>Projected:</span>
+                                        <strong class="text-emerald-700 font-bold">UGX <?= number_format($projectedRev) ?></strong>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2.5 border-t border-gray-100">
+                                    <?php if ($classFeesLocked): ?>
+                                        <div class="w-full py-1.5 px-2.5 bg-emerald-50 text-emerald-800 rounded-xl text-[11px] font-bold text-center border border-emerald-200 flex items-center justify-center gap-1">
+                                            <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-600"></i> Locked
+                                        </div>
+                                    <?php else: ?>
+                                        <form action="admin_fees_actions.php" method="post" class="space-y-1.5">
+                                            <input type="hidden" name="action" value="set_class_fee">
+                                            <input type="hidden" name="class_level" value="<?= htmlspecialchars($cVal) ?>">
+                                            <div class="relative">
+                                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">UGX</span>
+                                                <input type="number" name="fee_amount" value="<?= (int)$currentFee ?>" min="0" step="10000" required class="w-full pl-9 pr-2 py-1.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-mono font-bold text-gray-900 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                            </div>
+                                            <button type="submit" class="w-full py-1.5 bg-gray-900 hover:bg-gray-800 text-amber-400 font-extrabold rounded-xl text-xs shadow flex items-center justify-center gap-1.5 transition-colors">
+                                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Update Rate
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                    <!-- 4. Student Fee Ledger Table -->
+                    <div>
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-4 pb-3 border-b border-gray-100">
+                            <div>
+                                <h4 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                    <i data-lucide="book-open-check" class="w-5 h-5 text-amber-600"></i> Student Fee Ledger & Bank Reconciliation
+                                </h4>
+                                <p class="text-xs text-gray-500 mt-1">Review student billing records, total fees expected, total paid via bank, and current balances.</p>
+                            </div>
+
+                            <div class="w-full bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 mb-2">
+                                <i data-lucide="shield-alert" class="w-4.5 h-4.5 text-amber-600 shrink-0"></i>
+                                <span><strong>Billing Policy:</strong> Individual student fee adjustments are disabled. School fees are assigned uniformly per class level (e.g. S1–S4 or S5–S6) to maintain billing consistency and bank statement reconciliation.</span>
+                            </div>
+
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <!-- Filter Dropdown -->
+                                <select id="fee-status-filter" onchange="filterFeeLedgerTable();" class="px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500">
+                                    <option value="ALL">Filter: All Statuses</option>
+                                    <option value="PAID">🟢 Fully Paid</option>
+                                    <option value="PARTIAL">🟡 Partial Payment</option>
+                                    <option value="UNPAID">🔴 Unpaid / Overdue</option>
+                                </select>
+
+                                <!-- Class Filter -->
+                                <select id="fee-class-filter" onchange="filterFeeLedgerTable();" class="px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500">
+                                    <option value="ALL">All Classes</option>
+                                    <?php foreach ($feesClasses as $cVal => $cLbl): ?>
+                                        <option value="<?= htmlspecialchars($cVal) ?>"><?= htmlspecialchars($cLbl) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+
+                                <!-- Stream Filter -->
+                                <select id="fee-stream-filter" onchange="filterFeeLedgerTable();" class="px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500">
+                                    <option value="ALL">All Streams</option>
+                                    <?php foreach ($systemStreamsList as $strmOpt): ?>
+                                        <option value="<?= htmlspecialchars($strmOpt) ?>"><?= htmlspecialchars($strmOpt) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+
+                                <!-- Search Input -->
+                                <div class="relative">
+                                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                                    <input type="text" id="search-fee-ledger" onkeyup="filterFeeLedgerTable();" placeholder="Search student or LIN..." class="pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none w-56">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                            <table class="w-full text-left text-xs border-collapse" id="table-fee-ledger">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                        <th class="p-3.5">#</th>
+                                        <th class="p-3.5">Student Name</th>
+                                        <th class="p-3.5">Class &amp; Stream</th>
+                                        <th class="p-3.5">LIN / System PayCode</th>
+                                        <th class="p-3.5 text-right">School Fee</th>
+                                        <th class="p-3.5 text-right">Amount Paid</th>
+                                        <th class="p-3.5 text-right">Outstanding Balance</th>
+                                        <th class="p-3.5 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 font-medium">
+                                    <?php if (!empty($allStudentFeeAccounts)): ?>
+                                        <?php foreach ($allStudentFeeAccounts as $idx => $fa): ?>
+                                            <?php 
+                                                $cLvl = $fa['class_level'];
+                                                $strmVal = $fa['stream'] ?: 'Stream A';
+                                                $defF = (str_contains($cLvl, 'A-Level') || str_contains($cLvl, 'Senior 5') || str_contains($cLvl, 'Senior 6')) ? 950000.0 : 850000.0;
+                                                $totFee = ($fa['total_fee'] !== null && (float)$fa['total_fee'] > 0) ? (float)$fa['total_fee'] : $defF;
+                                                $paidAmt = (float)($fa['paid_amount'] ?? 0);
+                                                $bal = max(0.0, $totFee - $paidAmt);
+                                                $st = $bal <= 0 && $totFee > 0 ? 'PAID' : ($paidAmt > 0 ? 'PARTIAL' : 'UNPAID');
+
+                                                $badgeStyle = $st === 'PAID' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : ($st === 'PARTIAL' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-rose-100 text-rose-900 border-rose-300');
+                                            ?>
+                                            <tr class="hover:bg-gray-50 transition-colors fee-ledger-row" data-status="<?= $st ?>" data-class="<?= htmlspecialchars($cLvl) ?>" data-stream="<?= htmlspecialchars($strmVal) ?>">
+                                                <td class="p-3.5 font-mono text-gray-400"><?= $idx + 1 ?></td>
+                                                <td class="p-3.5">
+                                                    <div class="font-bold text-gray-900 text-sm search-target"><?= htmlspecialchars($fa['full_name']) ?></div>
+                                                    <div class="text-[11px] text-gray-500">Student ID #<?= (int)$fa['student_id'] ?></div>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <span class="px-2.5 py-1 rounded bg-gray-100 text-gray-800 font-bold text-xs border border-gray-200">
+                                                        <?= htmlspecialchars($fa['class_level']) ?> · <?= htmlspecialchars($fa['stream'] ?: 'Stream A') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <div class="font-mono text-xs font-bold text-gray-900 search-target"><?= htmlspecialchars($fa['lin_number'] ?: '—') ?></div>
+                                                    <?php if (!empty($fa['pay_code'])): ?>
+                                                        <div class="mt-1 inline-block px-2 py-0.5 rounded bg-purple-100 text-purple-950 border border-purple-300 font-mono text-[11px] font-black tracking-wide search-target" title="System PayCode for SchoolPay &amp; Bank Payments">
+                                                            💳 <?= htmlspecialchars($fa['pay_code']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="p-3.5 text-right font-mono font-bold text-gray-900 text-sm">UGX <?= number_format($totFee) ?></td>
+                                                <td class="p-3.5 text-right font-mono font-bold text-emerald-700 text-sm">UGX <?= number_format($paidAmt) ?></td>
+                                                <td class="p-3.5 text-right font-mono font-black <?= $bal > 0 ? 'text-rose-700' : 'text-gray-400' ?> text-sm">
+                                                    UGX <?= number_format($bal) ?>
+                                                </td>
+                                                <td class="p-3.5 text-center">
+                                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border <?= $badgeStyle ?>">
+                                                        <?= $st === 'PAID' ? '✓ FULLY PAID' : ($st === 'PARTIAL' ? '⏳ PARTIAL' : '⚠️ UNPAID') ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="8" class="p-10 text-center text-gray-500 text-sm">
+                                                No student fee accounts found. Enrolled students will appear here automatically.
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 5. Recent Bank Transactions Feed -->
+                    <div class="pt-6 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h4 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                    <i data-lucide="history" class="w-5 h-5 text-emerald-600"></i> Live Bank Transactions & Receipts Log
+                                </h4>
+                                <p class="text-xs text-gray-500 mt-0.5">Real-time stream of fee payments received via Centenary Bank, Stanbic FlexiPay, Equity, and Mobile Money.</p>
+                            </div>
+                            <span class="text-xs font-mono text-gray-400 font-bold"><?= count($allBankTransactions) ?> Transactions Logged</span>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-2xl border border-gray-200">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
+                                        <th class="p-3.5">Tx Reference</th>
+                                        <th class="p-3.5">Student Name & LIN</th>
+                                        <th class="p-3.5">Bank & Channel</th>
+                                        <th class="p-3.5 text-right">Amount (UGX)</th>
+                                        <th class="p-3.5">Receipt #</th>
+                                        <th class="p-3.5 text-center">Status</th>
+                                        <th class="p-3.5 text-right">Date & Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 font-medium">
+                                    <?php if (!empty($allBankTransactions)): ?>
+                                        <?php foreach ($allBankTransactions as $tx): ?>
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="p-3.5 font-mono text-xs font-bold text-gray-900"><?= htmlspecialchars($tx['transaction_ref']) ?></td>
+                                                <td class="p-3.5">
+                                                    <div class="font-bold text-gray-900"><?= htmlspecialchars($tx['student_name'] ?: 'Unknown Student') ?></div>
+                                                    <div class="text-[10px] text-amber-700 font-mono font-bold"><?= htmlspecialchars($tx['lin_number'] ?: 'LIN N/A') ?></div>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <span class="font-bold text-gray-800 block"><?= htmlspecialchars($tx['bank_code']) ?></span>
+                                                    <span class="text-[10px] text-gray-500 block"><?= htmlspecialchars($tx['payment_channel'] ?: 'API Sync') ?></span>
+                                                </td>
+                                                <td class="p-3.5 text-right font-mono font-black text-emerald-700 text-sm">+ UGX <?= number_format((float)$tx['amount']) ?></td>
+                                                <td class="p-3.5 font-mono text-xs text-gray-600 font-bold"><?= htmlspecialchars($tx['receipt_number']) ?></td>
+                                                <td class="p-3.5 text-center">
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                                        ✓ SUCCESS
+                                                    </span>
+                                                </td>
+                                                <td class="p-3.5 text-right font-mono text-xs text-gray-500"><?= date('d M Y, g:ia', strtotime($tx['payment_date'])) ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="7" class="p-8 text-center text-gray-500 text-xs">
+                                                No bank transactions recorded yet. Click "Sync Bank APIs Now" or "Record Bank Payment" above.
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- MODAL: CONFIGURE BANK / WEBHOOK INTEGRATION -->
+            <div id="modal-configure-bank-api" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+                <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-gray-100 flex flex-col my-auto max-h-[90vh]">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-950 text-white shrink-0">
+                        <h3 class="text-base sm:text-lg font-black flex items-center gap-2">
+                            <i data-lucide="key" class="w-5 h-5 text-amber-400"></i> <span id="bank-modal-title">Configure Bank / Webhook Integration</span>
+                        </h3>
+                        <button type="button" onclick="closeModal('modal-configure-bank-api');" class="text-gray-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <form action="admin_fees_actions.php" method="post" class="p-6 space-y-4 overflow-y-auto">
+                        <input type="hidden" name="action" id="bank-cfg-action" value="save_bank_config">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Bank Code (Identifier) <span class="text-amber-600">*</span></label>
+                                <input type="text" name="bank_code" id="bank-cfg-code" required placeholder="e.g. KCB or DFCU" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-mono uppercase font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Bank / Provider Name <span class="text-amber-600">*</span></label>
+                                <input type="text" name="bank_name" id="bank-cfg-name" required placeholder="e.g. KCB Bank Uganda" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">School Account / Merchant ID <span class="text-amber-600">*</span></label>
+                                <input type="text" name="account_number" id="bank-cfg-account" required placeholder="e.g. 3100045892" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Environment Mode</label>
+                                <select name="environment" id="bank-cfg-env" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-bold focus:ring-2 focus:ring-amber-500">
+                                    <option value="production">🟢 Production (Live Bank API)</option>
+                                    <option value="sandbox">🟡 Sandbox (Test Server)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Bank API Endpoint URL</label>
+                            <input type="url" name="api_endpoint" id="bank-cfg-endpoint" placeholder="https://api.bank.co.ug/v1/payments" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Client ID / API Key</label>
+                                <input type="text" name="api_key" id="bank-cfg-key" placeholder="API Key string" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Client Secret Key</label>
+                                <input type="password" name="secret_key" id="bank-cfg-secret" placeholder="Secret Key" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-3">
+                            <h4 class="text-xs font-black text-amber-900 uppercase flex items-center gap-1.5">
+                                <i data-lucide="webhook" class="w-4 h-4 text-amber-600"></i> Bank Webhook / Callback Endpoint Settings
+                            </h4>
+                            <div>
+                                <label class="block text-[11px] font-bold text-amber-900 mb-1">Custom Webhook Callback URL</label>
+                                <input type="text" name="webhook_url" id="bank-cfg-webhook" placeholder="http://localhost:8080/admin_fees_actions.php?webhook=1&bank=..." class="w-full px-3 py-2 border border-amber-300 rounded-xl text-xs font-mono bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-amber-900 mb-1">Webhook Signing Secret Token (Optional)</label>
+                                <input type="password" name="webhook_secret" id="bank-cfg-whsecret" placeholder="e.g. whsec_99182377" class="w-full px-3 py-2 border border-amber-300 rounded-xl text-xs font-mono bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-100 flex justify-end gap-2 shrink-0">
+                            <button type="button" onclick="closeModal('modal-configure-bank-api');" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-black text-gray-950 bg-amber-500 hover:bg-amber-400 shadow flex items-center gap-1.5">
+                                <i data-lucide="save" class="w-4 h-4"></i> <span id="bank-modal-submit-text">Save Integration</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+
+
+
 
             <!-- TAB 4: ALUMNI NETWORK -->
             <div id="tab-admin-alumni" class="admin-tab-content hidden space-y-6">
@@ -3310,6 +3736,63 @@ if (!empty($_SESSION['admin_flash'])) {
         </div>
     </div>
 
+    <!-- Modal: Execute Annual Class Transition & Promotion -->
+    <div id="modal-annual-class-transition" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden overflow-y-auto backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 border border-gray-100">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                    <i data-lucide="graduation-cap" class="w-6 h-6 text-purple-700"></i> End-of-Year Class Transition
+                </h3>
+                <button type="button" onclick="closeModal('modal-annual-class-transition');" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-xl hover:bg-gray-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form action="admin_fees_actions.php" method="post" class="space-y-4" onsubmit="return confirm('CRITICAL CONFIRMATION: Are you sure you want to execute the End of Year Class Transition? All S1–S5 students will be promoted to the next class level and S6 candidates will graduate to Alumni.');">
+                <input type="hidden" name="action" value="execute_annual_class_transition">
+
+                <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-xs text-amber-950 space-y-2">
+                    <div class="font-bold flex items-center gap-1.5 text-amber-800">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i> Annual Promotion Rules:
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-[11px] text-amber-900">
+                        <li><strong>Senior 1 &rarr; Senior 2</strong></li>
+                        <li><strong>Senior 2 &rarr; Senior 3</strong></li>
+                        <li><strong>Senior 3 &rarr; Senior 4</strong></li>
+                        <li><strong>Senior 4 &rarr; Senior 5</strong></li>
+                        <li><strong>Senior 5 &rarr; Senior 6</strong></li>
+                        <li><strong>Senior 6 candidates</strong> transition to <span class="font-extrabold text-emerald-800">Graduated Alumni Registry</span>.</li>
+                        <li>Unpaid balances from previous terms roll over into the new academic year fee account.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Target Academic Term for New Year</label>
+                    <input type="text" name="target_term" value="Term I 2027" required class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Graduation Year for S6 Alumni</label>
+                    <input type="number" name="graduation_year" value="<?= date('Y') ?>" min="2020" max="2035" required class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600">
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="confirm_transition" required class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                    <label for="confirm_transition" class="text-xs font-bold text-gray-800">I confirm that end-of-year examinations and marks entry are complete.</label>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="closeModal('modal-annual-class-transition');" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs shadow-md flex items-center gap-1.5">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Execute Transition
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openPointsConfigModal(windowId, windowTitle, showPoints, disabledLevelsStr) {
             document.getElementById('points-modal-window-id').value = windowId;
@@ -3343,6 +3826,79 @@ if (!empty($_SESSION['admin_flash'])) {
                     cb.checked = ['Senior 1','Senior 2','Senior 3','Senior 4'].indexOf(cb.value) !== -1;
                 } else if (preset === 'a_level_disabled') {
                     cb.checked = ['Senior 5','Senior 6'].indexOf(cb.value) !== -1;
+                }
+            });
+        }
+
+        // Bank API & Fees Management Helpers
+        function openConfigureBankModal(bankObj) {
+            if (!bankObj) return openAddBankModal();
+            document.getElementById('bank-cfg-action').value = 'save_bank_config';
+            document.getElementById('bank-modal-title').innerText = '⚙️ Edit Integration: ' + (bankObj.bank_name || bankObj.bank_code);
+            document.getElementById('bank-modal-submit-text').innerText = 'Save Changes';
+
+            var codeInput = document.getElementById('bank-cfg-code');
+            codeInput.value = bankObj.bank_code || '';
+            codeInput.readOnly = true;
+            codeInput.classList.add('bg-gray-100');
+
+            document.getElementById('bank-cfg-name').value = bankObj.bank_name || '';
+            document.getElementById('bank-cfg-account').value = bankObj.account_number || '';
+            document.getElementById('bank-cfg-env').value = bankObj.environment || 'sandbox';
+            document.getElementById('bank-cfg-endpoint').value = bankObj.api_endpoint || '';
+            document.getElementById('bank-cfg-key').value = bankObj.api_key || '';
+            document.getElementById('bank-cfg-secret').value = bankObj.secret_key || '';
+            document.getElementById('bank-cfg-webhook').value = bankObj.webhook_url || ('http://localhost:8080/admin_fees_actions.php?webhook=1&bank=' + (bankObj.bank_code || ''));
+            document.getElementById('bank-cfg-whsecret').value = bankObj.webhook_secret || '';
+
+            openModal('modal-configure-bank-api');
+        }
+
+        function openAddBankModal() {
+            document.getElementById('bank-cfg-action').value = 'add_bank_integration';
+            document.getElementById('bank-modal-title').innerText = '➕ Add New Bank / Webhook Integration';
+            document.getElementById('bank-modal-submit-text').innerText = 'Add Integration';
+
+            var codeInput = document.getElementById('bank-cfg-code');
+            codeInput.value = '';
+            codeInput.readOnly = false;
+            codeInput.classList.remove('bg-gray-100');
+
+            document.getElementById('bank-cfg-name').value = '';
+            document.getElementById('bank-cfg-account').value = '';
+            document.getElementById('bank-cfg-env').value = 'sandbox';
+            document.getElementById('bank-cfg-endpoint').value = '';
+            document.getElementById('bank-cfg-key').value = '';
+            document.getElementById('bank-cfg-secret').value = '';
+            document.getElementById('bank-cfg-webhook').value = '';
+            document.getElementById('bank-cfg-whsecret').value = '';
+
+            openModal('modal-configure-bank-api');
+        }
+
+        function filterFeeLedgerTable() {
+            var searchInput = (document.getElementById('search-fee-ledger').value || '').toLowerCase().trim();
+            var statusFilter = document.getElementById('fee-status-filter').value || 'ALL';
+            var classFilter = document.getElementById('fee-class-filter').value || 'ALL';
+            var streamFilter = (document.getElementById('fee-stream-filter') ? document.getElementById('fee-stream-filter').value : 'ALL');
+
+            var rows = document.querySelectorAll('#table-fee-ledger tbody tr.fee-ledger-row');
+            rows.forEach(function(row) {
+                var nameText = (row.querySelector('.search-target') ? row.querySelector('.search-target').innerText : '').toLowerCase();
+                var linText = (row.querySelectorAll('.search-target')[1] ? row.querySelectorAll('.search-target')[1].innerText : '').toLowerCase();
+                var rowStatus = row.getAttribute('data-status') || '';
+                var rowClass = row.getAttribute('data-class') || '';
+                var rowStream = row.getAttribute('data-stream') || '';
+
+                var matchesSearch = !searchInput || nameText.includes(searchInput) || linText.includes(searchInput) || row.innerText.toLowerCase().includes(searchInput);
+                var matchesStatus = (statusFilter === 'ALL') || (rowStatus === statusFilter);
+                var matchesClass = (classFilter === 'ALL') || (rowClass === classFilter);
+                var matchesStream = (streamFilter === 'ALL') || (rowStream === streamFilter);
+
+                if (matchesSearch && matchesStatus && matchesClass && matchesStream) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
                 }
             });
         }
