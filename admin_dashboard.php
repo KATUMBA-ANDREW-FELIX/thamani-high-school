@@ -6,6 +6,17 @@ $admin = current_admin();
 $hour  = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
+
 require_once 'conn.php';
 
 // ---------- Stat counters ----------
@@ -618,7 +629,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <?= (int)$t['is_active'] === 1 ? 'Active' : 'Disabled' ?>
                                                 </span>
                                             </td>
-                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($t['created_at'])) ?></td>
+                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= format_thamani_date($t['created_at'] ?? null) ?></td>
                                             <td class="p-3.5 text-right whitespace-nowrap space-x-1">
                                                 <button type="button" onclick="openEditTeacherModal(<?= htmlspecialchars(json_encode($t), ENT_QUOTES, 'UTF-8') ?>);" class="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white font-bold rounded-xl text-xs hover:bg-amber-700 transition-colors shadow-sm">
                                                     <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
@@ -1014,7 +1025,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <div class="pt-3 border-t border-white/10 space-y-2">
                                     <div class="text-[10px] text-gray-400 flex justify-between">
                                         <span>Last Sync:</span>
-                                        <span class="font-mono text-gray-300 truncate"><?= $bk['last_sync_at'] ? date('H:i, d M', strtotime($bk['last_sync_at'])) : 'Never' ?></span>
+                                        <span class="font-mono text-gray-300 truncate"><?= !empty($bk['last_sync_at']) ? format_thamani_date($bk['last_sync_at'], 'H:i, d M') : 'Never' ?></span>
                                     </div>
 
                                     <div class="flex items-center gap-1.5 pt-1">
@@ -1346,7 +1357,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                         ✓ SUCCESS
                                                     </span>
                                                 </td>
-                                                <td class="p-3.5 text-right font-mono text-xs text-gray-500"><?= date('d M Y, g:ia', strtotime($tx['payment_date'])) ?></td>
+                                                <td class="p-3.5 text-right font-mono text-xs text-gray-500"><?= format_thamani_date($tx['payment_date'] ?? null, 'd M Y, g:ia') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -1543,7 +1554,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                             <td class="p-3.5 font-bold text-gray-900"><?= htmlspecialchars($c['title']) ?></td>
                                             <td class="p-3.5"><span class="text-xs font-bold uppercase px-2.5 py-1 rounded bg-gray-100 text-gray-700"><?= htmlspecialchars($c['doc_type']) ?></span></td>
                                             <td class="p-3.5 text-xs text-gray-500 font-mono"><?= $szFmt ?></td>
-                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($c['uploaded_at'])) ?></td>
+                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= format_thamani_date($c['uploaded_at'] ?? null) ?></td>
                                             <td class="p-3.5 text-right whitespace-nowrap">
                                                 <a href="<?= htmlspecialchars($c['file_path']) ?>" target="_blank"
                                                    class="inline-flex items-center gap-1 px-3.5 py-1.5 bg-gray-900 text-white font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors">
@@ -1593,7 +1604,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                         <div class="text-sm font-bold text-gray-900 truncate"><?= htmlspecialchars($g['title']) ?></div>
                                         <div class="text-xs text-gray-500 mt-1 flex justify-between items-center mb-2">
                                             <span class="uppercase font-extrabold text-amber-700"><?= htmlspecialchars($g['category']) ?></span>
-                                            <span><?= date('d M Y', strtotime($g['uploaded_at'])) ?></span>
+                                            <span><?= format_thamani_date($g['uploaded_at'] ?? null) ?></span>
                                         </div>
                                         <div class="pt-2 border-t border-gray-100 flex justify-end">
                                             <form action="delete_item.php" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete photo <?= htmlspecialchars(addslashes($g['title'])) ?>?');">
@@ -1682,7 +1693,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <span class="text-gray-400">—</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= date('d M Y', strtotime($tt['created_at'])) ?></td>
+                                            <td class="p-3.5 text-xs text-gray-500 font-mono"><?= format_thamani_date($tt['created_at'] ?? null) ?></td>
                                             <td class="p-3.5 text-right whitespace-nowrap space-x-1">
                                                 <?php if ($slotCount > 0): ?>
                                                     <button type="button" onclick="viewTimetableDetails(<?= htmlspecialchars(json_encode($tt), ENT_QUOTES, 'UTF-8') ?>);" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 transition-colors shadow-sm">

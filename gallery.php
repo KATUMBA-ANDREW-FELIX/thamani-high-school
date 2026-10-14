@@ -8,6 +8,16 @@
  */
 
 session_start();
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
 require_once 'conn.php';
 
 $isAdmin   = !empty($_SESSION['admin_id']);
@@ -75,7 +85,7 @@ $photosPayload = json_encode(array_map(function($p) {
         'caption'     => $p['caption'] ?? '',
         'category'    => $p['category'],
         'url'         => $p['file_path'],
-        'uploaded'    => date('d M Y', strtotime($p['uploaded_at'])),
+        'uploaded'    => format_thamani_date($p['uploaded_at'] ?? null),
         'uploadedBy'  => (int)($p['uploaded_by'] ?? 0),
     ];
 }, $photos), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);

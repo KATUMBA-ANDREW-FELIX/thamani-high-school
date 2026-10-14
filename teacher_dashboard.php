@@ -8,6 +8,17 @@ $teacher  = current_teacher();
 $hour     = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
+
 $classAnnouncements = [];
 $caRes = thamani_db_query($conn, "SELECT id, title, content, class_level, posted_by_name, created_at FROM class_announcements ORDER BY created_at DESC LIMIT 30");
 if ($caRes) {
@@ -629,7 +640,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                             </span>
                                             <h4 class="text-lg font-bold text-gray-900"><?= htmlspecialchars($ann['title']) ?></h4>
                                         </div>
-                                        <span class="text-xs font-mono text-gray-500"><?= date('d M Y, g:ia', strtotime($ann['created_at'])) ?></span>
+                                        <span class="text-xs font-mono text-gray-500"><?= format_thamani_date($ann['created_at'] ?? null, 'd M Y, g:ia') ?></span>
                                     </div>
                                     <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed mb-3"><?= htmlspecialchars($ann['content']) ?></p>
                                     <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
@@ -672,7 +683,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         <!-- Quick Action Toggles -->
                         <div class="mb-4 flex flex-wrap justify-between items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div class="text-xs text-gray-600">
-                                Total Students in Rollcall: <strong class="text-brand-green"><?= count($streamStudents) ?></strong> · Date: <strong><?= date('d M Y', strtotime($attDate)) ?></strong>
+                                Total Students in Rollcall: <strong class="text-brand-green"><?= count($streamStudents) ?></strong> · Date: <strong><?= format_thamani_date($attDate, 'd M Y') ?></strong>
                             </div>
                             <div class="flex gap-2">
                                 <button type="button" onclick="markAllAttendance('Present');" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-lg text-xs hover:bg-emerald-700 shadow-sm flex items-center gap-1">

@@ -12,6 +12,17 @@ require_once 'auth_teacher.php';
 require_teacher_login();
 require_password_changed();
 
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
+
 $teacher = current_teacher();
 $isAdmin = !empty($_SESSION['admin_id']);
 $teacherId = (int)($teacher['id'] ?? 0);
@@ -325,7 +336,7 @@ if (!empty($_SESSION['teacher_flash'])) {
                                             <span class="px-2 py-0.5 rounded font-bold text-[11px] <?= $att['status'] === 'Present' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
                                                 <?= htmlspecialchars($att['status']) ?>
                                             </span>
-                                            <div class="text-[10px] text-gray-400 mt-0.5"><?= date('d M', strtotime($att['attendance_date'])) ?></div>
+                                            <div class="text-[10px] text-gray-400 mt-0.5"><?= format_thamani_date($att['attendance_date'] ?? null, 'd M') ?></div>
                                         <?php else: ?>
                                             <span class="text-gray-400 italic text-[11px]">Not marked today</span>
                                         <?php endif; ?>

@@ -9,6 +9,16 @@
 
 session_start();
 /** @var mysqli $conn */
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
 require_once __DIR__ . '/conn.php';
 
 $isAdmin   = !empty($_SESSION['admin_id']);
@@ -86,7 +96,7 @@ $docsPayload = json_encode(array_map(function($d) {
         'fileName'    => $d['file_name'],
         'url'         => $d['file_path'],
         'size'        => formatFileSize((int)$d['file_size']),
-        'uploaded'    => date('d M Y', strtotime($d['uploaded_at'])),
+        'uploaded'    => format_thamani_date($d['uploaded_at'] ?? null),
         'uploadedBy'  => (int)($d['uploaded_by'] ?? 0),
     ];
 }, $documents), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);

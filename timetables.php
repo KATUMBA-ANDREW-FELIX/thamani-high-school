@@ -8,6 +8,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!function_exists('format_thamani_date')) {
+    function format_thamani_date($value, string $format = 'd M Y'): string {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string)$value);
+        return $timestamp !== false ? date($format, $timestamp) : 'N/A';
+    }
+}
 require_once 'conn.php';
 
 $isStudent = !empty($_SESSION['student_id']);
@@ -210,7 +220,7 @@ if ($stmt) {
                                     <span class="px-3 py-1 rounded-full bg-brand-lightGreen text-brand-green font-extrabold text-xs">
                                         <?= htmlspecialchars($tt['class_level']) ?> (<?= htmlspecialchars($tt['stream']) ?>)
                                     </span>
-                                    <span class="text-xs font-mono text-gray-400">Published: <?= date('d M Y', strtotime($tt['created_at'])) ?></span>
+                                    <span class="text-xs font-mono text-gray-400">Published: <?= format_thamani_date($tt['created_at'] ?? null) ?></span>
                                 </div>
                                 <h2 class="text-2xl font-bold text-gray-900 mt-1"><?= htmlspecialchars($tt['title']) ?></h2>
                             </div>
