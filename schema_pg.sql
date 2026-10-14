@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS teachers (
     department VARCHAR(100),
     is_class_teacher INT DEFAULT 0,
     class_teacher_of VARCHAR(50),
+    class_teacher_stream VARCHAR(50) DEFAULT 'Stream A',
     classes_taught VARCHAR(255),
+    phone VARCHAR(30),
+    can_send_sms INT DEFAULT 0,
     password_hash VARCHAR(255) NOT NULL,
     must_change_password INT DEFAULT 0,
     is_active INT DEFAULT 1,
@@ -149,10 +152,45 @@ CREATE TABLE IF NOT EXISTS class_announcements (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS school_settings (
+    setting_key VARCHAR(255) PRIMARY KEY,
+    setting_value TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_contacts (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    category VARCHAR(30) DEFAULT 'Other',
+    class_level VARCHAR(50) DEFAULT '',
+    stream VARCHAR(50) DEFAULT '',
+    notes TEXT DEFAULT '',
+    is_active INT DEFAULT 1,
+    created_by INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_logs (
+    id SERIAL PRIMARY KEY,
+    batch_id VARCHAR(32),
+    sender_id INT DEFAULT 0,
+    sender_role VARCHAR(20) DEFAULT 'admin',
+    recipient_count INT DEFAULT 0,
+    category_filter VARCHAR(50) DEFAULT 'All',
+    message TEXT,
+    status VARCHAR(20) DEFAULT 'SUCCESS',
+    api_response TEXT DEFAULT '',
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Safe migrations for existing installations
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50);
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_stream VARCHAR(50) DEFAULT 'Stream A';
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255);
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_send_sms INT DEFAULT 0;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1;

@@ -62,11 +62,15 @@ $teachers = [
 
 foreach ($teachers as $t) {
     $stmt = thamani_db_prepare($conn, "SELECT id FROM teachers WHERE staff_id = ? OR email = ? LIMIT 1");
-    thamani_db_stmt_bind_param($stmt, "ss", $t['staff_id'], $t['email']);
-    thamani_db_stmt_execute($stmt);
-    $res = thamani_db_stmt_get_result($stmt);
-    $exists = $res ? thamani_db_fetch_assoc($res) : null;
-    thamani_db_stmt_close($stmt);
+    if ($stmt) {
+        thamani_db_stmt_bind_param($stmt, "ss", $t['staff_id'], $t['email']);
+        thamani_db_stmt_execute($stmt);
+        $res = thamani_db_stmt_get_result($stmt);
+        $exists = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($stmt);
+    } else {
+        $exists = null;
+    }
 
     if ($exists) {
         $upd = thamani_db_prepare($conn, "UPDATE teachers SET full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, password_hash = ? WHERE id = ?");
@@ -328,11 +332,15 @@ $students = [
 
 foreach ($students as $s) {
     $stmt = thamani_db_prepare($conn, "SELECT id FROM students WHERE lin_number = ? LIMIT 1");
-    thamani_db_stmt_bind_param($stmt, "s", $s['lin']);
-    thamani_db_stmt_execute($stmt);
-    $res = thamani_db_stmt_get_result($stmt);
-    $exists = $res ? thamani_db_fetch_assoc($res) : null;
-    thamani_db_stmt_close($stmt);
+    if ($stmt) {
+        thamani_db_stmt_bind_param($stmt, "s", $s['lin']);
+        thamani_db_stmt_execute($stmt);
+        $res = thamani_db_stmt_get_result($stmt);
+        $exists = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($stmt);
+    } else {
+        $exists = null;
+    }
 
     if ($exists) {
         $upd = thamani_db_prepare($conn, "UPDATE students SET full_name = ?, class_level = ?, stream = ?, status = ?, academic_doc_path = ?, recommendation_doc_path = ?, medical_doc_path = ?, password_hash = ?, account_active = 1 WHERE id = ?");
@@ -443,11 +451,15 @@ $rwRows = [
 $winIds = [];
 foreach ($rwRows as $rw) {
     $cStmt = thamani_db_prepare($conn, "SELECT id FROM reporting_windows WHERE title = ? LIMIT 1");
-    thamani_db_stmt_bind_param($cStmt, "s", $rw['title']);
-    thamani_db_stmt_execute($cStmt);
-    $cRes = thamani_db_stmt_get_result($cStmt);
-    $rwExists = $cRes ? thamani_db_fetch_assoc($cRes) : null;
-    thamani_db_stmt_close($cStmt);
+    if ($cStmt) {
+        thamani_db_stmt_bind_param($cStmt, "s", $rw['title']);
+        thamani_db_stmt_execute($cStmt);
+        $cRes = thamani_db_stmt_get_result($cStmt);
+        $rwExists = $cRes ? thamani_db_fetch_assoc($cRes) : null;
+        thamani_db_stmt_close($cStmt);
+    } else {
+        $rwExists = null;
+    }
 
     if ($rwExists) {
         $winIds[$rw['assessment_type'] . '_' . $rw['term']] = (int)$rwExists['id'];

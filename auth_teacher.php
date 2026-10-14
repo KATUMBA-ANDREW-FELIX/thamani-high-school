@@ -30,7 +30,7 @@ function current_teacher(): array {
     $id = (int)($_SESSION['teacher_id'] ?? 0);
     $tData = [];
     if ($id > 0 && !empty($conn)) {
-        $stmt = thamani_db_prepare($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster FROM teachers WHERE id = ? LIMIT 1");
+        $stmt = thamani_db_prepare($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms FROM teachers WHERE id = ? LIMIT 1");
         if ($stmt) {
             thamani_db_stmt_bind_param($stmt, "i", $id);
             thamani_db_stmt_execute($stmt);
@@ -54,5 +54,6 @@ function current_teacher(): array {
         'classes_taught'         => $tData['classes_taught']         ?? ($_SESSION['teacher_classes_taught']         ?? ''),
         'can_view_enrollments'   => (int)($tData['can_view_enrollments']   ?? ($_SESSION['teacher_can_view_enrollments']   ?? 0)),
         'can_manage_duty_roster' => (int)($tData['can_manage_duty_roster'] ?? ($_SESSION['teacher_can_manage_duty_roster'] ?? 0)),
+        'can_send_sms'           => (int)($tData['can_send_sms'] ?? 0),
     ];
 }

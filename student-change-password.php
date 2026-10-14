@@ -23,27 +23,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $stmt = thamani_db_prepare($db, 'SELECT password_hash FROM students WHERE id = ? LIMIT 1');
-        thamani_db_stmt_bind_param($stmt, 'i', $_SESSION['student_id']);
-        thamani_db_stmt_execute($stmt);
-        $result = thamani_db_stmt_get_result($stmt);
-        $student = $result ? thamani_db_fetch_assoc($result) : null;
-        thamani_db_stmt_close($stmt);
-
-        if (!$student || empty($student['password_hash']) || !password_verify($current, $student['password_hash'])) {
-            $errors[] = 'The current password is incorrect.';
+        if (!$stmt) {
+            $errors[] = 'Database error. Please try again.';
         } else {
-            $hash = password_hash($new, PASSWORD_DEFAULT);
-            $update = thamani_db_prepare($db, 'UPDATE students SET password_hash = ?, must_change_password = 0 WHERE id = ?');
-            thamani_db_stmt_bind_param($update, 'si', $hash, $_SESSION['student_id']);
-            $saved = thamani_db_stmt_execute($update);
-            thamani_db_stmt_close($update);
+            thamani_db_stmt_bind_param($stmt, 'i', $_SESSION['student_id']);
+            thamani_db_stmt_execute($stmt);
+            $result = thamani_db_stmt_get_result($stmt);
+            $student = $result ? thamani_db_fetch_assoc($result) : null;
+            thamani_db_stmt_close($stmt);
 
-            if (!$saved) {
-                $errors[] = 'The password could not be updated. Please try again.';
+            if (!$student || empty($student['password_hash']) || !password_verify($current, $student['password_hash'])) {
+                $errors[] = 'The current password is incorrect.';
             } else {
-                $_SESSION['student_must_change_password'] = 0;
-                header('Location: student-dashboard.php');
-                exit;
+                $hash = password_hash($new, PASSWORD_DEFAULT);
+                $update = thamani_db_prepare($db, 'UPDATE students SET password_hash = ?, must_change_password = 0 WHERE id = ?');
+                if ($update) {
+                    thamani_db_stmt_bind_param($update, 'si', $hash, $_SESSION['student_id']);
+                    $saved = thamani_db_stmt_execute($update);
+                    thamani_db_stmt_close($update);
+                    if (!$saved) {
+                        $errors[] = 'The password could not be updated. Please try again.';
+                    } else {
+                        $_SESSION['student_must_change_password'] = 0;
+                        header('Location: student-dashboard.php');
+                        exit;
+                    }
+                } else {
+                    $errors[] = 'Database error while saving password. Please try again.';
+                }
             }
         }
     }

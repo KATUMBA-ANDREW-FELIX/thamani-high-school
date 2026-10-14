@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6-dev \
     libzip-dev \
     libcurl4-openssl-dev \
+    libonig-dev \
     zip \
     unzip \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo pdo_pgsql pgsql gd zip curl opcache \
+    && docker-php-ext-install -j$(nproc) pdo pdo_pgsql pdo_sqlite pgsql gd zip curl mbstring opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache performance modules (rewrite, headers, expires, deflate)

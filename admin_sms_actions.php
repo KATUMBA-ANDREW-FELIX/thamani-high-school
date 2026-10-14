@@ -71,17 +71,23 @@ if ($action === 'save_sms_credentials') {
     $senderId  = substr($senderId ?: 'THAMANI', 0, 11);
 
     $saved = true;
+    // Driver-aware upsert: PostgreSQL uses ON CONFLICT, SQLite uses INSERT OR REPLACE
+    $isPostgres = ($db instanceof ThamaniPolyfillConn && $db->driver === 'pgsql');
+
     foreach ([
         'ego_sms_username'  => $username,
         'ego_sms_password'  => $password,
         'ego_sms_sender_id' => $senderId,
     ] as $key => $val) {
-        $stmt = thamani_db_prepare($db, "INSERT INTO school_settings (setting_key, setting_value, updated_at) VALUES (?, ?, NOW())
-            ON CONFLICT(setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = EXCLUDED.updated_at");
-        if (!$stmt) {
-            // SQLite fallback: INSERT OR REPLACE
-            $stmt = thamani_db_prepare($db, "INSERT OR REPLACE INTO school_settings (setting_key, setting_value, updated_at) VALUES (?, ?, datetime('now'))");
+        if ($isPostgres) {
+            $sql = "INSERT INTO school_settings (setting_key, setting_value, updated_at)
+                        VALUES (?, ?, NOW())
+                        ON CONFLICT(setting_key)
+                        DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW()";
+        } else {
+            $sql = "INSERT OR REPLACE INTO school_settings (setting_key, setting_value, updated_at) VALUES (?, ?, datetime('now'))";
         }
+        $stmt = thamani_db_prepare($db, $sql);
         if (!$stmt) { $saved = false; continue; }
         thamani_db_stmt_bind_param($stmt, 'ss', $key, $val);
         $saved = thamani_db_stmt_execute($stmt) && $saved;
@@ -281,13 +287,17 @@ if ($action === 'import_contacts') {
 // ─────────────────────────────────────────────────────────────────────────────
 if ($action === 'get_contacts') {
     $cat = trim($_GET['category'] ?? 'All');
+    $res = null;
     if ($cat === 'All' || empty($cat)) {
         $res = thamani_db_query($db, "SELECT id, full_name, phone, category, class_level, stream, is_active FROM sms_contacts ORDER BY category ASC, full_name ASC");
     } else {
         $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone, category, class_level, stream, is_active FROM sms_contacts WHERE category = ? ORDER BY full_name ASC");
-        thamani_db_stmt_bind_param($stmt, 's', $cat);
-        thamani_db_stmt_execute($stmt);
-        $res = thamani_db_stmt_get_result($stmt);
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, 's', $cat);
+            thamani_db_stmt_execute($stmt);
+            $res = thamani_db_stmt_get_result($stmt);
+            thamani_db_stmt_close($stmt);
+        }
     }
     $contacts = [];
     if ($res) while ($r = thamani_db_fetch_assoc($res)) $contacts[] = $r;
@@ -301,28 +311,31 @@ if ($action === 'get_contacts') {
 if ($action === 'preview_recipients') {
     $cat        = trim($_POST['category'] ?? 'All');
     $individual = (int)($_POST['individual_id'] ?? 0);
+    $res  = null;
+    $rows = [];
 
     if ($individual > 0) {
         $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone FROM sms_contacts WHERE id = ? AND is_active = 1 LIMIT 1");
-        thamani_db_stmt_bind_param($stmt, 'i', $individual);
-        thamani_db_stmt_execute($stmt);
-        $res = thamani_db_stmt_get_result($stmt);
-        $rows = [];
-        if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
-        echo json_encode(['success'=>true,'recipients'=>$rows,'total'=>count($rows)]);
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, 'i', $individual);
+            thamani_db_stmt_execute($stmt);
+            $res = thamani_db_stmt_get_result($stmt);
+            thamani_db_stmt_close($stmt);
+        }
+    } elseif ($cat === 'All') {
+        $res = thamani_db_query($db, "SELECT id, full_name, phone FROM sms_contacts WHERE is_active = 1 ORDER BY full_name ASC");
     } else {
-        if ($cat === 'All') {
-            $res = thamani_db_query($db, "SELECT id, full_name, phone FROM sms_contacts WHERE is_active = 1 ORDER BY full_name ASC");
-        } else {
-            $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone FROM sms_contacts WHERE category = ? AND is_active = 1 ORDER BY full_name ASC");
+        $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone FROM sms_contacts WHERE category = ? AND is_active = 1 ORDER BY full_name ASC");
+        if ($stmt) {
             thamani_db_stmt_bind_param($stmt, 's', $cat);
             thamani_db_stmt_execute($stmt);
             $res = thamani_db_stmt_get_result($stmt);
+            thamani_db_stmt_close($stmt);
         }
-        $rows = [];
-        if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
-        echo json_encode(['success'=>true,'recipients'=>$rows,'total'=>count($rows)]);
     }
+
+    if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
+    echo json_encode(['success'=>true,'recipients'=>$rows,'total'=>count($rows)]);
     exit;
 }
 
@@ -344,26 +357,30 @@ if ($action === 'send_bulk_sms') {
     }
 
     // Fetch target phones
+    $rows = [];
     if ($individual > 0) {
         $stmt = thamani_db_prepare($db, "SELECT phone, full_name FROM sms_contacts WHERE id = ? AND is_active = 1 LIMIT 1");
-        thamani_db_stmt_bind_param($stmt, 'i', $individual);
-        thamani_db_stmt_execute($stmt);
-        $res = thamani_db_stmt_get_result($stmt);
-        $rows = [];
-        if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, 'i', $individual);
+            thamani_db_stmt_execute($stmt);
+            $res = thamani_db_stmt_get_result($stmt);
+            if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
+            thamani_db_stmt_close($stmt);
+        }
         $catLabel = 'Individual';
     } elseif ($cat === 'All') {
         $res = thamani_db_query($db, "SELECT phone, full_name FROM sms_contacts WHERE is_active = 1");
-        $rows = [];
         if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
         $catLabel = 'All';
     } else {
         $stmt = thamani_db_prepare($db, "SELECT phone, full_name FROM sms_contacts WHERE category = ? AND is_active = 1");
-        thamani_db_stmt_bind_param($stmt, 's', $cat);
-        thamani_db_stmt_execute($stmt);
-        $res = thamani_db_stmt_get_result($stmt);
-        $rows = [];
-        if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
+        if ($stmt) {
+            thamani_db_stmt_bind_param($stmt, 's', $cat);
+            thamani_db_stmt_execute($stmt);
+            $res = thamani_db_stmt_get_result($stmt);
+            if ($res) while ($r = thamani_db_fetch_assoc($res)) $rows[] = $r;
+            thamani_db_stmt_close($stmt);
+        }
         $catLabel = $cat;
     }
 

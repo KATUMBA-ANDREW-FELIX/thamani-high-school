@@ -269,6 +269,9 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                 <div class="hidden lg:flex items-center space-x-2">
                     <a href="students_view.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Student Roster</a>
                     <a href="timetables.php" class="nav-link px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-brand-green">Class Timetables</a>
+                    <?php if (!empty($teacher['can_send_sms'])): ?>
+                        <a href="sms.php" class="nav-link px-3 py-2 rounded-md text-sm font-bold transition-colors text-rose-700 hover:text-rose-900">SMS Messaging</a>
+                    <?php endif; ?>
                 </div>
 
                 <div class="hidden md:flex items-center space-x-3">
@@ -302,6 +305,9 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
             <a href="home.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">🌐 Main Website</a>
             <a href="students_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Student Roster</a>
             <a href="timetables.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Class Timetables</a>
+            <?php if (!empty($teacher['can_send_sms'])): ?>
+                <a href="sms.php" class="block px-3 py-2 rounded-md text-base font-bold text-rose-700 hover:bg-rose-50">SMS Messaging</a>
+            <?php endif; ?>
             <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
                 <a href="teacher-change-password.php?voluntary=1" class="w-full py-2.5 rounded-md font-bold text-brand-green bg-brand-lightGreen text-center">Change Password</a>
                 <a href="teacher_logout.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>

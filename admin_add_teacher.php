@@ -21,6 +21,7 @@ $classTeacherOf      = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') 
 $classTeacherStream  = $isClassTeacher ? trim($_POST['class_teacher_stream'] ?? 'Stream A') : 'Stream A';
 $canViewEnrollments  = !empty($_POST['can_view_enrollments']) ? 1 : 0;
 $canManageDutyRoster = !empty($_POST['can_manage_duty_roster']) ? 1 : 0;
+$canSendSms          = !empty($_POST['can_send_sms']) ? 1 : 0;
 
 // Handle array or comma-separated string for classes_taught
 $classesTaughtRaw = $_POST['classes_taught'] ?? [];
@@ -93,13 +94,13 @@ $defaultPassword = 'Admin@2026';
 $hash = password_hash($defaultPassword, PASSWORD_BCRYPT);
 $now  = date('Y-m-d H:i:s');
 
-$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, password_hash, must_change_password, is_active, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
+$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, password_hash, must_change_password, is_active, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
 
 $insStmt = thamani_db_prepare($conn, $insertSql);
 
 if ($insStmt) {
-    thamani_db_stmt_bind_param($insStmt, "ssssisssiiss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $hash, $now);
+    thamani_db_stmt_bind_param($insStmt, "ssssisssiiiss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $canSendSms, $hash, $now);
     if (thamani_db_stmt_execute($insStmt)) {
         thamani_db_stmt_close($insStmt);
 

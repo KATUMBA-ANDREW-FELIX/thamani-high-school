@@ -22,6 +22,7 @@ $classTeacherOf      = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') 
 $classTeacherStream  = $isClassTeacher ? trim($_POST['class_teacher_stream'] ?? 'Stream A') : 'Stream A';
 $canViewEnrollments  = !empty($_POST['can_view_enrollments']) ? 1 : 0;
 $canManageDutyRoster = !empty($_POST['can_manage_duty_roster']) ? 1 : 0;
+$canSendSms          = !empty($_POST['can_send_sms']) ? 1 : 0;
 $isActive            = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
 $resetPassword       = !empty($_POST['reset_password']);
 
@@ -98,21 +99,21 @@ if ($resetPassword) {
     $defaultPassword = 'Admin@2026';
     $hash = password_hash($defaultPassword, PASSWORD_BCRYPT);
     $updateSql = "UPDATE teachers 
-                  SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, is_active = ?, password_hash = ?, must_change_password = 1
+                  SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, can_send_sms = ?, is_active = ?, password_hash = ?, must_change_password = 1
                   WHERE id = ?";
     $upStmt = thamani_db_prepare($conn, $updateSql);
     if ($upStmt) {
-        thamani_db_stmt_bind_param($upStmt, "ssssisssiiisi", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $isActive, $hash, $id);
+        thamani_db_stmt_bind_param($upStmt, "ssssisssiiiisi", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $canSendSms, $isActive, $hash, $id);
         $res = thamani_db_stmt_execute($upStmt);
         thamani_db_stmt_close($upStmt);
     }
 } else {
     $updateSql = "UPDATE teachers 
-                  SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, is_active = ?
+                  SET staff_id = ?, full_name = ?, email = ?, department = ?, is_class_teacher = ?, class_teacher_of = ?, class_teacher_stream = ?, classes_taught = ?, can_view_enrollments = ?, can_manage_duty_roster = ?, can_send_sms = ?, is_active = ?
                   WHERE id = ?";
     $upStmt = thamani_db_prepare($conn, $updateSql);
     if ($upStmt) {
-        thamani_db_stmt_bind_param($upStmt, "ssssisssiiii", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $isActive, $id);
+        thamani_db_stmt_bind_param($upStmt, "ssssisssiiiii", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $canSendSms, $isActive, $id);
         $res = thamani_db_stmt_execute($upStmt);
         thamani_db_stmt_close($upStmt);
     }

@@ -2,10 +2,10 @@
   "name": "thamani-academy",
   "private": true,
   "version": "1.0.0",
-  "description": "THAMANI HIGH SCHOOL Standalone HTML5, CSS3, and JavaScript Web Application",
+  "description": "THAMANI HIGH SCHOOL PHP and HTML application",
   "scripts": {
-    "start": "npx -y http-server -p 8080",
-    "dev": "npx -y http-server -p 8080",
+    "start": "php -S 127.0.0.1:8080 router.php",
+    "dev": "php -S 127.0.0.1:8080 router.php",
     "build:css": "npx -y tailwindcss@3 -i ./css/input.css -o ./css/tailwind.min.css --minify"
   },
   "dependencies": {
