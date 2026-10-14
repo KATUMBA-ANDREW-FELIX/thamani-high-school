@@ -121,7 +121,7 @@ $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email F
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -156,6 +156,10 @@ $allSystemStreamsDetails = get_all_system_streams_details($conn);
 $systemStreamsList = get_system_streams($conn);
 
 // ---------- Active Tab Handling ----------
+// Generate CSRF token for SMS actions (stored in session, embedded in JS)
+$smsCsrfToken = bin2hex(random_bytes(32));
+$_SESSION['sms_csrf_token'] = $smsCsrfToken;
+
 $allowedAdminTabs = [
     'tab-admin-overview',
     'tab-admin-teachers',
@@ -166,7 +170,8 @@ $allowedAdminTabs = [
     'tab-admin-gallery',
     'tab-admin-timetables',
     'tab-admin-roster',
-    'tab-admin-reporting'
+    'tab-admin-reporting',
+    'tab-admin-sms'
 ];
 $activeAdminTab = $_GET['tab'] ?? $_GET['tab_id'] ?? '';
 if (!in_array($activeAdminTab, $allowedAdminTabs, true)) {
@@ -436,6 +441,9 @@ if (!empty($_SESSION['admin_flash'])) {
                 <button onclick="switchAdminTab('tab-admin-reporting');" id="btn-tab-admin-reporting" class="tab-btn <?= $activeAdminTab === 'tab-admin-reporting' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="file-bar-chart-2" class="w-4 h-4 text-amber-500"></i> Academic Reporting Control
                 </button>
+                <button onclick="switchAdminTab('tab-admin-sms');" id="btn-tab-admin-sms" class="tab-btn <?= $activeAdminTab === 'tab-admin-sms' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-4 h-4"></i> SMS
+                </button>
                 <button onclick="switchAdminTab('tab-admin-gallery');" id="btn-tab-admin-gallery" class="tab-btn <?= $activeAdminTab === 'tab-admin-gallery' ? 'active text-gray-900 bg-white shadow-sm' : 'text-gray-700 hover:text-gray-900 hover:bg-white/70' ?> px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i data-lucide="image" class="w-4 h-4"></i> Gallery
                 </button>
@@ -593,6 +601,11 @@ if (!empty($_SESSION['admin_flash'])) {
                                                             <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i> TOD Roster Access
                                                         </span>
                                                     <?php endif; ?>
+                                                    <?php if ((int)($t['can_send_sms'] ?? 0) === 1): ?>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-900 border border-rose-300" title="Permitted by admin to send SMS">
+                                                            <i data-lucide="message-square" class="w-3 h-3 text-rose-600"></i> SMS Access
+                                                        </span>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                             <td class="p-3.5 text-xs text-gray-600 search-target"><?= htmlspecialchars($t['email']) ?></td>
@@ -629,6 +642,187 @@ if (!empty($_SESSION['admin_flash'])) {
                     </div>
                 </div>
             </div>
+
+            <!-- ══════════════════════════════════════════════════════════════════ -->
+            <!-- TAB: SMS CENTRE                                                    -->
+            <!-- ══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-admin-sms" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-sms' ? '' : 'hidden' ?> space-y-6">
+
+                <!-- Header -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                            <i data-lucide="message-square" class="w-6 h-6 text-rose-700"></i> School SMS Centre
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Manage contacts, configure Ego SMS, compose and send bulk or individual messages, and review delivery history.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="sms-notice" class="hidden rounded-lg border px-4 py-2 text-sm max-w-sm" role="status" aria-live="polite"></div>
+                    </div>
+                </div>
+
+                <!-- ── Provider Credentials (admin only) ──────────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                            <h4 class="font-black text-gray-900 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-gray-500"></i> Ego SMS Credentials</h4>
+                            <p id="sms-credential-state" class="text-xs text-gray-500 mt-0.5">Loading...</p>
+                        </div>
+                    </div>
+                    <form id="sms-dash-credentials-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                        <label class="text-xs font-bold text-gray-700">Username
+                            <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Password
+                            <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Sender ID <span class="font-normal text-gray-400">(max 11 chars)</span>
+                            <input id="dash-ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
+                        </label>
+                        <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
+                    </form>
+                    <form id="sms-dash-test-form" class="flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
+                        <label class="text-xs font-bold text-gray-700">Test phone number
+                            <input name="test_phone" inputmode="tel" placeholder="0772 123 456" required class="mt-1 w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <button class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold hover:bg-gray-50 transition">Send test SMS</button>
+                    </form>
+                </div>
+
+                <!-- ── Contact Book ────────────────────────────────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <div>
+                            <h4 class="font-black text-gray-900 flex items-center gap-2"><i data-lucide="book-user" class="w-4 h-4 text-amber-600"></i> Contact Book</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Active contacts are available as SMS recipients.</p>
+                        </div>
+                    </div>
+                    <form id="sms-dash-contact-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <input type="hidden" name="contact_id" id="sms-dash-contact-id">
+                        <label class="text-xs font-bold text-gray-700">Full name
+                            <input name="full_name" required maxlength="255" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Phone
+                            <input name="phone" required inputmode="tel" placeholder="0772 123 456" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Category
+                            <select name="category" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                <option>Parents</option><option>Teachers</option><option>Staff</option><option>Alumni</option><option>Other</option>
+                            </select>
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Class level
+                            <input name="class_level" maxlength="50" placeholder="Optional" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700">Stream
+                            <input name="stream" maxlength="50" placeholder="Optional" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <label class="text-xs font-bold text-gray-700 sm:col-span-2">Notes
+                            <input name="notes" maxlength="1000" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        </label>
+                        <div class="flex items-end gap-2">
+                            <button id="sms-dash-contact-save" class="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-gray-950 hover:bg-amber-400 transition">Add contact</button>
+                            <button type="button" id="sms-dash-contact-cancel" class="hidden rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-bold hover:bg-gray-50">Cancel</button>
+                        </div>
+                    </form>
+                    <!-- Filter + import toolbar -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                        <label class="text-xs font-bold text-gray-700">Filter by category
+                            <select id="sms-dash-contact-filter" class="ml-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal">
+                                <option>All</option><option>Parents</option><option>Teachers</option><option>Staff</option><option>Alumni</option><option>Other</option>
+                            </select>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" data-import="parents" class="sms-dash-import rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-50 transition"><i data-lucide="user-round-plus" class="w-3.5 h-3.5 inline -mt-0.5"></i> Import guardians</button>
+                            <button type="button" data-import="teachers" class="sms-dash-import rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-50 transition"><i data-lucide="user-round-plus" class="w-3.5 h-3.5 inline -mt-0.5"></i> Import teachers</button>
+                            <button type="button" id="sms-dash-refresh-contacts" class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-bold text-white hover:bg-gray-700 transition">Refresh</button>
+                        </div>
+                    </div>
+                    <!-- Contacts table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead><tr class="border-y border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
+                                <th class="p-2.5">Name</th>
+                                <th class="p-2.5">Phone</th>
+                                <th class="p-2.5">Category</th>
+                                <th class="p-2.5">Class / Stream</th>
+                                <th class="p-2.5">Status</th>
+                                <th class="p-2.5 text-right">Actions</th>
+                            </tr></thead>
+                            <tbody id="sms-dash-contact-rows">
+                                <tr><td colspan="6" class="p-5 text-center text-gray-400"><i data-lucide="loader-2" class="w-4 h-4 inline animate-spin mr-2"></i>Loading contacts…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ── Compose & Send ─────────────────────────────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <h4 class="font-black text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3 mb-4">
+                        <i data-lucide="send" class="w-4 h-4 text-rose-600"></i> Compose & Send
+                    </h4>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                        <div class="lg:col-span-2 space-y-3">
+                            <label class="block text-xs font-bold text-gray-700">Recipients
+                                <select id="sms-dash-category" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm">
+                                    <option value="All">All active contacts</option>
+                                    <option>Parents</option><option>Teachers</option><option>Staff</option><option>Alumni</option><option>Other</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-gray-700">Or send to one contact
+                                <select id="sms-dash-individual" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm">
+                                    <option value="0">No individual selected (use category above)</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-gray-700">Message
+                                <textarea id="sms-dash-message" rows="5" maxlength="1600" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm resize-y" placeholder="Type your message here…"></textarea>
+                            </label>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span id="sms-dash-char-count" class="text-xs text-gray-500 tabular-nums">0 / 1600 chars · 0 SMS parts</span>
+                                <div class="ml-auto flex gap-2">
+                                    <button id="sms-dash-preview" type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold hover:bg-gray-50 transition"><i data-lucide="eye" class="w-3.5 h-3.5 inline -mt-0.5 mr-1"></i>Preview</button>
+                                    <button id="sms-dash-send" type="button" class="rounded-lg bg-rose-700 px-5 py-2 text-sm font-bold text-white hover:bg-rose-800 transition flex items-center gap-2">
+                                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Send SMS
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Recipient preview sidebar -->
+                        <div class="border-t border-gray-100 pt-4 lg:border-t-0 lg:border-l lg:pl-5 lg:pt-0">
+                            <h5 class="text-sm font-bold text-gray-800">Recipient preview <span id="sms-dash-recipient-count" class="text-gray-400 font-normal"></span></h5>
+                            <ul id="sms-dash-recipient-preview" class="mt-2 max-h-72 overflow-y-auto divide-y divide-gray-100 text-xs text-gray-600">
+                                <li class="py-3 text-gray-400">Click Preview to see recipients.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SMS Batch Logs ──────────────────────────────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
+                        <h4 class="font-black text-gray-900 flex items-center gap-2">
+                            <i data-lucide="history" class="w-4 h-4 text-gray-500"></i> Recent SMS Batches
+                        </h4>
+                        <button type="button" id="sms-dash-refresh-logs" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-50 transition">Refresh</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead><tr class="border-y border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
+                                <th class="p-2.5">Time</th>
+                                <th class="p-2.5">Recipients</th>
+                                <th class="p-2.5">Filter</th>
+                                <th class="p-2.5">Sent by</th>
+                                <th class="p-2.5">Message preview</th>
+                                <th class="p-2.5">Status</th>
+                            </tr></thead>
+                            <tbody id="sms-dash-log-rows">
+                                <tr><td colspan="6" class="p-5 text-center text-gray-400"><i data-lucide="loader-2" class="w-4 h-4 inline animate-spin mr-2"></i>Loading history…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+            <!-- / SMS CENTRE TAB -->
 
             <!-- TAB 3: STUDENT ENROLLMENTS (FULL MANAGEMENT) -->
             <div id="tab-admin-enrollment" class="admin-tab-content hidden space-y-6">
@@ -2065,6 +2259,15 @@ if (!empty($_SESSION['admin_flash'])) {
                         </label>
                     </div>
 
+                    <div class="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_send_sms" id="add_can_send_sms" value="1" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+                            <span class="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                                <i data-lucide="message-square" class="w-4 h-4 text-rose-600"></i> Admin Permission: Permit teacher to send SMS
+                            </span>
+                        </label>
+                    </div>
+
                     <!-- SUBJECTS TAUGHT FOR AUTOMATIC ALLOCATION -->
                     <div class="p-4 bg-amber-50/50 border border-amber-200 rounded-xl space-y-2">
                         <label class="block text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
@@ -2215,6 +2418,15 @@ if (!empty($_SESSION['admin_flash'])) {
                             <input type="checkbox" name="can_manage_duty_roster" id="edit_can_manage_duty_roster" value="1" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
                             <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
                                 <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-600"></i> Admin Permission: Permit teacher to upload & manage Teacher On Duty (TOD) Roster
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="can_send_sms" id="edit_can_send_sms" value="1" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+                            <span class="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                                <i data-lucide="message-square" class="w-4 h-4 text-rose-600"></i> Admin Permission: Permit teacher to send SMS
                             </span>
                         </label>
                     </div>
@@ -2779,7 +2991,8 @@ if (!empty($_SESSION['admin_flash'])) {
                 'tab-admin-gallery',
                 'tab-admin-timetables',
                 'tab-admin-roster',
-                'tab-admin-reporting'
+                'tab-admin-reporting',
+                'tab-admin-sms'
             ];
 
             if (targetTab && validTabs.includes(targetTab)) {
@@ -3075,6 +3288,11 @@ if (!empty($_SESSION['admin_flash'])) {
             const canDutyCb = document.getElementById('edit_can_manage_duty_roster');
             if (canDutyCb) {
                 canDutyCb.checked = parseInt(t.can_manage_duty_roster || 0) === 1;
+            }
+
+            const canSmsCb = document.getElementById('edit_can_send_sms');
+            if (canSmsCb) {
+                canSmsCb.checked = parseInt(t.can_send_sms || 0) === 1;
             }
 
             const ctSel = document.getElementById('edit_class_teacher_of');
@@ -3902,6 +4120,309 @@ if (!empty($_SESSION['admin_flash'])) {
                 }
             });
         }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // SMS CENTRE — Dashboard Tab JavaScript
+        // ════════════════════════════════════════════════════════════════════════
+        (function () {
+            const SMS_CSRF = <?= json_encode($smsCsrfToken) ?>;
+            const smsEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            let smsAllContacts = [];
+
+            function showSmsMsg(msg, ok = false, el = 'sms-notice') {
+                const n = document.getElementById(el);
+                if (!n) return;
+                n.textContent = msg;
+                n.className = `rounded-lg border px-4 py-2 text-sm ${ok ? 'border-green-200 bg-green-50 text-green-900' : 'border-red-200 bg-red-50 text-red-900'}`;
+                n.classList.remove('hidden');
+                clearTimeout(n._t);
+                n._t = setTimeout(() => n.classList.add('hidden'), 7000);
+            }
+
+            async function smsDashPost(action, vals = {}) {
+                const body = new URLSearchParams({action, ...vals, csrf_token: SMS_CSRF});
+                const r = await fetch('admin_sms_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                if (!r.ok || !d.success) throw new Error(d.error || 'Request failed.');
+                return d;
+            }
+
+            async function smsDashGet(action, vals = {}) {
+                const q = new URLSearchParams({action, ...vals});
+                const r = await fetch(`admin_sms_actions.php?${q}`, {credentials: 'same-origin'});
+                const d = await r.json();
+                if (!r.ok || !d.success) throw new Error(d.error || 'Request failed.');
+                return d;
+            }
+
+            // ── Contacts ─────────────────────────────────────────────────────────
+            async function dashLoadContacts() {
+                const category = document.getElementById('sms-dash-contact-filter').value;
+                const data = await smsDashGet('get_contacts', {category});
+                smsAllContacts = data.contacts || [];
+
+                // Populate individual picker
+                const ind = document.getElementById('sms-dash-individual');
+                ind.innerHTML = '<option value="0">No individual selected (use category above)</option>' +
+                    smsAllContacts.filter(c => Number(c.is_active) === 1)
+                        .map(c => `<option value="${Number(c.id)}">${smsEsc(c.full_name)} · ${smsEsc(c.phone)} [${smsEsc(c.category)}]</option>`).join('');
+
+                // Render table
+                const tbody = document.getElementById('sms-dash-contact-rows');
+                tbody.innerHTML = smsAllContacts.length
+                    ? smsAllContacts.map(c => {
+                        const active = Number(c.is_active) === 1;
+                        return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="p-2.5 font-semibold">${smsEsc(c.full_name)}</td>
+                            <td class="p-2.5 font-mono text-xs">${smsEsc(c.phone)}</td>
+                            <td class="p-2.5">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    c.category==='Parents'?'bg-blue-50 text-blue-700':
+                                    c.category==='Teachers'?'bg-green-50 text-green-700':
+                                    c.category==='Staff'?'bg-purple-50 text-purple-700':
+                                    c.category==='Alumni'?'bg-amber-50 text-amber-700':
+                                    'bg-gray-100 text-gray-600'
+                                }">${smsEsc(c.category)}</span>
+                            </td>
+                            <td class="p-2.5 text-xs text-gray-500">${smsEsc((c.class_level||'') + (c.stream ? ' · '+c.stream : ''))}</td>
+                            <td class="p-2.5">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-bold ${active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}">
+                                    ${active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="p-2.5 text-right whitespace-nowrap">
+                                <button type="button" data-edit-contact="${Number(c.id)}" class="px-2 py-1 text-xs font-bold text-amber-700 hover:underline">Edit</button>
+                                <button type="button" data-toggle-contact="${Number(c.id)}" class="px-2 py-1 text-xs font-bold ${active ? 'text-gray-600' : 'text-green-700'} hover:underline">${active ? 'Disable' : 'Enable'}</button>
+                                <button type="button" data-delete-contact="${Number(c.id)}" class="px-2 py-1 text-xs font-bold text-red-700 hover:underline">Delete</button>
+                            </td>
+                        </tr>`;
+                    }).join('')
+                    : '<tr><td colspan="6" class="p-6 text-center text-gray-400">No contacts found.</td></tr>';
+
+                if (window.lucide) lucide.createIcons();
+            }
+
+            // ── Settings / Credentials ────────────────────────────────────────
+            async function dashLoadSettings() {
+                try {
+                    const d = await smsDashGet('get_sms_settings');
+                    document.getElementById('dash-ego-username').value = d.username || '';
+                    document.getElementById('dash-ego-sender-id').value = d.sender_id || 'THAMANI';
+                    document.getElementById('sms-credential-state').textContent =
+                        d.password_configured
+                        ? '✅ A provider password is saved (not shown for security).'
+                        : '⚠️ No provider password saved — credentials incomplete.';
+                } catch (e) {
+                    document.getElementById('sms-credential-state').textContent = 'Unable to load credential status.';
+                }
+            }
+
+            // ── SMS Logs ──────────────────────────────────────────────────────
+            async function dashLoadLogs() {
+                try {
+                    const d = await smsDashGet('get_sms_logs', {limit: '50'});
+                    const rows = document.getElementById('sms-dash-log-rows');
+                    const statusBadge = s => {
+                        const m = {SUCCESS:'bg-green-50 text-green-700', PARTIAL:'bg-amber-50 text-amber-700', FAILED:'bg-red-50 text-red-700'};
+                        return `<span class="rounded-full px-2 py-0.5 text-xs font-bold ${m[s]||'bg-gray-100 text-gray-600'}">${smsEsc(s)}</span>`;
+                    };
+                    rows.innerHTML = d.logs.length
+                        ? d.logs.map(l => `<tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="p-2.5 text-xs tabular-nums text-gray-500">${smsEsc(l.sent_at)}</td>
+                            <td class="p-2.5 font-bold tabular-nums">${Number(l.recipient_count)}</td>
+                            <td class="p-2.5 text-xs">${smsEsc(l.category_filter)}</td>
+                            <td class="p-2.5 text-xs text-gray-500 capitalize">${smsEsc(l.sender_role)}</td>
+                            <td class="p-2.5 max-w-xs truncate text-xs">${smsEsc(l.message_preview)}</td>
+                            <td class="p-2.5">${statusBadge(l.status)}</td>
+                          </tr>`).join('')
+                        : '<tr><td colspan="6" class="p-6 text-center text-gray-400">No SMS batches sent yet.</td></tr>';
+                } catch (e) { showSmsMsg(e.message); }
+            }
+
+            // ── Character counter ─────────────────────────────────────────────
+            function updateSmsCharCount() {
+                const txt = (document.getElementById('sms-dash-message').value || '');
+                const len = [...txt].length;
+                const smsLen = len <= 160 ? 160 : Math.ceil(len / 153) * 153;
+                const parts = len === 0 ? 0 : Math.ceil(len / (len <= 160 ? 160 : 153));
+                document.getElementById('sms-dash-char-count').textContent =
+                    `${len} / 1600 chars · ${parts} SMS part${parts !== 1 ? 's' : ''}`;
+            }
+
+            // ── Preview recipients ────────────────────────────────────────────
+            async function dashPreviewRecipients() {
+                const indId = document.getElementById('sms-dash-individual').value;
+                const cat   = document.getElementById('sms-dash-category').value;
+                const d = await smsDashPost('preview_recipients', {category: cat, individual_id: indId});
+                document.getElementById('sms-dash-recipient-count').textContent = `(${d.total})`;
+                const ul = document.getElementById('sms-dash-recipient-preview');
+                ul.innerHTML = d.recipients.length
+                    ? d.recipients.slice(0, 100).map(c =>
+                        `<li class="py-2"><span class="font-semibold text-gray-800">${smsEsc(c.full_name)}</span>
+                         <span class="block font-mono text-gray-400">${smsEsc(c.phone)}</span></li>`).join('')
+                    : '<li class="py-3 text-gray-400">No active recipients for this selection.</li>';
+                if (d.total > 100) ul.insertAdjacentHTML('beforeend',
+                    `<li class="py-2 text-gray-400 text-xs">…and ${d.total - 100} more.</li>`);
+                return d.total;
+            }
+
+            // ── Contact table actions (edit / toggle / delete) ────────────────
+            document.getElementById('sms-dash-contact-rows').addEventListener('click', async ev => {
+                const editId   = ev.target.dataset.editContact;
+                const togId    = ev.target.dataset.toggleContact;
+                const delId    = ev.target.dataset.deleteContact;
+                try {
+                    if (editId) {
+                        const c = smsAllContacts.find(x => Number(x.id) === Number(editId));
+                        if (!c) return;
+                        const f = document.getElementById('sms-dash-contact-form');
+                        ['contact_id','full_name','phone','category','class_level','stream','notes']
+                            .forEach(k => { if (f.elements[k]) f.elements[k].value = c[k] || ''; });
+                        document.getElementById('sms-dash-contact-id').value = c.id;
+                        document.getElementById('sms-dash-contact-save').textContent = 'Save changes';
+                        document.getElementById('sms-dash-contact-cancel').classList.remove('hidden');
+                        f.scrollIntoView({behavior:'smooth', block:'center'});
+                    } else if (togId) {
+                        await smsDashPost('toggle_contact', {contact_id: togId});
+                        await dashLoadContacts();
+                    } else if (delId && window.confirm('Delete this contact permanently?')) {
+                        await smsDashPost('delete_contact', {contact_id: delId});
+                        await dashLoadContacts();
+                    }
+                } catch (e) { showSmsMsg(e.message); }
+            });
+
+            // ── Contact form submit ───────────────────────────────────────────
+            document.getElementById('sms-dash-contact-form').addEventListener('submit', async ev => {
+                ev.preventDefault();
+                try {
+                    await smsDashPost('save_contact', Object.fromEntries(new FormData(ev.currentTarget)));
+                    ev.currentTarget.reset();
+                    document.getElementById('sms-dash-contact-id').value = '';
+                    document.getElementById('sms-dash-contact-save').textContent = 'Add contact';
+                    document.getElementById('sms-dash-contact-cancel').classList.add('hidden');
+                    showSmsMsg('Contact saved.', true);
+                    await dashLoadContacts();
+                } catch (e) { showSmsMsg(e.message); }
+            });
+
+            document.getElementById('sms-dash-contact-cancel').addEventListener('click', () => {
+                document.getElementById('sms-dash-contact-form').reset();
+                document.getElementById('sms-dash-contact-id').value = '';
+                document.getElementById('sms-dash-contact-save').textContent = 'Add contact';
+                document.getElementById('sms-dash-contact-cancel').classList.add('hidden');
+            });
+
+            // ── Credentials form ──────────────────────────────────────────────
+            document.getElementById('sms-dash-credentials-form').addEventListener('submit', async ev => {
+                ev.preventDefault();
+                const vals = Object.fromEntries(new FormData(ev.currentTarget));
+                if (!vals.ego_password) delete vals.ego_password;
+                try {
+                    await smsDashPost('save_sms_credentials', vals);
+                    document.getElementById('dash-ego-password').value = '';
+                    showSmsMsg('Ego SMS credentials saved.', true);
+                    await dashLoadSettings();
+                } catch (e) { showSmsMsg(e.message); }
+            });
+
+            // ── Test form ─────────────────────────────────────────────────────
+            document.getElementById('sms-dash-test-form').addEventListener('submit', async ev => {
+                ev.preventDefault();
+                try {
+                    const d = await smsDashPost('test_sms_credentials', Object.fromEntries(new FormData(ev.currentTarget)));
+                    showSmsMsg(d.success ? `✅ Test SMS sent (${d.sent_count}).` : (d.error || 'Failed.'), d.success);
+                } catch (e) { showSmsMsg(e.message); }
+            });
+
+            // ── Filters / refresh ─────────────────────────────────────────────
+            document.getElementById('sms-dash-contact-filter').addEventListener('change', () =>
+                dashLoadContacts().catch(e => showSmsMsg(e.message)));
+            document.getElementById('sms-dash-refresh-contacts').addEventListener('click', () =>
+                dashLoadContacts().catch(e => showSmsMsg(e.message)));
+            document.getElementById('sms-dash-refresh-logs').addEventListener('click', () =>
+                dashLoadLogs().catch(e => showSmsMsg(e.message)));
+
+            // ── Import buttons ────────────────────────────────────────────────
+            document.querySelectorAll('.sms-dash-import').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    try {
+                        const d = await smsDashPost('import_contacts', {source: btn.dataset.import});
+                        showSmsMsg(`✅ Imported ${d.imported} new contact(s), skipped ${d.skipped} duplicate(s).`, true);
+                        await dashLoadContacts();
+                    } catch (e) { showSmsMsg(e.message); }
+                })
+            );
+
+            // ── Category ↔ individual sync ────────────────────────────────────
+            document.getElementById('sms-dash-category').addEventListener('change', () =>
+                { document.getElementById('sms-dash-individual').value = '0'; });
+            document.getElementById('sms-dash-individual').addEventListener('change', () => {
+                if (document.getElementById('sms-dash-individual').value !== '0')
+                    document.getElementById('sms-dash-category').value = 'All';
+            });
+
+            // ── Char counter ──────────────────────────────────────────────────
+            document.getElementById('sms-dash-message').addEventListener('input', updateSmsCharCount);
+
+            // ── Preview button ────────────────────────────────────────────────
+            document.getElementById('sms-dash-preview').addEventListener('click', async () => {
+                try { await dashPreviewRecipients(); }
+                catch (e) { showSmsMsg(e.message); }
+            });
+
+            // ── Send button ───────────────────────────────────────────────────
+            document.getElementById('sms-dash-send').addEventListener('click', async () => {
+                const msg = (document.getElementById('sms-dash-message').value || '').trim();
+                if (!msg) return showSmsMsg('Please type a message before sending.');
+                try {
+                    const total = await dashPreviewRecipients();
+                    if (!total) return showSmsMsg('No active recipients for this selection.');
+                    if (!window.confirm(`Send this SMS to ${total} recipient(s)?\n\nMessage:\n${msg.slice(0, 200)}${msg.length > 200 ? '…' : ''}`)) return;
+                    const btn = document.getElementById('sms-dash-send');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Sending…';
+                    if (window.lucide) lucide.createIcons();
+                    const d = await smsDashPost('send_bulk_sms', {
+                        message: msg,
+                        category: document.getElementById('sms-dash-category').value,
+                        individual_id: document.getElementById('sms-dash-individual').value
+                    });
+                    showSmsMsg(d.message || (d.success ? 'SMS sent!' : 'Failed.'), d.success);
+                    if (d.success) document.getElementById('sms-dash-message').value = '';
+                    await dashLoadLogs();
+                } catch (e) { showSmsMsg(e.message); }
+                finally {
+                    const btn = document.getElementById('sms-dash-send');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i> Send SMS';
+                    if (window.lucide) lucide.createIcons();
+                }
+            });
+
+            // ── Initial load: trigger when SMS tab is active ───────────────────
+            function smsDashInit() {
+                dashLoadSettings().catch(() => {});
+                dashLoadContacts().catch(e => showSmsMsg(e.message));
+                dashLoadLogs().catch(() => {});
+            }
+
+            // Load immediately if SMS tab is already active (deep-link), otherwise
+            // load on first click of the SMS tab button.
+            const smsBtnEl = document.getElementById('btn-tab-admin-sms');
+            let smsDashLoaded = false;
+            function triggerSmsLoad() {
+                if (!smsDashLoaded) { smsDashLoaded = true; smsDashInit(); }
+            }
+            if (smsBtnEl) smsBtnEl.addEventListener('click', triggerSmsLoad);
+
+            // If the page loaded directly on the SMS tab, init right away.
+            if (document.getElementById('tab-admin-sms') &&
+                !document.getElementById('tab-admin-sms').classList.contains('hidden')) {
+                triggerSmsLoad();
+            }
+        })();
+        // ════════════════════════════════════════════════════════════════════════
     </script>
 </body>
 </html>

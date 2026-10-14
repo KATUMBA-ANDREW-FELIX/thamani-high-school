@@ -217,6 +217,8 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         classes_taught TEXT,
                         can_view_enrollments INTEGER DEFAULT 0,
                         can_manage_duty_roster INTEGER DEFAULT 0,
+                        can_send_sms INTEGER DEFAULT 0,
+                        phone TEXT,
                         password_hash TEXT,
                         must_change_password INTEGER DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
@@ -476,6 +478,32 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         fee_amount REAL NOT NULL DEFAULT 850000,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS sms_contacts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        full_name TEXT NOT NULL,
+                        phone TEXT NOT NULL,
+                        category TEXT DEFAULT 'Other',
+                        class_level TEXT DEFAULT '',
+                        stream TEXT DEFAULT '',
+                        notes TEXT DEFAULT '',
+                        is_active INTEGER DEFAULT 1,
+                        created_by INTEGER DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS sms_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        batch_id TEXT,
+                        sender_id INTEGER DEFAULT 0,
+                        sender_role TEXT DEFAULT 'admin',
+                        recipient_count INTEGER DEFAULT 0,
+                        category_filter TEXT DEFAULT 'All',
+                        message TEXT,
+                        status TEXT DEFAULT 'SUCCESS',
+                        api_response TEXT DEFAULT '',
+                        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
 
             try {
@@ -636,6 +664,40 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN IF NOT EXISTS disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN IF NOT EXISTS webhook_url TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN IF NOT EXISTS webhook_secret TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_send_sms INT DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS phone VARCHAR(30)"); } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS sms_contacts (
+                            id SERIAL PRIMARY KEY,
+                            full_name TEXT NOT NULL,
+                            phone TEXT NOT NULL,
+                            category TEXT DEFAULT 'Other',
+                            class_level TEXT DEFAULT '',
+                            stream TEXT DEFAULT '',
+                            notes TEXT DEFAULT '',
+                            is_active INT DEFAULT 1,
+                            created_by INT DEFAULT 0,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        );
+                    ");
+                } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS sms_logs (
+                            id SERIAL PRIMARY KEY,
+                            batch_id TEXT,
+                            sender_id INT DEFAULT 0,
+                            sender_role TEXT DEFAULT 'admin',
+                            recipient_count INT DEFAULT 0,
+                            category_filter TEXT DEFAULT 'All',
+                            message TEXT,
+                            status TEXT DEFAULT 'SUCCESS',
+                            api_response TEXT DEFAULT '',
+                            sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        );
+                    ");
+                } catch (Exception $e) {}
             } else {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
@@ -658,6 +720,8 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE reporting_windows ADD COLUMN disabled_points_levels TEXT DEFAULT ''"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN webhook_url TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE bank_integrations ADD COLUMN webhook_secret TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN can_send_sms INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN phone TEXT"); } catch (Exception $e) {}
             }
 
             // Ensure default admin exists and has valid Admin@2026 hash
@@ -898,6 +962,32 @@ if (!function_exists('thamani_db_prepare')) {
             return mysqli_prepare($connection, $sql);
         }
         return $connection instanceof ThamaniPolyfillConn ? $connection->prepare($sql) : false;
+    }
+
+    function thamani_db_column_exists($connection, string $table, string $column): bool {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column)) {
+            return false;
+        }
+
+        if ($connection instanceof ThamaniPolyfillConn) {
+            if ($connection->driver === 'pgsql') {
+                $stmt = $connection->pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? LIMIT 1');
+                $stmt->execute([$table, $column]);
+                return (bool)$stmt->fetchColumn();
+            }
+            $result = $connection->pdo->query('PRAGMA table_info("' . $table . '")');
+            foreach ($result->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (($row['name'] ?? '') === $column) return true;
+            }
+            return false;
+        }
+
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
+            $result = thamani_db_query($connection, "SHOW COLUMNS FROM `{$table}` LIKE '" . thamani_db_real_escape_string($connection, $column) . "'");
+            return (bool)thamani_db_fetch_assoc($result);
+        }
+
+        return false;
     }
 
     function thamani_db_query($connection, $sql = null) {
@@ -1193,8 +1283,12 @@ if (!function_exists('thamani_db_prepare')) {
         function ensure_student_pay_codes($conn = null) {
             if (!$conn) $conn = $GLOBALS['conn'];
 
-            @thamani_db_query($conn, "ALTER TABLE students ADD COLUMN pay_code TEXT");
-            @thamani_db_query($conn, "ALTER TABLE student_fees ADD COLUMN pay_code TEXT");
+            if (!thamani_db_column_exists($conn, 'students', 'pay_code')) {
+                thamani_db_query($conn, "ALTER TABLE students ADD COLUMN pay_code TEXT");
+            }
+            if (!thamani_db_column_exists($conn, 'student_fees', 'pay_code')) {
+                thamani_db_query($conn, "ALTER TABLE student_fees ADD COLUMN pay_code TEXT");
+            }
 
             $res = thamani_db_query($conn, "SELECT id, full_name, class_level, stream, registered_at, pay_code FROM students WHERE pay_code IS NULL OR pay_code = '' ORDER BY id ASC");
             if ($res) {
