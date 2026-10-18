@@ -8,14 +8,20 @@
  */
 
 require_once 'auth_student.php';
-require_student_or_admin_login();
 
-// Only authenticated students and admins may access the library.
+if (empty($_SESSION['student_id']) && empty($_SESSION['teacher_id']) && empty($_SESSION['admin_id'])) {
+    header('Location: student-login.php');
+    exit;
+}
+
+// ---------- Authenticated viewer ----------
+$isStudent     = !empty($_SESSION['student_id']);
+$isTeacher     = !empty($_SESSION['teacher_id']);
 $isAdmin       = !empty($_SESSION['admin_id']);
-$isTeacher     = false;
-$currentUserId = (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0);
+$currentUserId = (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? $_SESSION['student_id'] ?? 0);
 
 require_once 'conn.php';
+$conn = $GLOBALS['conn'];
 
 // ---------- Helpers ----------
 function formatFileSize(int $bytes): string {

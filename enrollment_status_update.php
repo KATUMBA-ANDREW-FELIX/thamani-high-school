@@ -12,6 +12,7 @@ require_admin_login();
 
 /** @var mysqli $conn */
 require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/auth_student.php';
 
 // ---------- Only accept POST ----------
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -50,7 +51,7 @@ if (!in_array($newStatus, $allowedStatuses, true)) {
 }
 
 // ---------- Confirm student exists ----------
-$check = thamani_db_prepare($conn, "SELECT id, full_name, status FROM students WHERE id = ? LIMIT 1");
+$check = thamani_db_prepare($conn, "SELECT id, full_name, status, password_hash FROM students WHERE id = ? LIMIT 1");
 
 if ($check === false) {
     error_log('[Enrollment Status Check] ' . thamani_db_error($conn));
@@ -72,15 +73,26 @@ if ($student['status'] === $newStatus) {
     $setFlash('info', "{$student['full_name']} is already marked as {$newStatus}.");
 }
 
-// ---------- Update the status ----------
-$upd = thamani_db_prepare($conn, "UPDATE students SET status = ? WHERE id = ?");
+// ---------- Update the status and initialize a temporary password for new student accounts ----------
+$needsTemporaryPassword = $newStatus === 'Enrolled' && empty($student['password_hash']);
+$temporaryHash = $needsTemporaryPassword
+    ? password_hash(THAMANI_STUDENT_DEFAULT_PASSWORD, PASSWORD_DEFAULT)
+    : null;
+$updateSql = $needsTemporaryPassword
+    ? "UPDATE students SET status = ?, password_hash = ?, must_change_password = 1 WHERE id = ?"
+    : "UPDATE students SET status = ? WHERE id = ?";
+$upd = thamani_db_prepare($conn, $updateSql);
 
 if ($upd === false) {
     error_log('[Enrollment Status Prepare] ' . thamani_db_error($conn));
     $setFlash('error', 'System error while updating.');
 }
 
-thamani_db_stmt_bind_param($upd, "si", $newStatus, $studentId);
+if ($needsTemporaryPassword) {
+    thamani_db_stmt_bind_param($upd, 'ssi', $newStatus, $temporaryHash, $studentId);
+} else {
+    thamani_db_stmt_bind_param($upd, "si", $newStatus, $studentId);
+}
 
 if (thamani_db_stmt_execute($upd)) {
     thamani_db_stmt_close($upd);

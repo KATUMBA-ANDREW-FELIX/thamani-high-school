@@ -34,6 +34,7 @@ if (!empty($_SESSION['student_id'])) {
 }
 
 require_once 'conn.php';
+require_once __DIR__ . '/auth_student.php';
 $conn = $GLOBALS['conn'];
 
 $errors = [];
@@ -141,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $student = $resStudent ? thamani_db_fetch_assoc($resStudent) : null;
             thamani_db_stmt_close($stmtStudent);
 
-            if ($student && (int)$student['account_active'] === 1 && !empty($student['password_hash']) && password_verify($password, $student['password_hash'])) {
+            if ($student && (int)$student['account_active'] === 1 && verify_student_login_password($conn, $student, $password)) {
                 session_regenerate_id(true);
                 $_SESSION['student_id']                   = (int)$student['id'];
                 $_SESSION['student_name']                 = $student['full_name'];

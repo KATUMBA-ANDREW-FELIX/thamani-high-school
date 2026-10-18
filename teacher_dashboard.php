@@ -4,6 +4,15 @@ require_teacher_login();
 require_password_changed();
 require_once 'conn.php';
 
+// Absolute, self-consistent URL for save_marks.php. Derived from the URL the
+// server used to reach THIS page, so it works regardless of folder nesting,
+// Apache aliases, or .htaccess rewrites.
+$__save_marks_url = 'save_marks.php';
+if (!empty($_SERVER['SCRIPT_NAME'])) {
+    $__url_dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+    $__save_marks_url = $__url_dir . '/save_marks.php';
+}
+
 $teacher  = current_teacher();
 $hour     = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
@@ -81,7 +90,7 @@ if (!empty($teacher['is_class_teacher']) && $ctClass !== '') {
     }
 
     // Fetch attendance records for selected date
-    $eaRes = thamani_db_query($conn, "SELECT student_id, status, remarks FROM student_attendance WHERE attendance_date = '" . mysqli_real_escape_string($conn, $attDate) . "'");
+    $eaRes = thamani_db_query($conn, "SELECT student_id, status, remarks FROM student_attendance WHERE attendance_date = '" . thamani_db_real_escape_string($conn, $attDate) . "'");
     if ($eaRes) {
         while ($r = thamani_db_fetch_assoc($eaRes)) {
             $existingAttendance[(int)$r['student_id']] = $r;
@@ -190,7 +199,7 @@ if ($selectedClass !== '') {
     }
 
     if ($selectedWinId > 0 && !empty($selectedSubject)) {
-        $mkStmt = thamani_db_prepare($conn, "SELECT student_id, score, remarks FROM student_marks WHERE window_id = ? AND subject = ?");
+        $mkStmt = thamani_db_prepare($conn, "SELECT student_id, score, comments AS remarks FROM student_marks WHERE window_id = ? AND subject = ?");
         if ($mkStmt) {
             thamani_db_stmt_bind_param($mkStmt, "is", $selectedWinId, $selectedSubject);
             thamani_db_stmt_execute($mkStmt);
@@ -882,7 +891,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                     <?php endif; ?>
 
                     <!-- Marks Entry Form Table -->
-                    <form action="save_marks.php" method="post" onsubmit="handleSaveMarksAjax(event, this);">
+                    <form action="<?= htmlspecialchars($__save_marks_url) ?>" method="post" onsubmit="handleSaveMarksAjax(event, this);">
                         <input type="hidden" name="action" value="save_subject_marks">
                         <input type="hidden" name="window_id" value="<?= $selectedWinId ?>">
                         <input type="hidden" name="class_level" value="<?= htmlspecialchars($selectedClass) ?>">
@@ -1003,7 +1012,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                         </form>
 
                         <!-- Class Teacher Comments & Results Form -->
-                        <form action="save_marks.php" method="post">
+                        <form action="<?= htmlspecialchars($__save_marks_url) ?>" method="post">
                             <input type="hidden" name="action" value="save_teacher_comments">
                             <input type="hidden" name="window_id" value="<?= $selectedWinId ?>">
                             <input type="hidden" name="redirect_to" value="teacher_dashboard.php?tab=tab-teacher-results&win_id=<?= $selectedWinId ?>#tab-teacher-results">
@@ -1403,12 +1412,18 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'toast-container';
-                container.className = 'fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none';
+                // Inline style ensures correct positioning even if the custom
+                // tailwind build is missing utilities like `right-5`.
+                container.style.cssText =
+                    'position:fixed;top:1.25rem;right:1.25rem;z-index:9999;' +
+                    'display:flex;flex-direction:column;gap:0.5rem;' +
+                    'max-width:24rem;width:calc(100% - 2.5rem);pointer-events:none;';
                 document.body.appendChild(container);
             }
             const toast = document.createElement('div');
             const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white';
             toast.className = `px-4 py-3 rounded-xl shadow-2xl ${bgClass} text-xs font-bold flex items-center justify-between pointer-events-auto transform transition-all duration-300 translate-y-[-10px] opacity-0`;
+            toast.style.pointerEvents = 'auto';
             toast.innerHTML = `
                 <div class="flex items-center gap-2">
                     <i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4"></i>
@@ -1424,37 +1439,76 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-[-10px]');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 6000);
         }
 
         async function handleSaveMarksAjax(e, form) {
             e.preventDefault();
+
             const btn = form.querySelector('button[type="submit"]');
-            const origHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
-            if (window.lucide) lucide.createIcons();
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
+                if (window.lucide) lucide.createIcons();
+            }
+
+            // Resolve the exact URL the browser will POST to, and log it so
+            // we can see it in DevTools → Console.
+            const actionAttr = form.getAttribute('action') || 'save_marks.php';
+            let actionUrl;
+            try { actionUrl = new URL(actionAttr, window.location.href).href; }
+            catch (e2) { actionUrl = actionAttr; }
+            console.log('[save_marks] POSTing to:', actionUrl);
 
             try {
                 const formData = new FormData(form);
                 formData.append('ajax', '1');
-                const res = await fetch(form.action, {
+
+                const res = await fetch(actionUrl, {
                     method: 'POST',
                     body: formData,
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
-                const data = await res.json();
-                if (data.success) {
+
+                console.log('[save_marks] HTTP status:', res.status, res.statusText);
+                const text = await res.text();
+                console.log('[save_marks] raw response (first 400 chars):', text.slice(0, 400));
+
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        throw new Error(
+                            '404 Not Found at ' + actionUrl +
+                            ' — save_marks.php is missing from that folder or the URL is wrong. ' +
+                            'Open DevTools → Network to see the exact URL.'
+                        );
+                    }
+                    throw new Error('Server returned HTTP ' + res.status + ' from ' + actionUrl);
+                }
+
+                let data = null;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    const snippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+                    throw new Error('Server returned non-JSON: ' + (snippet || '(empty response)') +
+                                    ' — usually a PHP warning or fatal in save_marks.php.');
+                }
+
+                if (data && data.success) {
                     showToast(data.message || 'Marks saved successfully!', 'success');
                 } else {
-                    showToast(data.message || 'Error saving marks', 'error');
+                    showToast((data && data.message) || 'Error saving marks', 'error');
                 }
             } catch (err) {
-                showToast('Marks saved successfully!', 'success');
+                console.error('[save_marks] failure:', err);
+                showToast(err && err.message ? err.message : 'Could not save marks. Check DevTools console for details.', 'error');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = origHtml;
-                if (window.lucide) lucide.createIcons();
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                    if (window.lucide) lucide.createIcons();
+                }
             }
         }
 

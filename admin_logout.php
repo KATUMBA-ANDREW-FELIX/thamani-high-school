@@ -1,15 +1,18 @@
 <?php
 session_start();
 
-// Only clear admin session keys — leave teacher session intact
-unset(
-    $_SESSION['admin_id'],
-    $_SESSION['admin_admin_id'],
-    $_SESSION['admin_name'],
-    $_SESSION['admin_email'],
-    $_SESSION['admin_must_change_password'],
-    $_SESSION['admin_logged_in_at']
-);
+$_SESSION = [];
 
-header('Location: teacher-login.php?role=admin');
+if (ini_get('session.use_cookies')) {
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(), '', time() - 42000,
+        $params['path'], $params['domain'],
+        $params['secure'], $params['httponly']
+    );
+}
+
+session_destroy();
+
+header('Location: login.php');
 exit;

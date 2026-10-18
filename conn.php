@@ -937,7 +937,13 @@ if (!function_exists('thamani_db_prepare')) {
             $str = $connection;
             $connection = null;
         }
-        if (function_exists('mysqli_real_escape_string')) {
+        global $conn;
+        $connection = $connection ?: ($conn ?? null);
+
+        if ($connection instanceof ThamaniPolyfillConn) {
+            return str_replace("'", "''", (string)$str);
+        }
+        if (class_exists('mysqli') && $connection instanceof mysqli) {
             return mysqli_real_escape_string($connection, $str);
         }
         return addslashes($str);

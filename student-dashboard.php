@@ -59,13 +59,57 @@ $timetableSlots = $timetable ? (json_decode($timetable['schedule_json'] ?: '[]',
 
 require_once 'grading_helper.php';
 
-// ---------- Fetch Published Academic Reports for Student ----------
+// ---------- Fetch Academic Reports visible to this student ----------
 $studentId = (int)$student['id'];
 $publishedWindows = [];
-$pwRes = thamani_db_query($db, "SELECT id, title, academic_year, term, assessment_type, show_positions, created_at FROM reporting_windows WHERE is_published = 1 ORDER BY id DESC");
+
+// 1) Windows the admin has explicitly published
+$pwRes = thamani_db_query(
+    $db,
+    "SELECT id, title, academic_year, term, assessment_type, show_positions, created_at
+     FROM reporting_windows
+     WHERE is_published = 1
+     ORDER BY id DESC"
+);
 if ($pwRes) {
     while ($r = thamani_db_fetch_assoc($pwRes)) {
         $publishedWindows[] = $r;
+    }
+}
+
+// 2) Fallback: if nothing is published yet, still surface any window that has
+//    marks for THIS student — either linked by window_id, or by
+//    (term, academic_year, assessment_type) when window_id was saved as 0.
+if (empty($publishedWindows)) {
+    $fbSql = "SELECT DISTINCT rw.id, rw.title, rw.academic_year, rw.term,
+                     rw.assessment_type, rw.show_positions, rw.created_at
+              FROM reporting_windows rw
+              WHERE EXISTS (
+                  SELECT 1 FROM student_marks sm
+                  WHERE sm.student_id = ?
+                    AND (
+                        sm.window_id = rw.id
+                        OR (
+                            (sm.window_id IS NULL OR sm.window_id = 0)
+                            AND sm.term = rw.term
+                            AND sm.academic_year = rw.academic_year
+                            AND sm.assessment_type = rw.assessment_type
+                        )
+                    )
+              )
+              ORDER BY rw.id DESC";
+    $fbStmt = thamani_db_prepare($db, $fbSql);
+    if ($fbStmt) {
+        thamani_db_stmt_bind_param($fbStmt, "i", $studentId);
+        if (thamani_db_stmt_execute($fbStmt)) {
+            $fbRes = thamani_db_stmt_get_result($fbStmt);
+            if ($fbRes) {
+                while ($r = thamani_db_fetch_assoc($fbRes)) {
+                    $publishedWindows[] = $r;
+                }
+            }
+        }
+        thamani_db_stmt_close($fbStmt);
     }
 }
 
@@ -89,20 +133,50 @@ $studentComment = ['class_teacher_comment' => '', 'head_teacher_comment' => ''];
 $streamRankText = 'N/A';
 
 if ($selectedWindow) {
-    // Fetch marks
-    $mStmt = thamani_db_prepare($db, "SELECT subject, score, max_score, comments FROM student_marks WHERE student_id = ? AND (window_id = ? OR (class_level = ? AND term = ?)) ORDER BY subject ASC");
+    // Fetch marks (matches both window-linked rows and legacy window_id = 0 rows)
+    $mStmt = thamani_db_prepare(
+        $db,
+        "SELECT subject, score, max_score, comments
+         FROM student_marks
+         WHERE student_id = ?
+           AND (
+               window_id = ?
+               OR (
+                   (window_id IS NULL OR window_id = 0)
+                   AND class_level = ?
+                   AND term = ?
+                   AND academic_year = ?
+                   AND assessment_type = ?
+               )
+           )
+         ORDER BY subject ASC"
+    );
     if ($mStmt) {
-        thamani_db_stmt_bind_param($mStmt, "iiss", $studentId, $selectedWindowId, $studentClass, $selectedWindow['term']);
-        thamani_db_stmt_execute($mStmt);
-        $mRes = thamani_db_stmt_get_result($mStmt);
-        if ($mRes) {
-            while ($r = thamani_db_fetch_assoc($mRes)) {
-                $studentMarks[] = $r;
-                $totalScore += floatval($r['score']);
-                $totalMax   += floatval($r['max_score'] ?: 100);
+        thamani_db_stmt_bind_param(
+            $mStmt,
+            "iissss",
+            $studentId,
+            $selectedWindowId,
+            $studentClass,
+            $selectedWindow['term'],
+            $selectedWindow['academic_year'],
+            $selectedWindow['assessment_type']
+        );
+        if (thamani_db_stmt_execute($mStmt)) {
+            $mRes = thamani_db_stmt_get_result($mStmt);
+            if ($mRes) {
+                while ($r = thamani_db_fetch_assoc($mRes)) {
+                    $studentMarks[] = $r;
+                    $totalScore += floatval($r['score']);
+                    $totalMax   += floatval($r['max_score'] ?: 100);
+                }
             }
+        } else {
+            error_log('[Student Dashboard Marks Fetch] ' . thamani_db_stmt_error($mStmt));
         }
         thamani_db_stmt_close($mStmt);
+    } else {
+        error_log('[Student Dashboard Marks Prepare] ' . thamani_db_error($db));
     }
 
     // Fetch comments
@@ -120,9 +194,9 @@ if ($selectedWindow) {
     // Compute rank if enabled
     if (!empty($selectedWindow['show_positions'])) {
         $streamTotals = [];
-        $allStreamStmt = thamani_db_prepare($db, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND (window_id = ? OR term = ?) GROUP BY student_id");
+        $allStreamStmt = thamani_db_prepare($db, "SELECT student_id, SUM(score) as total_score FROM student_marks WHERE class_level = ? AND (stream = ? OR ? = 'All Streams') AND (window_id = ? OR ((window_id IS NULL OR window_id = 0) AND term = ? AND academic_year = ? AND assessment_type = ?)) GROUP BY student_id");
         if ($allStreamStmt) {
-            thamani_db_stmt_bind_param($allStreamStmt, "sssis", $studentClass, $studentStream, $studentStream, $selectedWindowId, $selectedWindow['term']);
+            thamani_db_stmt_bind_param($allStreamStmt, "sssisss", $studentClass, $studentStream, $studentStream, $selectedWindowId, $selectedWindow['term'], $selectedWindow['academic_year'], $selectedWindow['assessment_type']);
             thamani_db_stmt_execute($allStreamStmt);
             $asRes = thamani_db_stmt_get_result($allStreamStmt);
             if ($asRes) {
@@ -142,6 +216,75 @@ if ($selectedWindow) {
 $edLevel = (strpos($studentClass, 'Senior 5') !== false || strpos($studentClass, 'Senior 6') !== false) ? 'A-Level' : 'O-Level';
 $averagePercent = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 1) : 0;
 $overallGradeInfo = calculate_grade_info($totalScore, $totalMax ?: 100, $edLevel);
+
+$performanceChartMarks = $studentMarks;
+$performanceChartIsDemo = false;
+$appEnvironment = strtolower(trim((string)(getenv('APP_ENV') ?: '')));
+$isDevelopmentEnvironment = in_array($appEnvironment, ['development', 'dev', 'local'], true);
+if ($appEnvironment === '' && $db instanceof ThamaniPolyfillConn && $db->driver === 'sqlite') {
+    $localHost = strtolower((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    $localHost = preg_replace('/:\d+$/', '', $localHost);
+    $isDevelopmentEnvironment = in_array($localHost, ['localhost', '127.0.0.1', '::1'], true);
+}
+
+if (empty($performanceChartMarks) && $isDevelopmentEnvironment) {
+    $performanceChartMarks = [
+        ['subject' => 'Mathematics', 'score' => 78, 'max_score' => 100],
+        ['subject' => 'English', 'score' => 84, 'max_score' => 100],
+        ['subject' => 'Biology', 'score' => 71, 'max_score' => 100],
+        ['subject' => 'Chemistry', 'score' => 66, 'max_score' => 100],
+        ['subject' => 'Physics', 'score' => 73, 'max_score' => 100],
+        ['subject' => 'Geography', 'score' => 89, 'max_score' => 100],
+    ];
+    $performanceChartIsDemo = true;
+}
+
+$performanceChartData = [];
+$bestPerformanceSubject = null;
+$weakestPerformanceSubject = null;
+$performanceLinePoints = [];
+$performanceChartCount = count($performanceChartMarks);
+foreach ($performanceChartMarks as $index => $mark) {
+    $subject = (string)($mark['subject'] ?? 'Subject');
+    $score = (float)($mark['score'] ?? 0);
+    $maxScore = (float)($mark['max_score'] ?? 100);
+    if ($maxScore <= 0) $maxScore = 100;
+    $percent = max(0, ($score / $maxScore) * 100);
+    $plotPercent = min(100, $percent);
+    $band = $percent >= 70
+        ? ['label' => 'Strong', 'bar' => 'bg-brand-green', 'dot' => '#1A472A']
+        : ($percent >= 40
+            ? ['label' => 'Developing', 'bar' => 'bg-amber-400', 'dot' => '#FBBF24']
+            : ['label' => 'Needs improvement', 'bar' => 'bg-red-500', 'dot' => '#EF4444']);
+    $chartMark = [
+        'subject' => $subject,
+        'score' => $score,
+        'max_score' => $maxScore,
+        'percent' => $percent,
+        'plot_percent' => $plotPercent,
+        'band' => $band,
+    ];
+    $performanceChartData[] = $chartMark;
+
+    if ($bestPerformanceSubject === null || $percent > $bestPerformanceSubject['percent']) {
+        $bestPerformanceSubject = $chartMark;
+    }
+    if ($weakestPerformanceSubject === null || $percent < $weakestPerformanceSubject['percent']) {
+        $weakestPerformanceSubject = $chartMark;
+    }
+
+    $pointX = $performanceChartCount <= 1 ? 300 : 48 + (504 * $index / ($performanceChartCount - 1));
+    $pointY = 220 - (1.8 * $plotPercent);
+    $performanceLinePoints[] = [
+        'x' => number_format($pointX, 1, '.', ''),
+        'y' => number_format($pointY, 1, '.', ''),
+        'subject' => $subject,
+        'score' => $score,
+        'percent' => $percent,
+        'label' => mb_substr($subject, 0, 10),
+        'color' => $band['dot'],
+    ];
+}
 
 function formatSize($bytes) {
     $bytes = (int)$bytes;
@@ -303,8 +446,16 @@ function formatSize($bytes) {
                         </div>
                         <span class="text-[10px] font-bold text-gray-400 uppercase">Reports</span>
                     </div>
-                    <div class="text-2xl font-bold text-brand-green">—</div>
-                    <div class="text-xs text-gray-500 mt-1">Coming in Phase 3</div>
+                    <?php if (!empty($studentMarks)): ?>
+                        <div class="text-2xl font-bold text-brand-green"><?= number_format($averagePercent, 1) ?>%</div>
+                        <div class="text-xs text-gray-500 mt-1">Average across <?= count($studentMarks) ?> subjects</div>
+                    <?php elseif ($performanceChartIsDemo): ?>
+                        <div class="text-2xl font-bold text-brand-green">Sample</div>
+                        <div class="text-xs text-gray-500 mt-1">Development preview only</div>
+                    <?php else: ?>
+                        <div class="text-2xl font-bold text-brand-green">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Term marks not published</div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -329,11 +480,122 @@ function formatSize($bytes) {
                     <div class="text-xs text-gray-500 mt-1"><?= $timetable ? 'Time slots published' : 'Not yet published' ?></div>
                 </div>
             </div>
+
+            <section class="bg-white p-5 sm:p-7 rounded-2xl shadow-sm border border-gray-100" aria-labelledby="performance-chart-title">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2 text-brand-green">
+                            <i data-lucide="chart-no-axes-column-increasing" class="w-5 h-5"></i>
+                            <h2 id="performance-chart-title" class="text-lg font-bold">Subject Performance</h2>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <?= $performanceChartIsDemo
+                                ? 'Example marks to preview the chart. These are not your results.'
+                                : ($selectedWindow
+                                    ? 'Your marks for ' . htmlspecialchars((string)$selectedWindow['title'], ENT_QUOTES, 'UTF-8') . '.'
+                                    : 'Subject marks will appear here when a term report is published.') ?>
+                        </p>
+                    </div>
+                    <?php if ($performanceChartIsDemo): ?>
+                        <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold uppercase tracking-wider">Development sample</span>
+                    <?php elseif ($selectedWindow && !empty($studentMarks)): ?>
+                        <span class="px-3 py-1 rounded-full bg-brand-lightGreen text-brand-green text-[10px] font-bold"><?= htmlspecialchars((string)$selectedWindow['term'], ENT_QUOTES, 'UTF-8') ?> <?= htmlspecialchars((string)$selectedWindow['academic_year'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!empty($performanceChartData)): ?>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-5">Marks by subject</h3>
+                            <div class="space-y-4" role="img" aria-label="<?= $performanceChartIsDemo ? 'Development sample subject marks bar chart' : 'Subject marks bar chart' ?>">
+                                <div class="hidden sm:grid grid-cols-[minmax(80px,120px)_1fr_95px] gap-3 items-end text-[9px] font-bold uppercase tracking-wide text-gray-400">
+                                    <span>Subject</span>
+                                    <div class="flex justify-between px-1">
+                                        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                                    </div>
+                                    <span class="text-right">Mark</span>
+                                </div>
+                                <?php foreach ($performanceChartData as $mark): ?>
+                                    <div class="grid grid-cols-1 sm:grid-cols-[minmax(80px,120px)_1fr_95px] gap-2 sm:gap-3 items-center">
+                                        <span class="text-xs font-semibold text-gray-700 truncate" title="<?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <div class="relative h-3.5 rounded-full bg-gray-200 overflow-hidden" role="meter" aria-label="<?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?> score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= number_format($mark['plot_percent'], 1, '.', '') ?>">
+                                            <div class="h-full rounded-full <?= $mark['band']['bar'] ?> transition-all duration-500" style="width: <?= number_format($mark['plot_percent'], 1, '.', '') ?>%"></div>
+                                        </div>
+                                        <span class="text-[11px] font-bold text-gray-700 sm:text-right"><?= number_format($mark['score'], 1) ?> / <?= number_format($mark['max_score'], 0) ?> <span class="text-gray-400 font-medium">(<?= number_format($mark['percent'], 1) ?>%)</span></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-3">Score trend by subject</h3>
+                            <div class="overflow-x-auto">
+                                <svg class="w-full min-w-[440px] h-auto" viewBox="0 0 600 270" role="img" aria-labelledby="performance-line-title performance-line-description">
+                                    <title id="performance-line-title">Subject score trend</title>
+                                    <desc id="performance-line-description">Line graph of this student's percentage mark in each subject.</desc>
+                                    <?php foreach ([0, 25, 50, 75, 100] as $tick):
+                                        $gridY = 220 - (1.8 * $tick);
+                                    ?>
+                                        <line x1="42" y1="<?= number_format($gridY, 1, '.', '') ?>" x2="570" y2="<?= number_format($gridY, 1, '.', '') ?>" stroke="#E5E7EB" stroke-width="1" />
+                                        <text x="34" y="<?= number_format($gridY + 3, 1, '.', '') ?>" text-anchor="end" fill="#9CA3AF" font-size="9"><?= $tick ?></text>
+                                    <?php endforeach; ?>
+                                    <polyline
+                                        points="<?= implode(' ', array_map(static function ($point) { return $point['x'] . ',' . $point['y']; }, $performanceLinePoints)) ?>"
+                                        fill="none"
+                                        stroke="#1A472A"
+                                        stroke-width="3"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    />
+                                    <?php foreach ($performanceLinePoints as $point): ?>
+                                        <circle cx="<?= $point['x'] ?>" cy="<?= $point['y'] ?>" r="5" fill="<?= $point['color'] ?>" stroke="white" stroke-width="2">
+                                            <title><?= htmlspecialchars($point['subject'], ENT_QUOTES, 'UTF-8') ?>: <?= number_format($point['score'], 1) ?> (<?= number_format($point['percent'], 1) ?>%)</title>
+                                        </circle>
+                                        <text x="<?= $point['x'] ?>" y="246" text-anchor="middle" fill="#6B7280" font-size="9"><?= htmlspecialchars($point['label'], ENT_QUOTES, 'UTF-8') ?></text>
+                                    <?php endforeach; ?>
+                                </svg>
+                            </div>
+                            <p class="text-[10px] text-gray-400 text-center -mt-1">Subject labels may be shortened; full names appear in the bar chart.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-gray-100 pt-4" aria-label="Performance bands">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wide text-gray-400">Performance bands</span>
+                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-brand-green"></span>Strong: 70% and above</span>
+                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Developing: 40–&lt;70%</span>
+                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Needs improvement: below 40%</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+                        <div class="rounded-xl border border-brand-green/15 bg-brand-lightGreen/50 p-4 flex items-center justify-between gap-3">
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-green">Best subject</span>
+                                <p class="text-sm font-bold text-gray-800 mt-1"><?= htmlspecialchars($bestPerformanceSubject['subject'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                            <span class="text-lg font-black text-brand-green"><?= number_format($bestPerformanceSubject['percent'], 1) ?>%</span>
+                        </div>
+                        <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 flex items-center justify-between gap-3">
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Needs most focus</span>
+                                <p class="text-sm font-bold text-gray-800 mt-1"><?= htmlspecialchars($weakestPerformanceSubject['subject'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                            <span class="text-lg font-black text-amber-800"><?= number_format($weakestPerformanceSubject['percent'], 1) ?>%</span>
+                        </div>
+                    </div>
+
+                    <?php if (!$performanceChartIsDemo): ?>
+                        <p class="mt-5 pt-4 border-t border-gray-100 text-xs text-gray-500">Use the Academic Reports section to view comments, grades, and your full report card.</p>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="rounded-xl bg-gray-50 border border-dashed border-gray-200 px-5 py-8 text-center">
+                        <i data-lucide="chart-no-axes-column-increasing" class="w-8 h-8 text-gray-300 mx-auto mb-2"></i>
+                        <p class="text-sm font-semibold text-gray-600"><?= $selectedWindow ? 'No subject marks are available in this report yet.' : 'No published term results yet.' ?></p>
+                        <p class="text-xs text-gray-400 mt-1">Your graph will update when your results are published.</p>
+                    </div>
+                <?php endif; ?>
+            </section>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- VIEW: REPORTS                                                 -->
-        <!-- ============================================================ -->
         <!-- ============================================================ -->
         <!-- VIEW: REPORTS                                                 -->
         <!-- ============================================================ -->

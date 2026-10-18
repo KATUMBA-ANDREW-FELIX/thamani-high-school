@@ -26,8 +26,21 @@ $isAdmin   = !empty($_SESSION['admin_id']);
 $isLoggedIn = $isStudent || $isTeacher || $isAdmin;
 
 if (!$isLoggedIn) {
-    header('Location: student-login.php');
+    header('Location: login.php');
     exit;
+}
+
+$canSendSms = false;
+if ($isTeacher) {
+    $permission = thamani_db_prepare($conn, "SELECT id FROM teachers WHERE id = ? AND is_active = 1 AND can_send_sms = 1 LIMIT 1");
+    if ($permission) {
+        $teacherId = (int)$_SESSION['teacher_id'];
+        thamani_db_stmt_bind_param($permission, 'i', $teacherId);
+        thamani_db_stmt_execute($permission);
+        $permissionResult = thamani_db_stmt_get_result($permission);
+        $canSendSms = (bool)($permissionResult && thamani_db_fetch_assoc($permissionResult));
+        thamani_db_stmt_close($permission);
+    }
 }
 
 $dashboardLink = 'home.php';
@@ -125,12 +138,13 @@ if ($stmt) {
 
                 <!-- Navigation Links -->
                 <div class="hidden lg:flex items-center space-x-1 font-medium text-sm">
-                    <a href="home.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Home</a>
-                    <a href="enrollment.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Enrollment</a>
-                    <a href="library.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Library</a>
-                    <a href="gallery.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Gallery</a>
-                    <a href="calendar.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Calendar & Fees</a>
-                    <a href="alumni.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Alumni</a>
+                    <?php if ($isTeacher): ?>
+                        <a href="students_view.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Student Roster</a>
+                        <a href="timetables.php" class="nav-link px-3 py-2 rounded-md transition-colors text-gray-700 hover:text-brand-green">Class Timetables</a>
+                        <?php if ($canSendSms): ?>
+                            <a href="sms.php" class="nav-link px-3 py-2 rounded-md text-sm font-bold transition-colors text-rose-700 hover:text-rose-900">SMS Messaging</a>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Right-side Actions: Smart Dashboard/Logout (Shown only when logged in) -->
@@ -151,10 +165,23 @@ if ($stmt) {
                 <?php endif; ?>
 
                 <div class="lg:hidden flex items-center">
-                    <button onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none">
+                    <button type="button" onclick="toggleMobileMenu();" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-brand-green hover:bg-gray-100 focus:outline-none" aria-label="Toggle navigation menu">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
                 </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200 px-4 pt-2 pb-4 space-y-2">
+            <?php if ($isTeacher): ?>
+                <a href="students_view.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Student Roster</a>
+                <a href="timetables.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Class Timetables</a>
+                <?php if ($canSendSms): ?>
+                    <a href="sms.php" class="block px-3 py-2 rounded-md text-base font-bold text-rose-700 hover:bg-rose-50">SMS Messaging</a>
+                <?php endif; ?>
+            <?php endif; ?>
+            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                <a href="<?= htmlspecialchars($dashboardLink, ENT_QUOTES, 'UTF-8') ?>" class="block px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-brand-lightGreen">Back to Dashboard</a>
+                <a href="<?= htmlspecialchars($logoutLink, ENT_QUOTES, 'UTF-8') ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center">Logout</a>
             </div>
         </div>
     </nav>
@@ -297,6 +324,10 @@ if ($stmt) {
     </footer>
 
     <script>
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
         lucide.createIcons();
     </script>
 </body>

@@ -7,6 +7,7 @@
 require_once 'auth_admin.php';
 require_admin_login();
 require_once 'conn.php';
+require_once __DIR__ . '/cloudinary_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: admin_dashboard.php?tab=tab-admin-timetables#tab-admin-timetables');
@@ -88,12 +89,9 @@ if (isset($_FILES['timetable_file']) && $_FILES['timetable_file']['error'] === U
     } else {
         // Try Cloudinary upload first
         $cloudinaryUrl = null;
-        if (file_exists('cloudinary_helper.php')) {
-            require_once 'cloudinary_helper.php';
-            $cRes = cloudinary_upload_file($fileTmp, 'timetables', 'raw');
-            if ($cRes['success']) {
-                $cloudinaryUrl = $cRes['url'];
-            }
+        $cRes = cloudinary_upload($fileTmp, $fileName, 'raw');
+        if (!empty($cRes['success']) && !empty($cRes['secure_url'])) {
+            $cloudinaryUrl = $cRes['secure_url'];
         }
 
         if ($cloudinaryUrl) {

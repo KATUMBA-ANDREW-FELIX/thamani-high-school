@@ -20,6 +20,7 @@ if (!empty($_SESSION['student_id'])) {
 }
 
 require_once 'conn.php';
+require_once __DIR__ . '/auth_student.php';
 $db = $GLOBALS['conn'];
 
 $errors = [];
@@ -39,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql = "SELECT id, full_name, class_level, stream,
                        password_hash, must_change_password, account_active
                 FROM students
-                WHERE (full_name = ? OR lin_number = ?) AND status = 'Enrolled'
+                WHERE (LOWER(TRIM(full_name)) = LOWER(?) OR LOWER(TRIM(lin_number)) = LOWER(?))
+                  AND status = 'Enrolled'
                 LIMIT 2";
 
         $stmt = thamani_db_prepare($db, $sql);
@@ -85,9 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ((int)$student['account_active'] !== 1) {
                     $errors[] = 'Your account has been disabled. Please contact the administration.';
-                } elseif (empty($student['password_hash'])) {
-                    $errors[] = 'Your account has no password set. Please contact the ICT office.';
-                } elseif (!password_verify($password, $student['password_hash'])) {
+                } elseif (!verify_student_login_password($db, $student, $password)) {
                     $errors[] = 'Invalid credentials. Please check your name and password.';
                 } else {
                     // Success
@@ -208,14 +208,14 @@ if (!empty($errors)) {
                     </div>
                     <span class="bg-brand-green text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Student Portal</span>
                     <h1 class="text-2xl font-bold text-brand-green mt-3">Student Login</h1>
-                    <p class="text-gray-500 text-sm mt-1">Sign in with your full name and password.</p>
+                    <p class="text-gray-500 text-sm mt-1">Sign in with your full name or LIN number and password.</p>
                 </div>
 
                 <form method="post" class="p-8 space-y-5" novalidate>
                     <?= $errorHtml ?>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name</label>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name or LIN Number</label>
                         <div class="relative">
                             <i data-lucide="user" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                             <input type="text" name="student_name" required autocomplete="username"
@@ -255,7 +255,7 @@ if (!empty($errors)) {
                 <i data-lucide="info" class="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5"></i>
                 <div class="text-xs text-gray-600 leading-relaxed">
                     <p class="font-bold text-brand-green mb-1">First time logging in?</p>
-                    <p>Use the default password given by the administration. You'll be asked to set your own password immediately.</p>
+                    <p>Newly enrolled students can sign in with <strong>Admin@2026</strong> and must set a personal password immediately.</p>
                 </div>
             </div>
 

@@ -12,7 +12,7 @@ session_start();
 
 // Teacher or Admin
 if (empty($_SESSION['teacher_id']) && empty($_SESSION['admin_id'])) {
-    header('Location: teacher-login.php');
+    header('Location: login.php');
     exit;
 }
 
