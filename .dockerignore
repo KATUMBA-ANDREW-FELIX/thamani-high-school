@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.git/
+node_modules/
+uploads/
+calendar_docs/
+gallery_images/
+library/
+thamani_database.sqlite*
+*.log

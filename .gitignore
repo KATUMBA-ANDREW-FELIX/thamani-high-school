@@ -37,6 +37,7 @@ gallery_images/*
 !gallery_images/.gitkeep
 library/*
 !library/.gitkeep
+uploads/*
 
 # Local mock data seed
 seed_mock_data.php

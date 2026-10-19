@@ -34,5 +34,7 @@ if (file_exists($file . '.html')) {
     exit;
 }
 
-return false;
+http_response_code(404);
+echo 'Not Found';
+exit;
 ?>

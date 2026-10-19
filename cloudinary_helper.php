@@ -8,9 +8,9 @@
 
 if (!function_exists('cloudinary_get_config')) {
     function cloudinary_get_config() {
-        $cloudName    = getenv('CLOUDINARY_CLOUD_NAME') ?: 'thamaniacademy';
-        $apiKey       = getenv('CLOUDINARY_API_KEY')    ?: '555989584672519';
-        $apiSecret    = getenv('CLOUDINARY_API_SECRET') ?: 'dcmq5dQZfmysvewtwrAZTsCeI3w';
+        $cloudName    = getenv('CLOUDINARY_CLOUD_NAME') ?: '';
+        $apiKey       = getenv('CLOUDINARY_API_KEY')    ?: '';
+        $apiSecret    = getenv('CLOUDINARY_API_SECRET') ?: '';
         $uploadPreset = getenv('CLOUDINARY_UPLOAD_PRESET') ?: '';
 
         // If CLOUDINARY_URL is provided, parse it (format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME)

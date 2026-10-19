@@ -88,6 +88,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete teacher record.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing teacher deletion.');
         }
         break;
 
@@ -108,6 +110,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete student record.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing student deletion.');
         }
         break;
 
@@ -128,6 +132,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete alumni record.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing alumni deletion.');
         }
         break;
 
@@ -136,6 +142,7 @@ switch ($type) {
     // ============================================================
     case 'calendar':
         $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM calendar_documents WHERE id = ? LIMIT 1");
+        if (!$check) { $setFlash('error', 'Database error checking calendar document.'); }
         thamani_db_stmt_bind_param($check, "i", $id);
         thamani_db_stmt_execute($check);
         $res = thamani_db_stmt_get_result($check);
@@ -164,6 +171,7 @@ switch ($type) {
         }
 
         $del = thamani_db_prepare($conn, "DELETE FROM calendar_documents WHERE id = ?");
+        if (!$del) { $setFlash('error', 'Database error deleting calendar document.'); }
         thamani_db_stmt_bind_param($del, "i", $id);
         if (thamani_db_stmt_execute($del)) {
             thamani_db_stmt_close($del);
@@ -179,6 +187,7 @@ switch ($type) {
     // ============================================================
     case 'gallery':
         $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM gallery_photos WHERE id = ? LIMIT 1");
+        if (!$check) { $setFlash('error', 'Database error checking gallery photo.'); }
         thamani_db_stmt_bind_param($check, "i", $id);
         thamani_db_stmt_execute($check);
         $res = thamani_db_stmt_get_result($check);
@@ -207,6 +216,7 @@ switch ($type) {
         }
 
         $del = thamani_db_prepare($conn, "DELETE FROM gallery_photos WHERE id = ?");
+        if (!$del) { $setFlash('error', 'Database error deleting gallery photo.'); }
         thamani_db_stmt_bind_param($del, "i", $id);
         if (thamani_db_stmt_execute($del)) {
             thamani_db_stmt_close($del);
@@ -222,6 +232,7 @@ switch ($type) {
     // ============================================================
     case 'library':
         $check = thamani_db_prepare($conn, "SELECT id, title, file_path, stored_name, uploaded_by FROM library_resources WHERE id = ? LIMIT 1");
+        if (!$check) { $setFlash('error', 'Database error checking library resource.'); }
         thamani_db_stmt_bind_param($check, "i", $id);
         thamani_db_stmt_execute($check);
         $res = thamani_db_stmt_get_result($check);
@@ -250,6 +261,7 @@ switch ($type) {
         }
 
         $del = thamani_db_prepare($conn, "DELETE FROM library_resources WHERE id = ?");
+        if (!$del) { $setFlash('error', 'Database error deleting library resource.'); }
         thamani_db_stmt_bind_param($del, "i", $id);
         if (thamani_db_stmt_execute($del)) {
             thamani_db_stmt_close($del);
@@ -268,6 +280,7 @@ switch ($type) {
             $setFlash('error', 'Only administrators can delete class timetables.');
         }
         $check = thamani_db_prepare($conn, "SELECT id, title, file_path FROM class_timetables WHERE id = ? LIMIT 1");
+        if (!$check) { $setFlash('error', 'Database error checking class timetable.'); }
         thamani_db_stmt_bind_param($check, "i", $id);
         thamani_db_stmt_execute($check);
         $res = thamani_db_stmt_get_result($check);
@@ -292,6 +305,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete timetable record.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing timetable deletion.');
         }
         break;
 
@@ -328,6 +343,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete duty roster entry.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing duty roster deletion.');
         }
         break;
 
@@ -336,6 +353,7 @@ switch ($type) {
     // ============================================================
     case 'personal_schedule':
         $check = thamani_db_prepare($conn, "SELECT id, teacher_id, subject FROM teacher_personal_schedules WHERE id = ? LIMIT 1");
+        if (!$check) { $setFlash('error', 'Database error checking schedule entry.'); }
         thamani_db_stmt_bind_param($check, "i", $id);
         thamani_db_stmt_execute($check);
         $res = thamani_db_stmt_get_result($check);
@@ -360,6 +378,8 @@ switch ($type) {
                 thamani_db_stmt_close($stmt);
                 $setFlash('error', 'Failed to delete schedule entry.');
             }
+        } else {
+            $setFlash('error', 'Database error preparing schedule deletion.');
         }
         break;
 

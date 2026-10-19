@@ -4,6 +4,7 @@ FROM php:8.2-apache
 # Install system dependencies & PostgreSQL development libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
+    libsqlite3-dev \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
@@ -41,7 +42,8 @@ WORKDIR /var/www/html
 COPY . /var/www/html/
 
 # Create required upload storage folders & assign permissions
-RUN mkdir -p /var/www/html/calendar_docs \
+RUN mkdir -p /var/www/html/uploads \
+             /var/www/html/calendar_docs \
              /var/www/html/gallery_images \
              /var/www/html/library \
     && chown -R www-data:www-data /var/www/html \

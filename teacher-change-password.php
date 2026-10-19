@@ -52,40 +52,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Fetch current hash for verification
         $sel = thamani_db_prepare($conn, "SELECT password_hash FROM teachers WHERE id = ? LIMIT 1");
-        thamani_db_stmt_bind_param($sel, "i", $_SESSION['teacher_id']);
-        thamani_db_stmt_execute($sel);
-        $res  = thamani_db_stmt_get_result($sel);
-        $row  = $res ? thamani_db_fetch_assoc($res) : null;
-        thamani_db_stmt_close($sel);
-
-        if (!$row) {
-            $errors[] = 'Account not found. Please log in again.';
-        } elseif (!password_verify($current, $row['password_hash'])) {
-            $errors[] = 'Your current password is incorrect.';
+        if (!$sel) {
+            $errors[] = 'A database error occurred. Please try again.';
         } else {
-            $newHash = password_hash($new, PASSWORD_DEFAULT);
+            thamani_db_stmt_bind_param($sel, "i", $_SESSION['teacher_id']);
+            thamani_db_stmt_execute($sel);
+            $res  = thamani_db_stmt_get_result($sel);
+            $row  = $res ? thamani_db_fetch_assoc($res) : null;
+            thamani_db_stmt_close($sel);
 
-            $upd = thamani_db_prepare($conn,
-                "UPDATE teachers SET password_hash = ?, must_change_password = 0 WHERE id = ?");
-            thamani_db_stmt_bind_param($upd, "si", $newHash, $_SESSION['teacher_id']);
-
-            if (thamani_db_stmt_execute($upd)) {
-                thamani_db_stmt_close($upd);
-                $_SESSION['must_change_password'] = 0;
-
-                if ($isForced) {
-                    // First-login change → straight to dashboard
-                    header('Location: teacher_dashboard.php');
-                    exit;
-                } else {
-                    // Voluntary change → return to dashboard after saving
-                    header('Location: teacher_dashboard.php');
-                    exit;
-                }
+            if (!$row) {
+                $errors[] = 'Account not found. Please log in again.';
+            } elseif (!password_verify($current, $row['password_hash'])) {
+                $errors[] = 'Your current password is incorrect.';
             } else {
-                error_log('[Teacher Change Password] ' . thamani_db_stmt_error($upd));
-                thamani_db_stmt_close($upd);
-                $errors[] = 'A system error occurred. Please try again later.';
+                $newHash = password_hash($new, PASSWORD_DEFAULT);
+
+                $upd = thamani_db_prepare($conn,
+                    "UPDATE teachers SET password_hash = ?, must_change_password = 0 WHERE id = ?");
+                if (!$upd) {
+                    $errors[] = 'A database error occurred while saving. Please try again.';
+                } else {
+                    thamani_db_stmt_bind_param($upd, "si", $newHash, $_SESSION['teacher_id']);
+
+                    if (thamani_db_stmt_execute($upd)) {
+                        thamani_db_stmt_close($upd);
+                        $_SESSION['must_change_password'] = 0;
+
+                        if ($isForced) {
+                            // First-login change → straight to dashboard
+                            header('Location: teacher_dashboard.php');
+                            exit;
+                        } else {
+                            // Voluntary change → return to dashboard after saving
+                            header('Location: teacher_dashboard.php');
+                            exit;
+                        }
+                    } else {
+                        error_log('[Teacher Change Password] ' . thamani_db_stmt_error($upd));
+                        thamani_db_stmt_close($upd);
+                        $errors[] = 'A system error occurred. Please try again later.';
+                    }
+                }
             }
         }
     }

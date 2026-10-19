@@ -7,6 +7,11 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
+    volumes:
+      - uploads_local:/var/www/html/uploads
+      - calendar_docs_local:/var/www/html/calendar_docs
+      - gallery_images_local:/var/www/html/gallery_images
+      - library_local:/var/www/html/library
     env_file:
       - path: .env
         required: false
@@ -16,10 +21,10 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-thamani_postgress}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ThamaniPostgres2026!}
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-thamaniacademy}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-555989584672519}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-dcmq5dQZfmysvewtwrAZTsCeI3w}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
       - CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET:-}
     depends_on:
       db:
@@ -34,7 +39,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-thamani_postgress}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ThamaniPostgres2026!}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5433:5432"
     volumes:
@@ -53,5 +58,13 @@ networks:
     driver: bridge
 
 volumes:
+  uploads_local:
+    driver: local
+  calendar_docs_local:
+    driver: local
+  gallery_images_local:
+    driver: local
+  library_local:
+    driver: local
   pgdata_local:
     driver: local

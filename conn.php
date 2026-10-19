@@ -921,6 +921,62 @@ if (!function_exists('mysqli_connect')) {
     function mysqli_close($c = null) { return true; }
 }
 
+// -----------------------------------------------------------------------
+// mbstring polyfills — used for safe UTF-8 string length / substring ops.
+// These kick in only when the mbstring PHP extension is not installed.
+// -----------------------------------------------------------------------
+if (!function_exists('mb_strlen')) {
+    function mb_strlen($str, $encoding = 'UTF-8') {
+        return preg_match_all('/./su', (string)$str);
+    }
+}
+if (!function_exists('mb_strtolower')) {
+    function mb_strtolower($str, $encoding = 'UTF-8') {
+        return strtolower((string)$str);
+    }
+}
+if (!function_exists('mb_strtoupper')) {
+    function mb_strtoupper($str, $encoding = 'UTF-8') {
+        return strtoupper((string)$str);
+    }
+}
+if (!function_exists('mb_substr')) {
+    function mb_substr($str, $start, $length = null, $encoding = 'UTF-8') {
+        $str = (string)$str;
+        if ($length === null) {
+            return implode('', array_slice(preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY), $start));
+        }
+        return implode('', array_slice(preg_split('//u', $str, -1, PREG_SPLIT_NO_EMPTY), $start, $length));
+    }
+}
+if (!function_exists('mb_strpos')) {
+    function mb_strpos($haystack, $needle, $offset = 0, $encoding = 'UTF-8') {
+        $chars = preg_split('//u', (string)$haystack, -1, PREG_SPLIT_NO_EMPTY);
+        $needleChars = preg_split('//u', (string)$needle, -1, PREG_SPLIT_NO_EMPTY);
+        $len = count($chars);
+        $needleLen = count($needleChars);
+        for ($i = $offset; $i <= $len - $needleLen; $i++) {
+            if (array_slice($chars, $i, $needleLen) === $needleChars) return $i;
+        }
+        return false;
+    }
+}
+if (!function_exists('mb_convert_encoding')) {
+    function mb_convert_encoding($str, $to, $from = 'UTF-8') {
+        return (string)$str; // best-effort: return as-is for UTF-8→UTF-8
+    }
+}
+if (!function_exists('mb_detect_encoding')) {
+    function mb_detect_encoding($str, $list = null, $strict = false) {
+        return 'UTF-8';
+    }
+}
+if (!function_exists('mb_internal_encoding')) {
+    function mb_internal_encoding($enc = null) {
+        return $enc ? true : 'UTF-8';
+    }
+}
+
 // Keep application queries compatible with native mysqli and the PDO polyfill.
 if (!function_exists('thamani_db_prepare')) {
     function thamani_db_error($connection = null) {
@@ -1259,6 +1315,7 @@ if (!function_exists('thamani_db_prepare')) {
                     return $ok;
                 }
             }
+            return false;
         }
     }
 

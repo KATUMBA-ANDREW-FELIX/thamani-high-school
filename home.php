@@ -202,7 +202,7 @@ if ($isStudent) {
                             <h2 class="text-4xl font-bold text-brand-green mb-2">Latest News</h2>
                             <p class="text-gray-600">Stay updated with the latest happenings at Thamani High School.</p>
                         </div>
-                        <a href="admin.php" class="px-6 py-2.5 rounded-lg font-bold border-2 border-brand-green text-brand-green hover:bg-brand-green hover:text-white transition-colors text-sm">View All Circulars</a>
+                        <a href="calendar.php" class="px-6 py-2.5 rounded-lg font-bold border-2 border-brand-green text-brand-green hover:bg-brand-green hover:text-white transition-colors text-sm">View Calendar &amp; Documents</a>
                     </div>
                     <div id="home-circulars-container" class="grid grid-cols-1 md:grid-cols-3 gap-8"></div>
                 </div>
