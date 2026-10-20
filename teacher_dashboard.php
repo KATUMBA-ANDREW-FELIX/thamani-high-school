@@ -1020,7 +1020,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-sm border-collapse">
                                     <thead>
-                                        <tr class="bg-blue-900 text-white font-bold">
+                                        <tr class="bg-blue-900 text-dark font-bold">
                                             <th class="p-3.5 w-12">#</th>
                                             <th class="p-3.5">LIN Number</th>
                                             <th class="p-3.5">Student Full Name</th>
@@ -1074,7 +1074,7 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                             <?php if (!empty($streamStudents)): ?>
                                 <div class="mt-6 flex justify-between items-center">
                                     <span class="text-xs text-gray-500">Total Stream Students: <strong><?= count($streamStudents) ?></strong></span>
-                                    <button type="submit" class="px-6 py-3 bg-blue-900 text-white font-extrabold rounded-xl text-xs hover:bg-blue-950 shadow-md flex items-center gap-2">
+                                    <button type="submit" class="px-6 py-3 bg-blue-500 text-dark font-extrabold rounded-xl text-xs hover:bg-blue-950 shadow-md flex items-center gap-2">
                                         <i data-lucide="save" class="w-4 h-4"></i> Save Class Teacher Comments
                                     </button>
                                 </div>
