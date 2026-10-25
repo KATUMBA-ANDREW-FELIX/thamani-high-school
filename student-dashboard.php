@@ -217,7 +217,6 @@ $edLevel = (strpos($studentClass, 'Senior 5') !== false || strpos($studentClass,
 $averagePercent = ($totalMax > 0) ? round(($totalScore / $totalMax) * 100, 1) : 0;
 $overallGradeInfo = calculate_grade_info($totalScore, $totalMax ?: 100, $edLevel);
 
-$performanceChartMarks = $studentMarks;
 $performanceChartIsDemo = false;
 $appEnvironment = strtolower(trim((string)(getenv('APP_ENV') ?: '')));
 $isDevelopmentEnvironment = in_array($appEnvironment, ['development', 'dev', 'local'], true);
@@ -227,8 +226,99 @@ if ($appEnvironment === '' && $db instanceof ThamaniPolyfillConn && $db->driver 
     $isDevelopmentEnvironment = in_array($localHost, ['localhost', '127.0.0.1', '::1'], true);
 }
 
-if (empty($performanceChartMarks) && $isDevelopmentEnvironment) {
-    $performanceChartMarks = [
+$termWindows = [];
+foreach ($publishedWindows as $window) {
+    if (!preg_match('/\bterm\s*(iii|ii|i|[1-3])\b/i', (string)$window['term'], $termMatch)) {
+        continue;
+    }
+
+    $termNumber = is_numeric($termMatch[1])
+        ? (int)$termMatch[1]
+        : ['i' => 1, 'ii' => 2, 'iii' => 3][strtolower($termMatch[1])];
+    $termKey = (string)$window['academic_year'] . '-' . $termNumber;
+    $isEotWindow = strtoupper(trim((string)$window['assessment_type'])) === 'EOT';
+    $existingIsEotWindow = isset($termWindows[$termKey])
+        && strtoupper(trim((string)$termWindows[$termKey]['assessment_type'])) === 'EOT';
+
+    if (!isset($termWindows[$termKey]) || ($isEotWindow && !$existingIsEotWindow)) {
+        $termWindows[$termKey] = $window + ['term_number' => $termNumber];
+    }
+}
+
+$termPerformanceData = [];
+foreach ($termWindows as $window) {
+    $termMarks = [];
+    $termTotalScore = 0;
+    $termTotalMax = 0;
+    $termMarksStmt = thamani_db_prepare(
+        $db,
+        "SELECT subject, score, max_score
+         FROM student_marks
+         WHERE student_id = ?
+           AND (
+               window_id = ?
+               OR (
+                   (window_id IS NULL OR window_id = 0)
+                   AND class_level = ?
+                   AND term = ?
+                   AND academic_year = ?
+                   AND assessment_type = ?
+               )
+           )
+         ORDER BY subject ASC"
+    );
+    if (!$termMarksStmt) {
+        error_log('[Student Dashboard Term Marks Prepare] ' . thamani_db_error($db));
+        continue;
+    }
+
+    thamani_db_stmt_bind_param(
+        $termMarksStmt,
+        "iissss",
+        $studentId,
+        $window['id'],
+        $studentClass,
+        $window['term'],
+        $window['academic_year'],
+        $window['assessment_type']
+    );
+    if (!thamani_db_stmt_execute($termMarksStmt)) {
+        error_log('[Student Dashboard Term Marks Fetch] ' . thamani_db_stmt_error($termMarksStmt));
+        thamani_db_stmt_close($termMarksStmt);
+        continue;
+    }
+
+    $termMarksResult = thamani_db_stmt_get_result($termMarksStmt);
+    if ($termMarksResult) {
+        while ($mark = thamani_db_fetch_assoc($termMarksResult)) {
+            $mark['score'] = (float)$mark['score'];
+            $mark['max_score'] = (float)($mark['max_score'] ?: 100);
+            $termMarks[] = $mark;
+            $termTotalScore += $mark['score'];
+            $termTotalMax += $mark['max_score'];
+        }
+    }
+    thamani_db_stmt_close($termMarksStmt);
+
+    if ($termTotalMax > 0) {
+        $year = (string)$window['academic_year'];
+        $termNumber = (int)$window['term_number'];
+        $termPerformanceData[$year][$termNumber] = [
+            'year' => $year,
+            'term_number' => $termNumber,
+            'label' => 'Term ' . $termNumber,
+            'average' => round(($termTotalScore / $termTotalMax) * 100, 1),
+            'marks' => $termMarks,
+        ];
+    }
+}
+
+if (!empty($termPerformanceData)) {
+    $latestAcademicYear = max(array_keys($termPerformanceData));
+    $termPerformanceData = $termPerformanceData[$latestAcademicYear];
+    ksort($termPerformanceData);
+} elseif ($isDevelopmentEnvironment) {
+    $sampleMarks = [
         ['subject' => 'Mathematics', 'score' => 78, 'max_score' => 100],
         ['subject' => 'English', 'score' => 84, 'max_score' => 100],
         ['subject' => 'Biology', 'score' => 71, 'max_score' => 100],
@@ -236,54 +326,17 @@ if (empty($performanceChartMarks) && $isDevelopmentEnvironment) {
         ['subject' => 'Physics', 'score' => 73, 'max_score' => 100],
         ['subject' => 'Geography', 'score' => 89, 'max_score' => 100],
     ];
+    $sampleAverage = array_sum(array_column($sampleMarks, 'score')) / count($sampleMarks);
+    $termPerformanceData = [
+        1 => [
+            'year' => date('Y'),
+            'term_number' => 1,
+            'label' => 'Term 1',
+            'average' => round($sampleAverage, 1),
+            'marks' => $sampleMarks,
+        ],
+    ];
     $performanceChartIsDemo = true;
-}
-
-$performanceChartData = [];
-$bestPerformanceSubject = null;
-$weakestPerformanceSubject = null;
-$performanceLinePoints = [];
-$performanceChartCount = count($performanceChartMarks);
-foreach ($performanceChartMarks as $index => $mark) {
-    $subject = (string)($mark['subject'] ?? 'Subject');
-    $score = (float)($mark['score'] ?? 0);
-    $maxScore = (float)($mark['max_score'] ?? 100);
-    if ($maxScore <= 0) $maxScore = 100;
-    $percent = max(0, ($score / $maxScore) * 100);
-    $plotPercent = min(100, $percent);
-    $band = $percent >= 70
-        ? ['label' => 'Strong', 'bar' => 'bg-brand-green', 'dot' => '#1A472A']
-        : ($percent >= 40
-            ? ['label' => 'Developing', 'bar' => 'bg-amber-400', 'dot' => '#FBBF24']
-            : ['label' => 'Needs improvement', 'bar' => 'bg-red-500', 'dot' => '#EF4444']);
-    $chartMark = [
-        'subject' => $subject,
-        'score' => $score,
-        'max_score' => $maxScore,
-        'percent' => $percent,
-        'plot_percent' => $plotPercent,
-        'band' => $band,
-    ];
-    $performanceChartData[] = $chartMark;
-
-    if ($bestPerformanceSubject === null || $percent > $bestPerformanceSubject['percent']) {
-        $bestPerformanceSubject = $chartMark;
-    }
-    if ($weakestPerformanceSubject === null || $percent < $weakestPerformanceSubject['percent']) {
-        $weakestPerformanceSubject = $chartMark;
-    }
-
-    $pointX = $performanceChartCount <= 1 ? 300 : 48 + (504 * $index / ($performanceChartCount - 1));
-    $pointY = 220 - (1.8 * $plotPercent);
-    $performanceLinePoints[] = [
-        'x' => number_format($pointX, 1, '.', ''),
-        'y' => number_format($pointY, 1, '.', ''),
-        'subject' => $subject,
-        'score' => $score,
-        'percent' => $percent,
-        'label' => mb_substr($subject, 0, 10),
-        'color' => $band['dot'],
-    ];
 }
 
 function formatSize($bytes) {
@@ -486,111 +539,130 @@ function formatSize($bytes) {
                     <div>
                         <div class="flex items-center gap-2 text-brand-green">
                             <i data-lucide="chart-no-axes-column-increasing" class="w-5 h-5"></i>
-                            <h2 id="performance-chart-title" class="text-lg font-bold">Subject Performance</h2>
+                            <h2 id="performance-chart-title" class="text-lg font-bold">Term Average Trend</h2>
                         </div>
                         <p class="text-xs text-gray-500 mt-1">
                             <?= $performanceChartIsDemo
-                                ? 'Example marks to preview the chart. These are not your results.'
-                                : ($selectedWindow
-                                    ? 'Your marks for ' . htmlspecialchars((string)$selectedWindow['title'], ENT_QUOTES, 'UTF-8') . '.'
-                                    : 'Subject marks will appear here when a term report is published.') ?>
+                                ? 'Example term average to preview the chart. This is not your result.'
+                                : (!empty($termPerformanceData)
+                                    ? 'Your average mark for each term in ' . htmlspecialchars((string)reset($termPerformanceData)['year'], ENT_QUOTES, 'UTF-8') . '. Select a dot to see your subject marks.'
+                                    : 'Term averages will appear here when a term report is published.') ?>
                         </p>
                     </div>
                     <?php if ($performanceChartIsDemo): ?>
                         <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold uppercase tracking-wider">Development sample</span>
-                    <?php elseif ($selectedWindow && !empty($studentMarks)): ?>
-                        <span class="px-3 py-1 rounded-full bg-brand-lightGreen text-brand-green text-[10px] font-bold"><?= htmlspecialchars((string)$selectedWindow['term'], ENT_QUOTES, 'UTF-8') ?> <?= htmlspecialchars((string)$selectedWindow['academic_year'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <?php elseif (!empty($termPerformanceData)): ?>
+                        <span class="px-3 py-1 rounded-full bg-brand-lightGreen text-brand-green text-[10px] font-bold"><?= htmlspecialchars((string)reset($termPerformanceData)['year'], ENT_QUOTES, 'UTF-8') ?></span>
                     <?php endif; ?>
                 </div>
 
-                <?php if (!empty($performanceChartData)): ?>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
-                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-5">Marks by subject</h3>
-                            <div class="space-y-4" role="img" aria-label="<?= $performanceChartIsDemo ? 'Development sample subject marks bar chart' : 'Subject marks bar chart' ?>">
-                                <div class="hidden sm:grid grid-cols-[minmax(80px,120px)_1fr_95px] gap-3 items-end text-[9px] font-bold uppercase tracking-wide text-gray-400">
-                                    <span>Subject</span>
-                                    <div class="flex justify-between px-1">
-                                        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-                                    </div>
-                                    <span class="text-right">Mark</span>
-                                </div>
-                                <?php foreach ($performanceChartData as $mark): ?>
-                                    <div class="grid grid-cols-1 sm:grid-cols-[minmax(80px,120px)_1fr_95px] gap-2 sm:gap-3 items-center">
-                                        <span class="text-xs font-semibold text-gray-700 truncate" title="<?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?></span>
-                                        <div class="relative h-3.5 rounded-full bg-gray-200 overflow-hidden" role="meter" aria-label="<?= htmlspecialchars($mark['subject'], ENT_QUOTES, 'UTF-8') ?> score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= number_format($mark['plot_percent'], 1, '.', '') ?>">
-                                            <div class="h-full rounded-full <?= $mark['band']['bar'] ?> transition-all duration-500" style="width: <?= number_format($mark['plot_percent'], 1, '.', '') ?>%"></div>
-                                        </div>
-                                        <span class="text-[11px] font-bold text-gray-700 sm:text-right"><?= number_format($mark['score'], 1) ?> / <?= number_format($mark['max_score'], 0) ?> <span class="text-gray-400 font-medium">(<?= number_format($mark['percent'], 1) ?>%)</span></span>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
+                <?php if (!empty($termPerformanceData)): ?>
+                    <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-500">Average mark by term</h3>
+                            <span class="text-[10px] text-gray-400">Click a point to view subject marks</span>
                         </div>
-
-                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
-                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-3">Score trend by subject</h3>
-                            <div class="overflow-x-auto">
-                                <svg class="w-full min-w-[440px] h-auto" viewBox="0 0 600 270" role="img" aria-labelledby="performance-line-title performance-line-description">
-                                    <title id="performance-line-title">Subject score trend</title>
-                                    <desc id="performance-line-description">Line graph of this student's percentage mark in each subject.</desc>
-                                    <?php foreach ([0, 25, 50, 75, 100] as $tick):
-                                        $gridY = 220 - (1.8 * $tick);
-                                    ?>
-                                        <line x1="42" y1="<?= number_format($gridY, 1, '.', '') ?>" x2="570" y2="<?= number_format($gridY, 1, '.', '') ?>" stroke="#E5E7EB" stroke-width="1" />
-                                        <text x="34" y="<?= number_format($gridY + 3, 1, '.', '') ?>" text-anchor="end" fill="#9CA3AF" font-size="9"><?= $tick ?></text>
-                                    <?php endforeach; ?>
+                        <div class="overflow-x-auto">
+                            <svg class="w-full min-w-[360px] h-auto" viewBox="0 0 600 280" role="img" aria-labelledby="term-trend-title term-trend-description">
+                                <title id="term-trend-title">Average mark by term</title>
+                                <desc id="term-trend-description">A line graph showing the student's average percentage in Terms 1, 2, and 3. Each point can be selected to view subject marks.</desc>
+                                <?php foreach ([0, 25, 50, 75, 100] as $tick):
+                                    $gridY = 230 - (1.8 * $tick);
+                                ?>
+                                    <line x1="52" y1="<?= number_format($gridY, 1, '.', '') ?>" x2="550" y2="<?= number_format($gridY, 1, '.', '') ?>" stroke="#E5E7EB" stroke-width="1" />
+                                    <text x="42" y="<?= number_format($gridY + 3, 1, '.', '') ?>" text-anchor="end" fill="#9CA3AF" font-size="10"><?= $tick ?>%</text>
+                                <?php endforeach; ?>
+                                <?php
+                                    $termTrendPoints = [];
+                                    foreach ($termPerformanceData as $termNumber => $termData) {
+                                        $termTrendPoints[] = [
+                                            'term_number' => (int)$termNumber,
+                                            'x' => 90 + (210 * ((int)$termNumber - 1)),
+                                            'y' => 230 - (1.8 * $termData['average']),
+                                            'average' => $termData['average'],
+                                        ];
+                                    }
+                                ?>
+                                <?php if (count($termTrendPoints) > 1): ?>
                                     <polyline
-                                        points="<?= implode(' ', array_map(static function ($point) { return $point['x'] . ',' . $point['y']; }, $performanceLinePoints)) ?>"
+                                        points="<?= implode(' ', array_map(static function ($point) { return number_format($point['x'], 1, '.', '') . ',' . number_format($point['y'], 1, '.', ''); }, $termTrendPoints)) ?>"
                                         fill="none"
                                         stroke="#1A472A"
                                         stroke-width="3"
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
                                     />
-                                    <?php foreach ($performanceLinePoints as $point): ?>
-                                        <circle cx="<?= $point['x'] ?>" cy="<?= $point['y'] ?>" r="5" fill="<?= $point['color'] ?>" stroke="white" stroke-width="2">
-                                            <title><?= htmlspecialchars($point['subject'], ENT_QUOTES, 'UTF-8') ?>: <?= number_format($point['score'], 1) ?> (<?= number_format($point['percent'], 1) ?>%)</title>
-                                        </circle>
-                                        <text x="<?= $point['x'] ?>" y="246" text-anchor="middle" fill="#6B7280" font-size="9"><?= htmlspecialchars($point['label'], ENT_QUOTES, 'UTF-8') ?></text>
-                                    <?php endforeach; ?>
-                                </svg>
-                            </div>
-                            <p class="text-[10px] text-gray-400 text-center -mt-1">Subject labels may be shortened; full names appear in the bar chart.</p>
+                                <?php endif; ?>
+                                <?php foreach ($termTrendPoints as $point):
+                                    $termData = $termPerformanceData[$point['term_number']];
+                                    $templateId = 'term-marks-' . $point['term_number'];
+                                ?>
+                                    <g
+                                        role="button"
+                                        tabindex="0"
+                                        aria-label="<?= htmlspecialchars($termData['label'] . ': ' . number_format($point['average'], 1) . ' percent average. View subject marks.', ENT_QUOTES, 'UTF-8') ?>"
+                                        onclick="showTermMarks('<?= $templateId ?>')"
+                                        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showTermMarks('<?= $templateId ?>'); }"
+                                        style="cursor: pointer"
+                                    >
+                                        <circle cx="<?= number_format($point['x'], 1, '.', '') ?>" cy="<?= number_format($point['y'], 1, '.', '') ?>" r="13" fill="transparent" />
+                                        <circle cx="<?= number_format($point['x'], 1, '.', '') ?>" cy="<?= number_format($point['y'], 1, '.', '') ?>" r="7" fill="#1A472A" stroke="white" stroke-width="3" />
+                                        <text x="<?= number_format($point['x'], 1, '.', '') ?>" y="<?= number_format($point['y'] - 14, 1, '.', '') ?>" text-anchor="middle" fill="#1A472A" font-size="12" font-weight="700"><?= number_format($point['average'], 1) ?>%</text>
+                                    </g>
+                                <?php endforeach; ?>
+                                <?php foreach ([1, 2, 3] as $termNumber): ?>
+                                    <text x="<?= 90 + (210 * ($termNumber - 1)) ?>" y="260" text-anchor="middle" fill="#6B7280" font-size="12" font-weight="600">Term <?= $termNumber ?></text>
+                                <?php endforeach; ?>
+                            </svg>
                         </div>
                     </div>
 
-                    <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-gray-100 pt-4" aria-label="Performance bands">
-                        <span class="text-[10px] font-extrabold uppercase tracking-wide text-gray-400">Performance bands</span>
-                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-brand-green"></span>Strong: 70% and above</span>
-                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Developing: 40–&lt;70%</span>
-                        <span class="inline-flex items-center gap-2 text-xs text-gray-600"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Needs improvement: below 40%</span>
-                    </div>
+                    <?php foreach ($termPerformanceData as $termData): ?>
+                        <?php $templateId = 'term-marks-' . $termData['term_number']; ?>
+                        <template id="<?= $templateId ?>" data-term-label="<?= htmlspecialchars($termData['label'] . ' ' . $termData['year'], ENT_QUOTES, 'UTF-8') ?>" data-term-average="<?= number_format($termData['average'], 1) ?>">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead>
+                                        <tr class="border-b border-gray-200 text-xs uppercase text-gray-500">
+                                            <th class="px-3 py-2">Subject</th>
+                                            <th class="px-3 py-2 text-right">Mark</th>
+                                            <th class="px-3 py-2 text-right">Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <?php foreach ($termData['marks'] as $mark):
+                                            $markMax = (float)($mark['max_score'] ?: 100);
+                                            $markPercent = $markMax > 0 ? ($mark['score'] / $markMax) * 100 : 0;
+                                        ?>
+                                            <tr>
+                                                <td class="px-3 py-3 font-semibold text-gray-800"><?= htmlspecialchars((string)$mark['subject'], ENT_QUOTES, 'UTF-8') ?></td>
+                                                <td class="px-3 py-3 text-right font-mono"><?= number_format((float)$mark['score'], 1) ?> / <?= number_format($markMax, 0) ?></td>
+                                                <td class="px-3 py-3 text-right font-bold text-brand-green"><?= number_format($markPercent, 1) ?>%</td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    <?php endforeach; ?>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-                        <div class="rounded-xl border border-brand-green/15 bg-brand-lightGreen/50 p-4 flex items-center justify-between gap-3">
+                    <dialog id="term-marks-dialog" class="w-[min(42rem,calc(100%-2rem))] max-h-[85vh] rounded-2xl p-0 shadow-2xl backdrop:bg-black/50">
+                        <div class="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
                             <div>
-                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-green">Best subject</span>
-                                <p class="text-sm font-bold text-gray-800 mt-1"><?= htmlspecialchars($bestPerformanceSubject['subject'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <h3 id="term-marks-title" class="text-lg font-bold text-brand-green">Term marks</h3>
+                                <p id="term-marks-average" class="mt-1 text-sm text-gray-500"></p>
                             </div>
-                            <span class="text-lg font-black text-brand-green"><?= number_format($bestPerformanceSubject['percent'], 1) ?>%</span>
+                            <form method="dialog">
+                                <button type="submit" class="rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100" aria-label="Close term marks">Close</button>
+                            </form>
                         </div>
-                        <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 flex items-center justify-between gap-3">
-                            <div>
-                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Needs most focus</span>
-                                <p class="text-sm font-bold text-gray-800 mt-1"><?= htmlspecialchars($weakestPerformanceSubject['subject'], ENT_QUOTES, 'UTF-8') ?></p>
-                            </div>
-                            <span class="text-lg font-black text-amber-800"><?= number_format($weakestPerformanceSubject['percent'], 1) ?>%</span>
-                        </div>
-                    </div>
-
-                    <?php if (!$performanceChartIsDemo): ?>
-                        <p class="mt-5 pt-4 border-t border-gray-100 text-xs text-gray-500">Use the Academic Reports section to view comments, grades, and your full report card.</p>
-                    <?php endif; ?>
+                        <div id="term-marks-content" class="max-h-[65vh] overflow-y-auto p-4 sm:p-5"></div>
+                    </dialog>
                 <?php else: ?>
                     <div class="rounded-xl bg-gray-50 border border-dashed border-gray-200 px-5 py-8 text-center">
                         <i data-lucide="chart-no-axes-column-increasing" class="w-8 h-8 text-gray-300 mx-auto mb-2"></i>
-                        <p class="text-sm font-semibold text-gray-600"><?= $selectedWindow ? 'No subject marks are available in this report yet.' : 'No published term results yet.' ?></p>
-                        <p class="text-xs text-gray-400 mt-1">Your graph will update when your results are published.</p>
+                        <p class="text-sm font-semibold text-gray-600">No published term marks are available yet.</p>
+                        <p class="text-xs text-gray-400 mt-1">Your term average graph will update when your results are published.</p>
                     </div>
                 <?php endif; ?>
             </section>
@@ -924,6 +996,17 @@ function formatSize($bytes) {
             // Scroll a bit so the tab is visible
             document.getElementById('feature-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             lucide.createIcons();
+        }
+
+        function showTermMarks(templateId) {
+            const template = document.getElementById(templateId);
+            const dialog = document.getElementById('term-marks-dialog');
+            if (!(template instanceof HTMLTemplateElement) || !(dialog instanceof HTMLDialogElement)) return;
+
+            document.getElementById('term-marks-title').textContent = template.dataset.termLabel;
+            document.getElementById('term-marks-average').textContent = `Average: ${template.dataset.termAverage}%`;
+            document.getElementById('term-marks-content').replaceChildren(template.content.cloneNode(true));
+            dialog.showModal();
         }
     </script>
 </body>
