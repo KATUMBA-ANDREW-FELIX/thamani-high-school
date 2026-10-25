@@ -182,6 +182,8 @@ if ($action === 'delete_contact') {
         $ok = thamani_db_stmt_execute($stmt);
         thamani_db_stmt_close($stmt);
         echo json_encode(['success'=>$ok]);
+    } else {
+        echo json_encode(['success'=>false,'error'=>'Unable to prepare contact deletion.']);
     }
     exit;
 }
@@ -193,21 +195,34 @@ if ($action === 'toggle_contact') {
     if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
     $cid = (int)($_POST['contact_id'] ?? 0);
     $stmt = thamani_db_prepare($db, "UPDATE sms_contacts SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = ?");
-    if ($stmt) {
-        thamani_db_stmt_bind_param($stmt, 'i', $cid);
-        thamani_db_stmt_execute($stmt);
-        thamani_db_stmt_close($stmt);
+    if (!$stmt) {
+        echo json_encode(['success'=>false,'error'=>'Unable to prepare contact status update.']);
+        exit;
     }
+    thamani_db_stmt_bind_param($stmt, 'i', $cid);
+    $updated = thamani_db_stmt_execute($stmt);
+    thamani_db_stmt_close($stmt);
+    if (!$updated) {
+        echo json_encode(['success'=>false,'error'=>'Unable to update contact status.']);
+        exit;
+    }
+
     // Return new state
     $s2 = thamani_db_prepare($db, "SELECT is_active FROM sms_contacts WHERE id = ?");
-    if ($s2) {
-        thamani_db_stmt_bind_param($s2, 'i', $cid);
-        thamani_db_stmt_execute($s2);
-        $r = thamani_db_stmt_get_result($s2);
-        $row = $r ? thamani_db_fetch_assoc($r) : null;
-        thamani_db_stmt_close($s2);
-        echo json_encode(['success'=>true,'is_active'=>(int)($row['is_active']??0)]);
+    if (!$s2) {
+        echo json_encode(['success'=>false,'error'=>'Unable to verify contact status.']);
+        exit;
     }
+    thamani_db_stmt_bind_param($s2, 'i', $cid);
+    thamani_db_stmt_execute($s2);
+    $r = thamani_db_stmt_get_result($s2);
+    $row = $r ? thamani_db_fetch_assoc($r) : null;
+    thamani_db_stmt_close($s2);
+    if (!$row) {
+        echo json_encode(['success'=>false,'error'=>'Contact not found.']);
+        exit;
+    }
+    echo json_encode(['success'=>true,'is_active'=>(int)$row['is_active']]);
     exit;
 }
 
@@ -400,7 +415,6 @@ if ($action === 'send_bulk_sms') {
         $lastRaw     = $res2['raw'];
         if (!$res2['success']) {
             $overallOk = false;
-            $totalFailed = array_merge($totalFailed, $chunk);
         }
     }
 
