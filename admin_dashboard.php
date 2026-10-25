@@ -283,6 +283,9 @@ if (!empty($_SESSION['admin_flash'])) {
                     <a href="home.php" class="px-4 py-2.5 rounded-xl text-xs font-black text-gray-800 bg-gray-100 hover:bg-gray-200 transition-all flex items-center gap-1.5 border border-gray-200 shadow-sm">
                         <i data-lucide="globe" class="w-4 h-4 text-amber-600"></i> Main Website
                     </a>
+                    <a href="alumni_editor.php" class="px-4 py-2.5 rounded-xl text-xs font-black text-brand-green bg-brand-lightGreen hover:bg-green-100 transition-all flex items-center gap-1.5 border border-green-200 shadow-sm">
+                        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Alumni Page
+                    </a>
 
                     <button onclick="switchAdminTab('tab-admin-overview');" class="px-4 py-2.5 rounded-xl text-xs font-black text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white transition-all flex items-center gap-1.5">
                         <i data-lucide="layout-dashboard" class="w-4 h-4 text-amber-500"></i> Dashboard
@@ -312,6 +315,7 @@ if (!empty($_SESSION['admin_flash'])) {
         </div>
         <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200 px-4 pt-3 pb-5 space-y-2">
             <a href="home.php" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-gray-900 bg-gray-50 border border-gray-200 block">🌐 Main Website</a>
+            <a href="alumni_editor.php" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-brand-green bg-brand-lightGreen border border-green-200 block">Alumni Page Editor</a>
             <button onclick="switchAdminTab('tab-admin-overview'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold text-gray-900 bg-gray-50 border border-gray-200">Dashboard</button>
             <button onclick="openModal('modal-admin-change-password'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-800 hover:bg-gray-100">Change Password</button>
             <div class="pt-3 border-t border-gray-100">
@@ -565,7 +569,10 @@ if (!empty($_SESSION['admin_flash'])) {
                             </h3>
                             <p class="text-xs text-gray-500 mt-1">Registered teachers can log in with their Staff ID and default password (<code class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-mono font-bold">Admin@2026</code>).</p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <a href="alumni_editor.php" class="inline-flex items-center gap-2 rounded-xl bg-brand-green px-4 py-2 text-xs font-extrabold text-white shadow hover:bg-brand-darkGreen">
+                                <i data-lucide="file-pen-line" class="h-4 w-4 text-brand-gold"></i> Public Page Editor
+                            </a>
                             <div class="relative">
                                 <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                                 <input type="text" id="search-teachers" onkeyup="filterTeachers();" placeholder="Search teacher or ID..." class="pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none w-64">

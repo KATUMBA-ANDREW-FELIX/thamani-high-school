@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Achievements &amp; Alumni Association | Thamani High School, Kakiri</title>
-    <meta name="description" content="The official Achievements & Alumni Association of Thamani High School, Kakiri. Meet the executive council, explore our 2026–2028 work plan, and register as a member.">
+    <title><?= alumni_page_escape($alumniPageContent['page_title']) ?> | Thamani High School Alumni Association</title>
+    <meta name="description" content="<?= alumni_page_escape($alumniPageContent['hero_intro']) ?>">
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -267,8 +267,8 @@
     <!-- Top bar -->
     <div class="topbar">
         <div class="container">
-            <span><i data-lucide="map-pin"></i> Kakiri Main Campus, Wakiso District, Uganda</span>
-            <span class="hide-sm"><i data-lucide="phone"></i> +256 414 123 456 &nbsp;·&nbsp; alumni@thamani.ac.ug</span>
+            <span><i data-lucide="map-pin"></i> <?= alumni_page_escape($alumniPageContent['footer_address']) ?></span>
+            <span class="hide-sm"><i data-lucide="phone"></i> <?= alumni_page_escape($alumniPageContent['footer_phone']) ?> &nbsp;·&nbsp; <?= alumni_page_escape($alumniPageContent['footer_email']) ?></span>
         </div>
     </div>
 
@@ -326,19 +326,18 @@
         <!-- HERO -->
         <header class="hero">
             <div class="container">
-                <span class="eyebrow">Thamani High School Alumni Association</span>
-                <h1 class="h-display">Achievements <em>&amp;</em> Alumni</h1>
-                <p class="lead">Welcome home, Old Boys and Old Girls. Wherever life has taken you since you left Kakiri, you remain part of the Thamani family. Reconnect with your classmates, mentor the next generation, and help shape the future of the school that shaped you.</p>
+                <span class="eyebrow"><?= alumni_page_escape($alumniPageContent['page_eyebrow']) ?></span>
+                <h1 class="h-display"><?= alumni_page_escape($alumniPageContent['page_title']) ?></h1>
+                <p class="lead"><?= alumni_page_escape($alumniPageContent['hero_intro']) ?></p>
                 <div class="hero-actions">
-                    <a href="#register" class="btn btn--gold" id="hero-join-btn"><i data-lucide="user-plus"></i> Become a Member</a>
-                    <a href="#leadership" class="btn btn--ghost" id="hero-leadership-btn">Meet the Executive Council <i data-lucide="arrow-right"></i></a>
+                    <a href="#register" class="btn btn--gold" id="hero-join-btn"><i data-lucide="user-plus"></i> <?= alumni_page_escape($alumniPageContent['hero_join_label']) ?></a>
+                    <a href="#leadership" class="btn btn--ghost" id="hero-leadership-btn"><?= alumni_page_escape($alumniPageContent['hero_leadership_label']) ?> <i data-lucide="arrow-right"></i></a>
                 </div>
 
                 <div class="stats">
-                    <div class="stat"><div class="stat-value">5,000+</div><div class="stat-label">Old Boys &amp; Old Girls</div></div>
-                    <div class="stat"><div class="stat-value">98%</div><div class="stat-label">University progression</div></div>
-                    <div class="stat"><div class="stat-value">120+</div><div class="stat-label">Active student mentors</div></div>
-                    <div class="stat"><div class="stat-value">UGX 250M</div><div class="stat-label">Invested in school projects</div></div>
+                    <?php foreach ($alumniPageContent['stats'] as $stat): ?>
+                        <div class="stat"><div class="stat-value"><?= alumni_page_escape($stat['value'] ?? '') ?></div><div class="stat-label"><?= alumni_page_escape($stat['label'] ?? '') ?></div></div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </header>
@@ -348,18 +347,18 @@
             <div class="container message">
                 <div class="message-card reveal">
                     <span class="quote-mark" aria-hidden="true">&ldquo;</span>
-                    <blockquote>Every one of us carries a piece of Thamani. Together, we can make sure the students walking those corridors today have even more than we did.</blockquote>
+                    <blockquote><?= alumni_page_escape($alumniPageContent['president_message']) ?></blockquote>
                     <div class="message-sign">
-                        <strong>Eng. Mugisha David</strong>
-                        <span>President, Alumni Association · Class of 2010</span>
+                        <strong><?= alumni_page_escape($alumniPageContent['president_name']) ?></strong>
+                        <span><?= alumni_page_escape($alumniPageContent['president_role']) ?></span>
                     </div>
                 </div>
                 <div class="message-body reveal">
-                    <span class="eyebrow">A Message to Our Alumni</span>
-                    <h2 class="h-section">Your story didn&rsquo;t end at graduation</h2>
-                    <p>The Thamani High School Alumni Association brings together former students from every class year into one community, united by shared memories and a shared commitment to the school.</p>
-                    <p>Membership is open to every former student. Whether you can give an afternoon to speak at Career Week, sponsor a bright student, or simply reconnect with your year group, there is a place for you here.</p>
-                    <a href="#register" class="btn btn--dark" style="width:auto; padding:14px 26px; margin-top:8px;" id="message-join-btn">Join the Association <i data-lucide="arrow-right"></i></a>
+                    <span class="eyebrow"><?= alumni_page_escape($alumniPageContent['president_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['about_heading']) ?></h2>
+                    <p><?= alumni_page_escape($alumniPageContent['about_paragraph_one']) ?></p>
+                    <p><?= alumni_page_escape($alumniPageContent['about_paragraph_two']) ?></p>
+                    <a href="#register" class="btn btn--dark" style="width:auto; padding:14px 26px; margin-top:8px;" id="message-join-btn"><?= alumni_page_escape($alumniPageContent['message_join_label']) ?> <i data-lucide="arrow-right"></i></a>
                 </div>
             </div>
         </section>
@@ -368,35 +367,19 @@
         <section class="section section--white" id="why-join">
             <div class="container">
                 <div class="section-head section-head--center reveal">
-                    <span class="eyebrow eyebrow--center">Membership Benefits</span>
-                    <h2 class="h-section">Why join the Association</h2>
-                    <p class="lead">Membership connects you to a lifelong network and a meaningful role in the school&rsquo;s future.</p>
+                    <span class="eyebrow eyebrow--center"><?= alumni_page_escape($alumniPageContent['benefits_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['benefits_heading']) ?></h2>
+                    <p class="lead"><?= alumni_page_escape($alumniPageContent['benefits_intro']) ?></p>
                 </div>
                 <div class="benefits reveal">
-                    <div class="benefit">
-                        <div class="benefit-num">01</div>
-                        <div class="benefit-icon"><i data-lucide="network"></i></div>
-                        <h3>Professional Network</h3>
-                        <p>Connect with alumni across engineering, medicine, law, finance, technology and public service, in Uganda and abroad.</p>
-                    </div>
-                    <div class="benefit">
-                        <div class="benefit-num">02</div>
-                        <div class="benefit-icon"><i data-lucide="graduation-cap"></i></div>
-                        <h3>Student Mentorship</h3>
-                        <p>Guide O-Level and A-Level students through career talks, university preparation and internship referrals.</p>
-                    </div>
-                    <div class="benefit">
-                        <div class="benefit-num">03</div>
-                        <div class="benefit-icon"><i data-lucide="landmark"></i></div>
-                        <h3>School Development</h3>
-                        <p>Shape and support projects that upgrade laboratories, ICT facilities, scholarships and sports infrastructure.</p>
-                    </div>
-                    <div class="benefit">
-                        <div class="benefit-num">04</div>
-                        <div class="benefit-icon"><i data-lucide="calendar-heart"></i></div>
-                        <h3>Reunions &amp; Events</h3>
-                        <p>Priority invitations to the Annual Alumni Dinner, OB vs OG Sports Gala, class reunions and Founders&rsquo; Day.</p>
-                    </div>
+                    <?php foreach ($alumniPageContent['benefits'] as $index => $benefit): ?>
+                        <div class="benefit">
+                            <div class="benefit-num"><?= sprintf('%02d', $index + 1) ?></div>
+                            <div class="benefit-icon"><i data-lucide="<?= ['network', 'graduation-cap', 'landmark', 'calendar-heart'][$index % 4] ?>"></i></div>
+                            <h3><?= alumni_page_escape($benefit['title'] ?? '') ?></h3>
+                            <p><?= alumni_page_escape($benefit['description'] ?? '') ?></p>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
@@ -405,26 +388,18 @@
         <section class="section" id="achievements">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="eyebrow">Achievements</span>
-                    <h2 class="h-section">What we have built together</h2>
-                    <p class="lead">Milestones made possible by the generosity and commitment of our alumni community.</p>
+                    <span class="eyebrow"><?= alumni_page_escape($alumniPageContent['achievements_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['achievements_heading']) ?></h2>
+                    <p class="lead"><?= alumni_page_escape($alumniPageContent['achievements_intro']) ?></p>
                 </div>
                 <div class="achievements">
-                    <article class="achievement reveal">
-                        <div class="achievement-year">2025</div>
-                        <h3>15 full scholarships awarded</h3>
-                        <p>The Needy Student Endowment now covers full tuition, uniforms and scholastic materials for fifteen students from Wakiso District.</p>
-                    </article>
-                    <article class="achievement reveal">
-                        <div class="achievement-year">2024</div>
-                        <h3>First Annual Career Week</h3>
-                        <p>Over 40 alumni professionals returned to campus to mentor more than 600 students on career paths and university choices.</p>
-                    </article>
-                    <article class="achievement reveal">
-                        <div class="achievement-year">2023</div>
-                        <h3>Library digitisation launched</h3>
-                        <p>Alumni contributions funded the first phase of the school&rsquo;s Digital Library, giving every student access to e-resources.</p>
-                    </article>
+                    <?php foreach ($alumniPageContent['achievements'] as $achievement): ?>
+                        <article class="achievement reveal">
+                            <div class="achievement-year"><?= alumni_page_escape($achievement['year'] ?? '') ?></div>
+                            <h3><?= alumni_page_escape($achievement['title'] ?? '') ?></h3>
+                            <p><?= alumni_page_escape($achievement['description'] ?? '') ?></p>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
@@ -433,63 +408,49 @@
         <section class="section section--white" id="leadership">
             <div class="container">
                 <div class="section-head section-head--center reveal">
-                    <span class="eyebrow eyebrow--center">Governance</span>
-                    <h2 class="h-section">Executive Council</h2>
-                    <p class="lead">The elected council responsible for the Association&rsquo;s governance, strategy and engagement with the school.</p>
+                    <span class="eyebrow eyebrow--center"><?= alumni_page_escape($alumniPageContent['leadership_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['leadership_heading']) ?></h2>
+                    <p class="lead"><?= alumni_page_escape($alumniPageContent['leadership_intro']) ?></p>
                 </div>
 
                 <div class="org reveal">
-                    <div class="org-row org-row--1">
-                        <div class="leader">
-                            <div class="avatar">KA</div>
-                            <div class="leader-role">Patron</div>
-                            <h3>Dr. Katumba Andrew</h3>
-                            <div class="leader-meta">Headteacher &amp; Ex-Officio Trustee</div>
-                            <p class="leader-desc">Provides strategic guidance and links school management with alumni initiatives.</p>
+                    <?php foreach (array_slice($alumniPageContent['leaders'], 0, 2) as $index => $leader):
+                        $nameParts = preg_split('/\s+/', trim((string)($leader['name'] ?? '')));
+                        $initials = '';
+                        foreach (array_slice($nameParts, 0, 2) as $part) {
+                            $initials .= mb_strtoupper(mb_substr($part, 0, 1));
+                        }
+                    ?>
+                        <?php if ($index === 1): ?><div class="org-connector"></div><?php endif; ?>
+                        <div class="org-row org-row--1">
+                            <div class="leader <?= $index === 1 ? 'leader--primary' : '' ?>">
+                                <div class="avatar"><?= alumni_page_escape($initials) ?></div>
+                                <div class="leader-role"><?= alumni_page_escape($leader['role'] ?? '') ?></div>
+                                <h3><?= alumni_page_escape($leader['name'] ?? '') ?></h3>
+                                <div class="leader-meta"><?= alumni_page_escape($leader['meta'] ?? '') ?></div>
+                                <p class="leader-desc"><?= alumni_page_escape($leader['description'] ?? '') ?></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="org-connector"></div>
-                    <div class="org-row org-row--1">
-                        <div class="leader leader--primary">
-                            <div class="avatar">MD</div>
-                            <div class="leader-role">President</div>
-                            <h3>Eng. Mugisha David</h3>
-                            <div class="leader-meta">Class of 2010 · Senior Civil Engineer</div>
-                            <p class="leader-desc">Chairs the Executive Council and oversees alumni chapters and development projects.</p>
-                        </div>
-                    </div>
-                    <div class="org-connector"></div>
+                        <div class="org-connector"></div>
+                    <?php endforeach; ?>
                     <div class="org-row org-row--4">
-                        <div class="leader">
-                            <div class="avatar">NS</div>
-                            <div class="leader-role">Vice President</div>
-                            <h3>Dr. Nakato Sarah</h3>
-                            <div class="leader-meta">Class of 2012 · Medical Officer</div>
-                            <p class="leader-desc">Leads mentorship programmes and welfare initiatives.</p>
-                        </div>
-                        <div class="leader">
-                            <div class="avatar">KE</div>
-                            <div class="leader-role">General Secretary</div>
-                            <h3>Kizza Emmanuel</h3>
-                            <div class="leader-meta">Class of 2014 · Advocate</div>
-                            <p class="leader-desc">Manages correspondence, minutes and the member registry.</p>
-                        </div>
-                        <div class="leader">
-                            <div class="avatar">NJ</div>
-                            <div class="leader-role">Treasurer</div>
-                            <h3>Namubiru Janet</h3>
-                            <div class="leader-meta">Class of 2015 · Financial Analyst</div>
-                            <p class="leader-desc">Oversees funds, budgets and financial reporting.</p>
-                        </div>
-                        <div class="leader">
-                            <div class="avatar">SB</div>
-                            <div class="leader-role">Publicity Secretary</div>
-                            <h3>Ssemwogerere Brian</h3>
-                            <div class="leader-meta">Class of 2016 · PR Specialist</div>
-                            <p class="leader-desc">Coordinates communications, events and digital media.</p>
-                        </div>
+                        <?php foreach (array_slice($alumniPageContent['leaders'], 2, 4) as $leader):
+                            $nameParts = preg_split('/\s+/', trim((string)($leader['name'] ?? '')));
+                            $initials = '';
+                            foreach (array_slice($nameParts, 0, 2) as $part) {
+                                $initials .= mb_strtoupper(mb_substr($part, 0, 1));
+                            }
+                        ?>
+                            <div class="leader">
+                                <div class="avatar"><?= alumni_page_escape($initials) ?></div>
+                                <div class="leader-role"><?= alumni_page_escape($leader['role'] ?? '') ?></div>
+                                <h3><?= alumni_page_escape($leader['name'] ?? '') ?></h3>
+                                <div class="leader-meta"><?= alumni_page_escape($leader['meta'] ?? '') ?></div>
+                                <p class="leader-desc"><?= alumni_page_escape($leader['description'] ?? '') ?></p>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <p class="reps-note">Supported by elected <strong>Class Year Representatives</strong> who connect each graduating class to the council.</p>
+                    <p class="reps-note"><?= alumni_page_escape($alumniPageContent['representatives_note']) ?></p>
                 </div>
             </div>
         </section>
@@ -498,90 +459,47 @@
         <section class="section" id="projects">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="eyebrow">Strategic Work Plan 2026 – 2028</span>
-                    <h2 class="h-section">Proposed projects</h2>
-                    <p class="lead">Transparent, high-impact projects led and funded by the Association in partnership with school management.</p>
+                    <span class="eyebrow"><?= alumni_page_escape($alumniPageContent['projects_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['projects_heading']) ?></h2>
+                    <p class="lead"><?= alumni_page_escape($alumniPageContent['projects_intro']) ?></p>
                 </div>
 
                 <div class="projects">
-                    <article class="project reveal">
-                        <div class="project-top">
-                            <span class="project-code">Project 2026-A · Science</span>
-                            <span class="badge badge--progress">Fundraising</span>
-                        </div>
-                        <h3>Science Laboratory Equipment Drive</h3>
-                        <p>Equipping the Physics, Chemistry and Biology laboratories with modern microscopes, precision balances and safety equipment for UNEB practicals.</p>
-                        <div class="progress-meta"><span>UGX 33.7M of 45M raised</span><strong>75%</strong></div>
-                        <div class="progress progress--gold"><span style="width:75%"></span></div>
-                    </article>
-
-                    <article class="project reveal">
-                        <div class="project-top">
-                            <span class="project-code">Project 2026-B · ICT</span>
-                            <span class="badge badge--progress">Fundraising</span>
-                        </div>
-                        <h3>Digital Library &amp; Coding Hub</h3>
-                        <p>Procuring 30 computers, high-speed fibre connectivity and interactive smartboards to strengthen computer science and digital literacy.</p>
-                        <div class="progress-meta"><span>UGX 30M of 60M raised</span><strong>50%</strong></div>
-                        <div class="progress progress--gold"><span style="width:50%"></span></div>
-                    </article>
-
-                    <article class="project reveal">
-                        <div class="project-top">
-                            <span class="project-code">Project 2026-C · Bursaries</span>
-                            <span class="badge badge--done">Fully Funded</span>
-                        </div>
-                        <h3>Needy Student Scholarship Endowment</h3>
-                        <p>Sponsoring 15 talented but financially disadvantaged students with full tuition, uniforms and scholastic requirements.</p>
-                        <div class="progress-meta"><span>15 of 15 students supported</span><strong>100%</strong></div>
-                        <div class="progress"><span style="width:100%"></span></div>
-                    </article>
-
-                    <article class="project reveal">
-                        <div class="project-top">
-                            <span class="project-code">Project 2027 · Sports</span>
-                            <span class="badge">Planning</span>
-                        </div>
-                        <h3>All-Weather Sports Court</h3>
-                        <p>A multi-purpose basketball and volleyball court with floodlights to nurture sporting talent and physical education.</p>
-                        <div class="progress-meta"><span>Design &amp; approvals</span><strong>30%</strong></div>
-                        <div class="progress progress--gold"><span style="width:30%"></span></div>
-                    </article>
+                    <?php foreach ($alumniPageContent['projects'] as $project):
+                        $progress = max(0, min(100, (int)($project['progress'] ?? 0)));
+                        $isDone = stripos((string)($project['status'] ?? ''), 'funded') !== false;
+                        $isFundraising = stripos((string)($project['status'] ?? ''), 'fundraising') !== false;
+                    ?>
+                        <article class="project reveal">
+                            <div class="project-top">
+                                <span class="project-code"><?= alumni_page_escape($project['code'] ?? '') ?></span>
+                                <span class="badge <?= $isDone ? 'badge--done' : ($isFundraising ? 'badge--progress' : '') ?>"><?= alumni_page_escape($project['status'] ?? '') ?></span>
+                            </div>
+                            <h3><?= alumni_page_escape($project['title'] ?? '') ?></h3>
+                            <p><?= alumni_page_escape($project['description'] ?? '') ?></p>
+                            <div class="progress-meta"><span><?= alumni_page_escape($project['progress_label'] ?? '') ?></span><strong><?= $progress ?>%</strong></div>
+                            <div class="progress <?= $isDone ? '' : 'progress--gold' ?>"><span style="width:<?= $progress ?>%"></span></div>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
 
                 <div class="plan reveal">
                     <div class="plan-head">
-                        <h3>Work plan at a glance</h3>
-                        <span>Reviewed annually at the Alumni General Meeting</span>
+                        <h3><?= alumni_page_escape($alumniPageContent['workplan_heading']) ?></h3>
+                        <span><?= alumni_page_escape($alumniPageContent['workplan_review_note']) ?></span>
                     </div>
                     <div class="plan-grid">
-                        <div class="phase">
-                            <div class="phase-when">Phase 1 · 2026</div>
-                            <h4>Foundation</h4>
-                            <ul>
-                                <li>Update the alumni registry</li>
-                                <li>Complete science lab drive</li>
-                                <li>Launch class representative network</li>
-                            </ul>
-                        </div>
-                        <div class="phase">
-                            <div class="phase-when">Phase 2 · 2027</div>
-                            <h4>Growth</h4>
-                            <ul>
-                                <li>Open the Coding Hub</li>
-                                <li>Break ground on sports court</li>
-                                <li>Expand mentorship to all classes</li>
-                            </ul>
-                        </div>
-                        <div class="phase">
-                            <div class="phase-when">Phase 3 · 2028</div>
-                            <h4>Legacy</h4>
-                            <ul>
-                                <li>Grow endowment to 30 scholars</li>
-                                <li>Establish regional alumni chapters</li>
-                                <li>Host the Grand Alumni Reunion</li>
-                            </ul>
-                        </div>
+                        <?php foreach ($alumniPageContent['workplan_phases'] as $phase): ?>
+                            <div class="phase">
+                                <div class="phase-when"><?= alumni_page_escape($phase['label'] ?? '') ?></div>
+                                <h4><?= alumni_page_escape($phase['title'] ?? '') ?></h4>
+                                <ul>
+                                    <?php foreach (($phase['items'] ?? []) as $item): ?>
+                                        <li><?= alumni_page_escape($item) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -591,24 +509,24 @@
         <section class="section register" id="register">
             <div class="container register-grid">
                 <div class="register-info reveal">
-                    <span class="eyebrow">Membership</span>
-                    <h2 class="h-section">Register as an alumnus</h2>
-                    <p class="lead">It takes less than a minute. Once registered, you&rsquo;ll be added to the official alumni registry.</p>
+                    <span class="eyebrow"><?= alumni_page_escape($alumniPageContent['registration_eyebrow']) ?></span>
+                    <h2 class="h-section"><?= alumni_page_escape($alumniPageContent['registration_heading']) ?></h2>
+                    <p class="lead"><?= alumni_page_escape($alumniPageContent['registration_intro']) ?></p>
                     <ol class="steps">
-                        <li><span class="step-num">1</span><div><strong>Submit your details</strong><span>Tell us your name, completion year and how to reach you.</span></div></li>
-                        <li><span class="step-num">2</span><div><strong>Verification</strong><span>The General Secretary confirms your record with the school.</span></div></li>
-                        <li><span class="step-num">3</span><div><strong>Welcome to the network</strong><span>Receive event invitations, updates and ways to get involved.</span></div></li>
+                        <?php foreach ($alumniPageContent['registration_steps'] as $index => $step): ?>
+                            <li><span class="step-num"><?= $index + 1 ?></span><div><strong><?= alumni_page_escape($step['title'] ?? '') ?></strong><span><?= alumni_page_escape($step['description'] ?? '') ?></span></div></li>
+                        <?php endforeach; ?>
                     </ol>
                 </div>
 
                 <div class="form-card reveal">
                     <div class="flash-wrap"><!-- ALUMNI_FLASH_MESSAGES --></div>
-                    <h3>Membership form</h3>
-                    <p>Fields marked <span style="color:#a33;">*</span> are required.</p>
+                    <h3><?= alumni_page_escape($alumniPageContent['membership_form_heading']) ?></h3>
+                    <p><?= alumni_page_escape($alumniPageContent['membership_form_intro']) ?></p>
 
                     <form action="alumni.php#register" method="post" id="alumni-register-form" novalidate>
                         <div class="field">
-                            <label for="alumni-name">Full name<span class="req">*</span></label>
+                            <label for="alumni-name"><?= alumni_page_escape($alumniPageContent['registration_name_label']) ?><span class="req">*</span></label>
                             <input type="text" id="alumni-name" name="name" required maxlength="100" autocomplete="name"
                                    value="<?= htmlspecialchars($_POST['name'] ?? '', ENT_QUOTES) ?>"
                                    placeholder="e.g. Mukasa David">
@@ -616,13 +534,13 @@
 
                         <div class="field-row">
                             <div class="field">
-                                <label for="alumni-year">Year of completion<span class="req">*</span></label>
-                                <input type="number" id="alumni-year" name="year" required min="2000" max="2026"
+                                <label for="alumni-year"><?= alumni_page_escape($alumniPageContent['registration_year_label']) ?><span class="req">*</span></label>
+                                <input type="number" id="alumni-year" name="year" required min="2000" max="<?= (int)date('Y') ?>"
                                        value="<?= htmlspecialchars($_POST['year'] ?? '', ENT_QUOTES) ?>"
                                        placeholder="e.g. 2018">
                             </div>
                             <div class="field">
-                                <label for="alumni-profession">Profession / institution<span class="req">*</span></label>
+                                <label for="alumni-profession"><?= alumni_page_escape($alumniPageContent['registration_profession_label']) ?><span class="req">*</span></label>
                                 <input type="text" id="alumni-profession" name="profession" required maxlength="150" autocomplete="organization-title"
                                        value="<?= htmlspecialchars($_POST['profession'] ?? '', ENT_QUOTES) ?>"
                                        placeholder="e.g. Civil Engineer">
@@ -631,13 +549,13 @@
 
                         <div class="field-row">
                             <div class="field">
-                                <label for="alumni-email">Email address<span class="req">*</span></label>
+                                <label for="alumni-email"><?= alumni_page_escape($alumniPageContent['registration_email_label']) ?><span class="req">*</span></label>
                                 <input type="email" id="alumni-email" name="email" required maxlength="150" autocomplete="email"
                                        value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES) ?>"
                                        placeholder="name@example.com">
                             </div>
                             <div class="field">
-                                <label for="alumni-phone">Phone number<span class="opt">(optional)</span></label>
+                                <label for="alumni-phone"><?= alumni_page_escape($alumniPageContent['registration_phone_label']) ?><span class="opt">(optional)</span></label>
                                 <input type="tel" id="alumni-phone" name="phone" maxlength="50" autocomplete="tel"
                                        value="<?= htmlspecialchars($_POST['phone'] ?? '', ENT_QUOTES) ?>"
                                        placeholder="+256 700 000 000">
@@ -645,11 +563,11 @@
                         </div>
 
                         <button type="submit" name="submit" class="btn btn--dark" id="alumni-submit-btn">
-                            Submit registration <i data-lucide="arrow-right"></i>
+                            <?= alumni_page_escape($alumniPageContent['registration_submit_label']) ?> <i data-lucide="arrow-right"></i>
                         </button>
                         <div class="form-note">
                             <i data-lucide="shield-check"></i>
-                            <span>Your information is used only by the Alumni Association and Thamani High School, and is never shared with third parties.</span>
+                            <span><?= alumni_page_escape($alumniPageContent['registration_privacy_note']) ?></span>
                         </div>
                     </form>
                 </div>
@@ -666,10 +584,10 @@
                         <img src="thamani-logo.png" alt="" style="height:40px;" onerror="this.src='favicon.svg'">
                         <div class="brand-name">Thamani High School</div>
                     </div>
-                    <p style="max-width:380px; margin:0;">Empowering the next generation of Ugandan leaders through excellence in education, culture and character.</p>
+                    <p style="max-width:380px; margin:0;"><?= alumni_page_escape($alumniPageContent['footer_mission']) ?></p>
                 </div>
                 <div>
-                    <h4>Quick Links</h4>
+                    <h4><?= alumni_page_escape($alumniPageContent['footer_links_heading']) ?></h4>
                     <ul>
                         <li><a href="enrollment.php">Student Enrollment</a></li>
                         <li><a href="library.php">Digital Library</a></li>
@@ -679,17 +597,17 @@
                     </ul>
                 </div>
                 <div>
-                    <h4>Alumni Office</h4>
+                    <h4><?= alumni_page_escape($alumniPageContent['footer_office_heading']) ?></h4>
                     <ul>
-                        <li><i data-lucide="map-pin"></i><span>Kakiri Main Campus, Wakiso District, Uganda</span></li>
-                        <li><i data-lucide="phone"></i><span>+256 414 123 456</span></li>
-                        <li><i data-lucide="mail"></i><span>alumni@thamani.ac.ug</span></li>
+                        <li><i data-lucide="map-pin"></i><span><?= alumni_page_escape($alumniPageContent['footer_address']) ?></span></li>
+                        <li><i data-lucide="phone"></i><span><?= alumni_page_escape($alumniPageContent['footer_phone']) ?></span></li>
+                        <li><i data-lucide="mail"></i><span><?= alumni_page_escape($alumniPageContent['footer_email']) ?></span></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <span>&copy; 2026 Thamani High School. All rights reserved.</span>
-                <span>Thamani High School Alumni Association</span>
+                <span><?= alumni_page_escape($alumniPageContent['footer_copyright']) ?></span>
+                <span><?= alumni_page_escape($alumniPageContent['footer_subtitle']) ?></span>
             </div>
         </div>
     </footer>

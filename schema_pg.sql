@@ -72,7 +72,21 @@ CREATE TABLE IF NOT EXISTS alumni (
     year VARCHAR(20),
     profession VARCHAR(255),
     phone VARCHAR(50),
-    email VARCHAR(255)
+    email VARCHAR(255),
+    editor_password_hash VARCHAR(255),
+    is_page_editor INT DEFAULT 0,
+    editor_active INT DEFAULT 0,
+    editor_last_login TIMESTAMP WITH TIME ZONE
+);
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_password_hash VARCHAR(255);
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS is_page_editor INT DEFAULT 0;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_active INT DEFAULT 0;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_last_login TIMESTAMP WITH TIME ZONE;
+
+CREATE TABLE IF NOT EXISTS alumni_page_content (
+    id INT PRIMARY KEY,
+    content_json TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 8. Class Timetables Table

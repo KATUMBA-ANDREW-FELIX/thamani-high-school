@@ -13,6 +13,8 @@
 session_start();
 /** @var mysqli $conn */
 require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/alumni_content.php';
+$alumniPageContent = load_alumni_page_content($conn);
 
 $isAdmin   = !empty($_SESSION['admin_id']);
 $isTeacher = !empty($_SESSION['teacher_id']);
@@ -30,6 +32,10 @@ if ($isAdmin) {
     $backLink   = 'student-dashboard.php';
     $logoutLink = 'student_logout.php';
     $viewerName = $_SESSION['student_name'] ?? 'Student';
+} elseif (!empty($_SESSION['alumni_editor_id'])) {
+    $backLink   = 'alumni_editor.php';
+    $logoutLink = 'alumni_editor_logout.php';
+    $viewerName = $_SESSION['alumni_editor_name'] ?? 'Alumni Editor';
 } else {
     $backLink   = 'home.php';
     $logoutLink = null;

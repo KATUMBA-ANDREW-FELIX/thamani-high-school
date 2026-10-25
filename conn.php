@@ -278,7 +278,17 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         year TEXT,
                         profession TEXT,
                         phone TEXT,
-                        email TEXT
+                        email TEXT,
+                        editor_password_hash TEXT,
+                        is_page_editor INTEGER DEFAULT 0,
+                        editor_active INTEGER DEFAULT 0,
+                        editor_last_login DATETIME
+                    );
+
+                    CREATE TABLE IF NOT EXISTS alumni_page_content (
+                        id INTEGER PRIMARY KEY,
+                        content_json TEXT NOT NULL,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS calendar_documents (
@@ -630,6 +640,21 @@ if (!class_exists('ThamaniPolyfillConn')) {
 
             // Safe auto-migration for existing database schemas (PostgreSQL & SQLite)
             if ($this->driver === 'pgsql') {
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_password_hash VARCHAR(255)"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN IF NOT EXISTS is_page_editor INT DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_active INT DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN IF NOT EXISTS editor_last_login TIMESTAMP WITH TIME ZONE"); } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS alumni_page_content (
+                            id INT PRIMARY KEY,
+                            content_json TEXT NOT NULL,
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        );
+                    ");
+                } catch (Exception $e) {
+                    error_log('[ThamaniPolyfillConn] Alumni content schema init warning: ' . $e->getMessage());
+                }
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50)"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_stream VARCHAR(50) DEFAULT 'Stream A'"); } catch (Exception $e) {}
@@ -699,6 +724,21 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     ");
                 } catch (Exception $e) {}
             } else {
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN editor_password_hash TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN is_page_editor INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN editor_active INTEGER DEFAULT 0"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE alumni ADD COLUMN editor_last_login DATETIME"); } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS alumni_page_content (
+                            id INTEGER PRIMARY KEY,
+                            content_json TEXT NOT NULL,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ");
+                } catch (Exception $e) {
+                    error_log('[ThamaniPolyfillConn] Alumni content schema init warning: ' . $e->getMessage());
+                }
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN is_class_teacher INTEGER DEFAULT 0"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_of TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN class_teacher_stream TEXT DEFAULT 'Stream A'"); } catch (Exception $e) {}

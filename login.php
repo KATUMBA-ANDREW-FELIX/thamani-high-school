@@ -7,6 +7,7 @@
  *     - Admin ID (e.g. ADM-2026-001) or Email -> Admin Control Panel
  *     - Teacher Staff ID (e.g. TSC-2026-001) or Email -> Teacher Portal
  *     - Student LIN (e.g. LIN-2026-003) or Full Name -> Student Portal
+ *     - Assigned Alumni Editor email -> Alumni Page Editor
  */
 
 session_start();
@@ -30,6 +31,10 @@ if (!empty($_SESSION['student_id'])) {
     } else {
         header('Location: student-dashboard.php');
     }
+    exit;
+}
+if (!empty($_SESSION['alumni_editor_id'])) {
+    header('Location: alumni_editor.php');
     exit;
 }
 
@@ -131,7 +136,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // ----------------------------------------------------
-        // STEP 3: Check Enrolled Students Table
+        // STEP 3: Check the specifically assigned Alumni Editor
+        // ----------------------------------------------------
+        $sqlAlumniEditor = "SELECT id, name, email, editor_password_hash
+                            FROM alumni
+                            WHERE email = ? AND is_page_editor = 1 AND editor_active = 1
+                            LIMIT 1";
+        $stmtAlumniEditor = thamani_db_prepare($conn, $sqlAlumniEditor);
+        if ($stmtAlumniEditor) {
+            thamani_db_stmt_bind_param($stmtAlumniEditor, 's', $identifier);
+            $editorQueryOk = thamani_db_stmt_execute($stmtAlumniEditor);
+            if (!$editorQueryOk) {
+                error_log('[Alumni Editor Login Fetch] ' . thamani_db_stmt_error($stmtAlumniEditor));
+            }
+            $resAlumniEditor = $editorQueryOk ? thamani_db_stmt_get_result($stmtAlumniEditor) : false;
+            $alumniEditor = $resAlumniEditor ? thamani_db_fetch_assoc($resAlumniEditor) : null;
+            thamani_db_stmt_close($stmtAlumniEditor);
+
+            if (
+                $alumniEditor
+                && !empty($alumniEditor['editor_password_hash'])
+                && password_verify($password, $alumniEditor['editor_password_hash'])
+            ) {
+                session_regenerate_id(true);
+                $_SESSION['alumni_editor_id'] = (int)$alumniEditor['id'];
+                $_SESSION['alumni_editor_name'] = $alumniEditor['name'];
+                $_SESSION['alumni_editor_email'] = $alumniEditor['email'];
+                $_SESSION['alumni_editor_logged_in_at'] = time();
+
+                $loginUpdate = thamani_db_prepare($conn, 'UPDATE alumni SET editor_last_login = CURRENT_TIMESTAMP WHERE id = ?');
+                if ($loginUpdate) {
+                    $editorId = (int)$alumniEditor['id'];
+                    thamani_db_stmt_bind_param($loginUpdate, 'i', $editorId);
+                    if (!thamani_db_stmt_execute($loginUpdate)) {
+                        error_log('[Alumni Editor Login Timestamp] ' . thamani_db_stmt_error($loginUpdate));
+                    }
+                    thamani_db_stmt_close($loginUpdate);
+                } else {
+                    error_log('[Alumni Editor Login Timestamp Prepare] ' . thamani_db_error($conn));
+                }
+
+                header('Location: alumni_editor.php');
+                exit;
+            }
+        } else {
+            error_log('[Alumni Editor Login Prepare] ' . thamani_db_error($conn));
+        }
+
+        // ----------------------------------------------------
+        // STEP 4: Check Enrolled Students Table
         // ----------------------------------------------------
         $sqlStudent = "SELECT id, full_name, lin_number, class_level, stream, password_hash, must_change_password, account_active FROM students WHERE (lin_number = ? OR full_name = ? OR guardian_email = ?) AND status = 'Enrolled' LIMIT 1";
         $stmtStudent = thamani_db_prepare($conn, $sqlStudent);
@@ -241,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i data-lucide="shield-check" class="w-8 h-8 text-brand-green"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-brand-green">Portal Sign In</h2>
-                <p class="text-xs text-gray-500 mt-1">Students, Teachers, and Admins can sign in using their attached ID or Email.</p>
+                <p class="text-xs text-gray-500 mt-1">Students, Teachers, Admins, and the assigned Alumni Page Editor can sign in using their ID or email.</p>
             </div>
 
             <?php if (!empty($errors)): ?>
