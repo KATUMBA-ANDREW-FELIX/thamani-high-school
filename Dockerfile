@@ -1,5 +1,5 @@
 # Production Dockerfile for Thamani High School Application (Optimized with OPcache & Caching)
-FROM php:8.2-apache
+FROM php:8.5-apache
 
 # Install system dependencies & PostgreSQL development libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo pdo_pgsql pdo_sqlite pgsql gd zip curl mbstring opcache \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql pgsql gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache performance modules (rewrite, headers, expires, deflate)
