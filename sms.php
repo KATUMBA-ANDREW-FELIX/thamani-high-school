@@ -58,6 +58,10 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
                     <h2 class="font-bold text-lg">Provider settings</h2>
                     <p id="sms-credential-state" class="text-xs text-gray-500 mt-1">Credentials are stored in school settings.</p>
                 </div>
+                <div class="flex items-center gap-2">
+                    <span id="sms-balance-pill" class="hidden rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 sms-tabular"></span>
+                    <button type="button" id="sms-check-balance" class="rounded border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50">Check Ego SMS balance</button>
+                </div>
             </div>
             <form id="sms-credentials-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                 <label class="text-xs font-bold text-gray-700">Ego SMS username
@@ -269,6 +273,15 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
                     await loadSmsSettings();
                 } catch (error) { showSmsNotice(error.message); }
             });
+            document.getElementById('sms-check-balance').addEventListener('click', async () => {
+                const pill = document.getElementById('sms-balance-pill');
+                try {
+                    const res = await smsPost('check_sms_balance');
+                    pill.textContent = `Balance: ${res.balance} ${res.currency || ''}`.trim();
+                    pill.classList.remove('hidden');
+                    showSmsNotice(`Ego SMS live balance: ${res.balance} ${res.currency || ''}`.trim(), true);
+                } catch (error) { showSmsNotice(error.message); }
+            });
             document.getElementById('sms-test-form').addEventListener('submit', async event => {
                 event.preventDefault();
                 try {
@@ -312,8 +325,10 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
                     const contact = smsContacts.find(item => Number(item.id) === Number(editId));
                     if (!contact) return;
                     const form = document.getElementById('sms-contact-form');
-                    for (const field of ['contact_id', 'full_name', 'phone', 'category', 'class_level', 'notes']) form.elements[field].value = contact[field] || '';
-                    form.elements.stream.value = contact.stream || '';
+                    for (const field of ['full_name', 'phone', 'category', 'class_level', 'stream', 'notes']) {
+                        if (form.elements[field]) form.elements[field].value = contact[field] || '';
+                    }
+                    document.getElementById('sms-contact-id').value = contact.id;
                     document.getElementById('sms-contact-save').textContent = 'Save changes';
                     document.getElementById('sms-contact-cancel').classList.remove('hidden');
                 } else if (toggleId) {

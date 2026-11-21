@@ -18,6 +18,7 @@ if (!function_exists('format_thamani_date')) {
 }
 
 require_once 'conn.php';
+require_once 'bank_api_helper.php';
 
 // ---------- Stat counters ----------
 function safeCount($conn, string $sql): int {
@@ -681,23 +682,35 @@ if (!empty($_SESSION['admin_flash'])) {
 
                 <!-- ── Provider Credentials (admin only) ──────────────────────── -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
-                    <div class="flex items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
                         <div>
                             <h4 class="font-black text-gray-900 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-gray-500"></i> Ego SMS Credentials</h4>
                             <p id="sms-credential-state" class="text-xs text-gray-500 mt-0.5">Loading...</p>
                         </div>
+                        <div class="flex items-center gap-2">
+                            <span id="sms-dash-balance-pill" class="hidden rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 tabular-nums"></span>
+                            <button type="button" id="sms-dash-check-balance" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50 transition flex items-center gap-1.5">
+                                <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-700"></i> Check Ego SMS Balance
+                            </button>
+                        </div>
                     </div>
-                    <form id="sms-dash-credentials-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-                        <label class="text-xs font-bold text-gray-700">Username
-                            <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <form id="sms-dash-credentials-form" class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                            <label class="text-xs font-bold text-gray-700">Username
+                                <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Password
+                                <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Sender ID <span class="font-normal text-gray-400">(max 11 chars)</span>
+                                <input id="dash-ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
+                            </label>
+                            <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                            <input type="checkbox" id="dash-ego-auto-receipts" name="ego_auto_fee_receipts" value="1" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span>Automatically send Ego SMS fee confirmation receipts to guardians whenever a verified Bank API / Webhook payment arrives</span>
                         </label>
-                        <label class="text-xs font-bold text-gray-700">Password
-                            <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
-                        </label>
-                        <label class="text-xs font-bold text-gray-700">Sender ID <span class="font-normal text-gray-400">(max 11 chars)</span>
-                            <input id="dash-ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
-                        </label>
-                        <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
                     </form>
                     <form id="sms-dash-test-form" class="flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
                         <label class="text-xs font-bold text-gray-700">Test phone number
@@ -1004,7 +1017,13 @@ if (!empty($_SESSION['admin_flash'])) {
                                 $code = $bk['bank_code'];
                                 $style = $bankStyleMap[$code] ?? ['bg' => 'bg-slate-900/90 border-slate-700', 'text' => 'text-amber-400', 'badge' => 'bg-slate-800 text-amber-300'];
                                 $isActive = (int)$bk['is_active'] === 1;
-                                $whUrl = !empty($bk['webhook_url']) ? $bk['webhook_url'] : "http://localhost:8080/admin_fees_actions.php?webhook=1&bank=" . urlencode($code);
+                                $whUrl = !empty($bk['webhook_url']) ? $bk['webhook_url'] : bank_api_default_webhook_url($code);
+                                $bkSafe = $bk;
+                                $bkSafe['secret_key'] = '';
+                                $bkSafe['webhook_secret'] = '';
+                                $bkSafe['has_secret'] = !empty($bk['secret_key']);
+                                $bkSafe['has_webhook_secret'] = !empty($bk['webhook_secret']);
+                                $bkSafe['default_webhook_url'] = bank_api_default_webhook_url($code);
                             ?>
                             <div class="rounded-2xl p-4 border <?= $style['bg'] ?> flex flex-col justify-between space-y-3 relative shadow-md">
                                 <div>
@@ -1035,10 +1054,22 @@ if (!empty($_SESSION['admin_flash'])) {
                                         <span class="font-mono text-gray-300 truncate"><?= !empty($bk['last_sync_at']) ? format_thamani_date($bk['last_sync_at'], 'H:i, d M') : 'Never' ?></span>
                                     </div>
 
-                                    <div class="flex items-center gap-1.5 pt-1">
-                                        <button type="button" onclick="openConfigureBankModal(<?= htmlspecialchars(json_encode($bk), ENT_QUOTES, 'UTF-8') ?>);" class="flex-grow py-1.5 px-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-bold text-center transition-colors">
+                                    <div class="flex items-center gap-1 pt-1 flex-wrap">
+                                        <button type="button" onclick="openConfigureBankModal(<?= htmlspecialchars(json_encode($bkSafe), ENT_QUOTES, 'UTF-8') ?>);" class="flex-grow py-1.5 px-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-bold text-center transition-colors">
                                             ⚙️ Edit
                                         </button>
+
+                                        <button type="button" onclick="testBankApiConnection('<?= htmlspecialchars($bk['bank_code'], ENT_QUOTES) ?>', this);" class="px-2 py-1.5 rounded-lg text-[11px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 hover:bg-sky-500/40" title="Test Live Bank API Connection">
+                                            Ping
+                                        </button>
+
+                                        <form action="admin_fees_actions.php" method="post" class="inline">
+                                            <input type="hidden" name="action" value="sync_bank_api">
+                                            <input type="hidden" name="bank_code" value="<?= htmlspecialchars($bk['bank_code']) ?>">
+                                            <button type="submit" class="px-2 py-1.5 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/40" title="Sync Payments From This Bank API">
+                                                Sync
+                                            </button>
+                                        </form>
 
                                         <form action="admin_fees_actions.php" method="post" class="inline">
                                             <input type="hidden" name="action" value="toggle_bank_status">
@@ -1215,7 +1246,12 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <span><strong>Billing Policy:</strong> Individual student fee adjustments are disabled. School fees are assigned uniformly per class level (e.g. S1–S4 or S5–S6) to maintain billing consistency and bank statement reconciliation.</span>
                             </div>
 
+                            <div id="bank-live-feedback" class="hidden w-full rounded-2xl border px-4 py-3 text-xs font-semibold"></div>
+
                             <div class="flex items-center gap-3 flex-wrap">
+                                <button type="button" onclick="sendBulkFeeReminderSms(0, this);" class="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors">
+                                    <i data-lucide="message-square-text" class="w-3.5 h-3.5"></i> Send Unpaid Reminders (Ego SMS)
+                                </button>
                                 <!-- Filter Dropdown -->
                                 <select id="fee-status-filter" onchange="filterFeeLedgerTable();" class="px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500">
                                     <option value="ALL">Filter: All Statuses</option>
@@ -1260,6 +1296,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                         <th class="p-3.5 text-right">Amount Paid</th>
                                         <th class="p-3.5 text-right">Outstanding Balance</th>
                                         <th class="p-3.5 text-center">Status</th>
+                                        <th class="p-3.5 text-right">Live Bank / SMS</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 font-medium">
@@ -1305,11 +1342,25 @@ if (!empty($_SESSION['admin_flash'])) {
                                                         <?= $st === 'PAID' ? '✓ FULLY PAID' : ($st === 'PARTIAL' ? '⏳ PARTIAL' : '⚠️ UNPAID') ?>
                                                     </span>
                                                 </td>
+                                                <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                    <button type="button" onclick="checkSingleStudentBankFees(<?= (int)$fa['student_id'] ?>, this);"
+                                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 text-amber-300 font-bold text-[11px] transition-colors"
+                                                            title="Query active Bank APIs for this student">
+                                                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Check Bank
+                                                    </button>
+                                                    <?php if ($bal > 0): ?>
+                                                        <button type="button" onclick="sendBulkFeeReminderSms(<?= (int)$fa['student_id'] ?>, this);"
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition-colors"
+                                                                title="Send fee balance SMS reminder to guardian via Ego SMS">
+                                                            <i data-lucide="send" class="w-3 h-3"></i> Remind
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="8" class="p-10 text-center text-gray-500 text-sm">
+                                            <td colspan="9" class="p-10 text-center text-gray-500 text-sm">
                                                 No student fee accounts found. Enrolled students will appear here automatically.
                                             </td>
                                         </tr>
@@ -4083,9 +4134,11 @@ if (!empty($_SESSION['admin_flash'])) {
             document.getElementById('bank-cfg-env').value = bankObj.environment || 'sandbox';
             document.getElementById('bank-cfg-endpoint').value = bankObj.api_endpoint || '';
             document.getElementById('bank-cfg-key').value = bankObj.api_key || '';
-            document.getElementById('bank-cfg-secret').value = bankObj.secret_key || '';
-            document.getElementById('bank-cfg-webhook').value = bankObj.webhook_url || ('http://localhost:8080/admin_fees_actions.php?webhook=1&bank=' + (bankObj.bank_code || ''));
-            document.getElementById('bank-cfg-whsecret').value = bankObj.webhook_secret || '';
+            document.getElementById('bank-cfg-secret').value = '';
+            document.getElementById('bank-cfg-secret').placeholder = bankObj.has_secret ? 'Saved (leave blank to keep)' : 'Secret Key';
+            document.getElementById('bank-cfg-webhook').value = bankObj.webhook_url || bankObj.default_webhook_url || (window.location.origin + '/admin_fees_actions.php?webhook=1&bank=' + encodeURIComponent(bankObj.bank_code || ''));
+            document.getElementById('bank-cfg-whsecret').value = '';
+            document.getElementById('bank-cfg-whsecret').placeholder = bankObj.has_webhook_secret ? 'Saved (leave blank to keep)' : 'e.g. whsec_99182377';
 
             openModal('modal-configure-bank-api');
         }
@@ -4137,6 +4190,74 @@ if (!empty($_SESSION['admin_flash'])) {
                     row.style.display = 'none';
                 }
             });
+        }
+
+        function showBankFeedback(message, ok = false) {
+            const box = document.getElementById('bank-live-feedback');
+            if (!box) return alert(message);
+            box.textContent = message;
+            box.className = 'w-full rounded-2xl border px-4 py-3 text-xs font-semibold ' +
+                (ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900');
+            box.classList.remove('hidden');
+            box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        }
+
+        async function testBankApiConnection(bankCode, btn) {
+            const orig = btn ? btn.textContent : 'Ping';
+            if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            try {
+                const body = new URLSearchParams({action: 'test_bank_connection', bank_code: bankCode, response_format: 'json'});
+                const r = await fetch('admin_fees_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                showBankFeedback((d.success ? '✅ ' : '⚠️ ') + (d.message || d.error || 'Connection check finished.'), !!d.success);
+            } catch (e) {
+                showBankFeedback('❌ Bank API test failed: ' + (e.message || 'Network error'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = orig; }
+            }
+        }
+
+        async function checkSingleStudentBankFees(studentId, btn) {
+            const orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
+            try {
+                const body = new URLSearchParams({action: 'check_student_fees_api', student_id: String(studentId), poll_banks: '1', response_format: 'json'});
+                const r = await fetch('admin_fees_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                if (!r.ok || !d.success) throw new Error(d.error || 'Check failed.');
+                const s = d.fee_summary || {};
+                const stName = (d.student && d.student.full_name) ? d.student.full_name : ('Student #' + studentId);
+                const newCnt = Number(d.new_payments_found || 0);
+                const msg = `${stName}: Paid UGX ${Math.round(Number(s.paid_amount || 0)).toLocaleString()} · Balance UGX ${Math.round(Number(s.balance || 0)).toLocaleString()} (${s.status || 'UNPAID'}). ` +
+                    (newCnt > 0 ? `Imported ${newCnt} new payment(s) — reloading ledger...` : `Checked ${(d.banks_checked || []).length} bank API(s); ledger is up to date.`);
+                showBankFeedback((newCnt > 0 ? '✅ ' : 'ℹ️ ') + msg, newCnt > 0);
+                if (newCnt > 0) setTimeout(() => window.location.reload(), 1200);
+            } catch (e) {
+                showBankFeedback('❌ ' + (e.message || 'Bank check failed.'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+            }
+        }
+
+        async function sendBulkFeeReminderSms(studentId, btn) {
+            const label = studentId > 0 ? 'Send a fee balance SMS reminder to this student\'s guardian via Ego SMS?' : 'Send fee balance SMS reminders to ALL enrolled students with unpaid/partial balances via Ego SMS?';
+            if (!window.confirm(label)) return;
+            const orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+            try {
+                const body = new URLSearchParams({
+                    action: 'send_fee_reminder_sms',
+                    student_id: String(studentId),
+                    csrf_token: <?= json_encode($smsCsrfToken) ?>
+                });
+                const r = await fetch('admin_sms_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                showBankFeedback(d.message || d.error || (d.success ? 'Reminder SMS sent.' : 'Failed to send SMS.'), !!d.success);
+            } catch (e) {
+                showBankFeedback('❌ SMS reminder failed: ' + (e.message || 'Network error'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+            }
         }
 
         // ════════════════════════════════════════════════════════════════════════
@@ -4226,6 +4347,8 @@ if (!empty($_SESSION['admin_flash'])) {
                     const d = await smsDashGet('get_sms_settings');
                     document.getElementById('dash-ego-username').value = d.username || '';
                     document.getElementById('dash-ego-sender-id').value = d.sender_id || 'THAMANI';
+                    const autoEl = document.getElementById('dash-ego-auto-receipts');
+                    if (autoEl) autoEl.checked = !!d.auto_fee_receipts;
                     document.getElementById('sms-credential-state').textContent =
                         d.password_configured
                         ? '✅ A provider password is saved (not shown for security).'
@@ -4336,11 +4459,25 @@ if (!empty($_SESSION['admin_flash'])) {
                 ev.preventDefault();
                 const vals = Object.fromEntries(new FormData(ev.currentTarget));
                 if (!vals.ego_password) delete vals.ego_password;
+                vals.ego_auto_fee_receipts = document.getElementById('dash-ego-auto-receipts')?.checked ? '1' : '0';
                 try {
                     await smsDashPost('save_sms_credentials', vals);
                     document.getElementById('dash-ego-password').value = '';
                     showSmsMsg('Ego SMS credentials saved.', true);
                     await dashLoadSettings();
+                } catch (e) { showSmsMsg(e.message); }
+            });
+
+            // ── Check Live Balance button ─────────────────────────────────────
+            document.getElementById('sms-dash-check-balance')?.addEventListener('click', async () => {
+                const pill = document.getElementById('sms-dash-balance-pill');
+                try {
+                    const d = await smsDashPost('check_sms_balance');
+                    if (pill) {
+                        pill.textContent = `Balance: ${d.balance} ${d.currency || ''}`.trim();
+                        pill.classList.remove('hidden');
+                    }
+                    showSmsMsg(`✅ Ego SMS live balance: ${d.balance} ${d.currency || ''}`.trim(), true);
                 } catch (e) { showSmsMsg(e.message); }
             });
 

@@ -82,7 +82,6 @@ if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         $fi = finfo_open(FILEINFO_MIME_TYPE);
         if ($fi) {
             $mime = finfo_file($fi, $file['tmp_name']) ?: $mime;
-            finfo_close($fi);
         }
     }
     if (!in_array($mime, $allowedMimes, true)) {

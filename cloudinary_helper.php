@@ -111,7 +111,6 @@ if (!function_exists('cloudinary_upload')) {
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlErr  = curl_error($ch);
-        curl_close($ch);
 
         if ($response === false) {
             error_log("[Cloudinary Upload Error] cURL failed: " . $curlErr);
@@ -171,7 +170,6 @@ if (!function_exists('cloudinary_delete')) {
         ]);
 
         $response = curl_exec($ch);
-        curl_close($ch);
 
         if (!$response) return false;
         $json = json_decode($response, true);

@@ -61,8 +61,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 if ($action === 'save_sms_credentials') {
     if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
 
-    $username  = trim($_POST['ego_username'] ?? '');
-    $password  = trim($_POST['ego_password'] ?? '');
+    $username        = trim($_POST['ego_username'] ?? '');
+    $password        = trim($_POST['ego_password'] ?? '');
+    $autoFeeReceipts = (!empty($_POST['ego_auto_fee_receipts']) && $_POST['ego_auto_fee_receipts'] !== '0') ? '1' : '0';
     if ($password === '') {
         $existingCredentials = get_egosms_credentials($db);
         $password = $existingCredentials['password'] ?? '';
@@ -71,27 +72,13 @@ if ($action === 'save_sms_credentials') {
     $senderId  = substr($senderId ?: 'THAMANI', 0, 11);
 
     $saved = true;
-    // Driver-aware upsert: PostgreSQL uses ON CONFLICT, SQLite uses INSERT OR REPLACE
-    $isPostgres = ($db instanceof ThamaniPolyfillConn && $db->driver === 'pgsql');
-
     foreach ([
-        'ego_sms_username'  => $username,
-        'ego_sms_password'  => $password,
-        'ego_sms_sender_id' => $senderId,
+        'ego_sms_username'          => $username,
+        'ego_sms_password'          => $password,
+        'ego_sms_sender_id'         => $senderId,
+        'ego_sms_auto_fee_receipts' => $autoFeeReceipts,
     ] as $key => $val) {
-        if ($isPostgres) {
-            $sql = "INSERT INTO school_settings (setting_key, setting_value, updated_at)
-                        VALUES (?, ?, NOW())
-                        ON CONFLICT(setting_key)
-                        DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW()";
-        } else {
-            $sql = "INSERT OR REPLACE INTO school_settings (setting_key, setting_value, updated_at) VALUES (?, ?, datetime('now'))";
-        }
-        $stmt = thamani_db_prepare($db, $sql);
-        if (!$stmt) { $saved = false; continue; }
-        thamani_db_stmt_bind_param($stmt, 'ss', $key, $val);
-        $saved = thamani_db_stmt_execute($stmt) && $saved;
-        thamani_db_stmt_close($stmt);
+        $saved = thamani_set_setting($db, $key, $val) && $saved;
     }
     echo json_encode(['success' => $saved, 'message' => $saved ? 'Ego SMS credentials saved.' : 'Unable to save SMS credentials.']);
     exit;
@@ -101,11 +88,28 @@ if ($action === 'get_sms_settings') {
     if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
     $creds = get_egosms_credentials($db);
     echo json_encode([
-        'success' => true,
-        'username' => $creds['username'] ?? '',
-        'sender_id' => $creds['sender_id'] ?: 'THAMANI',
+        'success'             => true,
+        'username'            => $creds['username'] ?? '',
+        'sender_id'           => $creds['sender_id'] ?: 'THAMANI',
         'password_configured' => !empty($creds['password']),
+        'auto_fee_receipts'   => !empty($creds['auto_fee_receipts']),
     ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Check Live Ego SMS Account Balance (admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'check_sms_balance') {
+    if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
+    $creds = get_egosms_credentials($db);
+    if (empty($creds['username']) || empty($creds['password'])) {
+        echo json_encode(['success'=>false,'error'=>'Ego SMS credentials not configured. Please save your API username and password first.']);
+        exit;
+    }
+    $walletType = trim($_POST['wallet_type'] ?? $_GET['wallet_type'] ?? 'Local');
+    $res = egosms_check_balance($creds['username'], $creds['password'], $walletType ?: 'Local');
+    echo json_encode($res);
     exit;
 }
 
@@ -304,9 +308,9 @@ if ($action === 'get_contacts') {
     $cat = trim($_GET['category'] ?? 'All');
     $res = null;
     if ($cat === 'All' || empty($cat)) {
-        $res = thamani_db_query($db, "SELECT id, full_name, phone, category, class_level, stream, is_active FROM sms_contacts ORDER BY category ASC, full_name ASC");
+        $res = thamani_db_query($db, "SELECT id, full_name, phone, category, class_level, stream, notes, is_active FROM sms_contacts ORDER BY category ASC, full_name ASC");
     } else {
-        $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone, category, class_level, stream, is_active FROM sms_contacts WHERE category = ? ORDER BY full_name ASC");
+        $stmt = thamani_db_prepare($db, "SELECT id, full_name, phone, category, class_level, stream, notes, is_active FROM sms_contacts WHERE category = ? ORDER BY full_name ASC");
         if ($stmt) {
             thamani_db_stmt_bind_param($stmt, 's', $cat);
             thamani_db_stmt_execute($stmt);
@@ -405,7 +409,7 @@ if ($action === 'send_bulk_sms') {
 
     // Ego SMS max 1000 per request — chunk if needed
     $chunks   = array_chunk($phones, 1000);
-    $totalSent = 0; $totalFailed = []; $lastRaw = '';
+    $totalSent = 0; $totalFailed = []; $lastRaw = ''; $lastError = ''; $lastTracking = ''; $totalCost = 0;
     $overallOk = true;
 
     foreach ($chunks as $chunk) {
@@ -413,8 +417,15 @@ if ($action === 'send_bulk_sms') {
         $totalSent  += $res2['sent_count'];
         $totalFailed = array_merge($totalFailed, $res2['failed'] ?? []);
         $lastRaw     = $res2['raw'];
+        $totalCost  += (int)($res2['cost'] ?? 0);
+        if (!empty($res2['tracking'])) {
+            $lastTracking = $res2['tracking'];
+        }
         if (!$res2['success']) {
             $overallOk = false;
+            if (!empty($res2['error'])) {
+                $lastError = $res2['error'];
+            }
         }
     }
 
@@ -427,17 +438,110 @@ if ($action === 'send_bulk_sms') {
         $logStatus = 'FAILED';
     }
 
-    log_sms_batch($db, $actorId, $actorRole, $totalSent, $catLabel, $message, $logStatus, $lastRaw);
+    log_sms_batch($db, $actorId, $actorRole, $totalSent, $catLabel, $message, $logStatus, $lastRaw ?: $lastError);
 
+    $failReason = $lastError !== '' ? $lastError : 'Check your Ego SMS credentials and account balance.';
     echo json_encode([
         'success'       => $totalSent > 0,
         'sent_count'    => $totalSent,
         'total_targets' => count($phones),
         'failed_count'  => count($totalFailed),
         'status'        => $logStatus,
+        'tracking'      => $lastTracking,
+        'cost'          => $totalCost,
+        'error'         => $totalSent > 0 ? '' : $failReason,
         'message'       => $totalSent > 0
-            ? "✅ SMS sent to {$totalSent} of " . count($phones) . " contacts."
-            : "❌ Failed to send SMS. Check your Ego SMS credentials and account balance.",
+            ? "✅ SMS sent to {$totalSent} of " . count($phones) . " contacts." . ($totalCost > 0 ? " (Cost: {$totalCost} units)" : '')
+            : "❌ Failed to send SMS: {$failReason}",
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Send School Fees Balance Reminder SMS (admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'send_fee_reminder_sms') {
+    if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
+
+    $studentId = (int)($_POST['student_id'] ?? 0);
+    $creds = get_egosms_credentials($db);
+    if (empty($creds['username']) || empty($creds['password'])) {
+        echo json_encode(['success'=>false,'error'=>'Ego SMS credentials not configured. Please configure Ego SMS in the SMS Centre tab first.']);
+        exit;
+    }
+
+    $targets = [];
+    if ($studentId > 0) {
+        $st = thamani_db_prepare($db, "SELECT s.id, s.full_name, s.class_level, s.lin_number, s.pay_code, s.guardian_name, s.guardian_phone, COALESCE(sf.total_fee, 0) AS total_fee, COALESCE(sf.paid_amount, 0) AS paid_amount, COALESCE(sf.balance, 0) AS balance FROM students s LEFT JOIN student_fees sf ON sf.student_id = s.id WHERE s.id = ? LIMIT 1");
+        if ($st) {
+            thamani_db_stmt_bind_param($st, 'i', $studentId);
+            thamani_db_stmt_execute($st);
+            $r = thamani_db_stmt_get_result($st);
+            if ($r && $row = thamani_db_fetch_assoc($r)) $targets[] = $row;
+            thamani_db_stmt_close($st);
+        }
+    } else {
+        $r = thamani_db_query($db, "SELECT s.id, s.full_name, s.class_level, s.lin_number, s.pay_code, s.guardian_name, s.guardian_phone, COALESCE(sf.total_fee, 0) AS total_fee, COALESCE(sf.paid_amount, 0) AS paid_amount, COALESCE(sf.balance, 0) AS balance FROM students s LEFT JOIN student_fees sf ON sf.student_id = s.id WHERE s.status = 'Enrolled' ORDER BY s.full_name ASC");
+        if ($r) {
+            while ($row = thamani_db_fetch_assoc($r)) {
+                $tot = (float)$row['total_fee'] > 0 ? (float)$row['total_fee'] : thamani_get_class_fee($db, (string)$row['class_level']);
+                $bal = max(0.0, $tot - (float)$row['paid_amount']);
+                if ($bal > 0) {
+                    $row['total_fee'] = $tot;
+                    $row['balance'] = $bal;
+                    $targets[] = $row;
+                }
+            }
+        }
+    }
+
+    if (empty($targets)) {
+        echo json_encode(['success'=>false,'error'=>'No students with outstanding fee balances found.']);
+        exit;
+    }
+
+    $sentCount = 0;
+    $skippedCount = 0;
+    $lastError = '';
+    $lastRaw = '';
+    foreach ($targets as $t) {
+        $tot = (float)$t['total_fee'] > 0 ? (float)$t['total_fee'] : thamani_get_class_fee($db, (string)$t['class_level']);
+        $paid = (float)$t['paid_amount'];
+        $bal = max(0.0, $tot - $paid);
+        if ($bal <= 0) { $skippedCount++; continue; }
+
+        $phone = normalize_ug_phone((string)($t['guardian_phone'] ?? ''));
+        if (!is_valid_ug_phone($phone)) { $skippedCount++; continue; }
+
+        $payCode = $t['pay_code'] ?: ($t['lin_number'] ?: 'Student ID ' . $t['id']);
+        $msg = sprintf(
+            "Thamani High School Fees Reminder: Dear Parent/Guardian of %s (%s), Paid: UGX %s, Balance: UGX %s. Pay via SchoolPay/Bank using PayCode: %s. Thank you.",
+            $t['full_name'],
+            $t['class_level'],
+            number_format($paid),
+            number_format($bal),
+            $payCode
+        );
+        $res2 = egosms_send($phone, $msg, $creds['username'], $creds['password'], $creds['sender_id'] ?: 'THAMANI');
+        $lastRaw = $res2['raw'];
+        if ($res2['success']) {
+            $sentCount++;
+        } else {
+            $lastError = $res2['error'];
+        }
+    }
+
+    $logStatus = $sentCount > 0 ? ($lastError === '' ? 'SUCCESS' : 'PARTIAL') : 'FAILED';
+    log_sms_batch($db, $actorId, $actorRole, $sentCount, $studentId > 0 ? 'Fee Reminder (Single)' : 'Fee Reminders (Unpaid)', 'Automated school fees balance reminder', $logStatus, $lastRaw ?: $lastError);
+
+    echo json_encode([
+        'success' => $sentCount > 0,
+        'sent_count' => $sentCount,
+        'skipped_count' => $skippedCount,
+        'error' => $sentCount > 0 ? '' : ($lastError ?: 'No valid guardian phone numbers found or Ego SMS rejected the request.'),
+        'message' => $sentCount > 0
+            ? "✅ Sent fee reminder SMS to {$sentCount} guardian(s)" . ($skippedCount > 0 ? " ({$skippedCount} skipped without valid phone/balance)." : '.')
+            : "❌ Could not send fee reminder SMS: " . ($lastError ?: 'No valid guardian phones found.'),
     ]);
     exit;
 }

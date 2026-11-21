@@ -8,8 +8,8 @@ A full-featured PHP school management system for Ugandan secondary schools (Seni
 
 | Requirement | Notes |
 |---|---|
-| **PHP 8.0+** | 8.1+ recommended |
-| **PHP extensions** | `pdo`, `pdo_sqlite` (built in), `curl` (for SMS), optionally `pdo_pgsql` |
+| **PHP 8.0+ (Docker uses PHP 8.6)** | PHP 8.6.0 (`php:8.6-apache`) in Docker; compatible with PHP 8.0–8.6 |
+| **PHP extensions** | `pdo`, `pdo_sqlite` (built in), `curl` (for SMS & Bank APIs), optionally `pdo_pgsql` |
 | **Web server** | Apache (with `mod_rewrite`) or Nginx or PHP built-in server |
 | **No Composer needed** | Pure PHP, no external dependencies |
 
@@ -77,9 +77,12 @@ The app runs the schema from `schema_pg.sql` automatically on first boot.
 ├── teacher_dashboard.php     # Teacher workspace
 ├── student-dashboard.php     # Student portal
 │
-├── sms_helper.php            # Ego SMS API helper functions
-├── admin_sms_actions.php     # SMS JSON endpoint (all SMS actions)
+├── sms_helper.php            # Ego SMS API helper (SendSms, Balance, auto fee receipts)
+├── admin_sms_actions.php     # SMS JSON endpoint (contacts, bulk send, balance, fee reminders)
 ├── sms.php                   # SMS workspace for authorised teachers
+├── bank_api_helper.php       # Bank API polling, webhook signature verification & fee reconciliation
+├── admin_fees_actions.php    # Fees admin actions & verified Bank Webhook listener
+├── student_fees_check.php    # Student live Bank API fee status checker
 │
 ├── uploads/                  # File uploads (enrollment docs, gallery, etc.)
 │   ├── enrollment_docs/
