@@ -255,7 +255,7 @@ if (!empty($errors)) {
                 <i data-lucide="info" class="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5"></i>
                 <div class="text-xs text-gray-600 leading-relaxed">
                     <p class="font-bold text-brand-green mb-1">First time logging in?</p>
-                    <p>Newly enrolled students can sign in with <strong>Admin@2026</strong> and must set a personal password immediately.</p>
+                    <p>Sign in with your LIN / Student ID and the temporary password sent to your parent/guardian via SMS, then set your personal password.</p>
                 </div>
             </div>
 
