@@ -47,15 +47,17 @@ if (!class_exists('ThamaniPolyfillStmt')) {
         public $pdo;
         public $driver;
         public $sql;
+        public $connRef = null;
         public $params = [];
         public $resultRows = [];
         public $affectedRows = 0;
         public $lastInsertId = 0;
         public $errorMsg = '';
 
-        public function __construct($pdo, $sql, $driver = 'sqlite') {
+        public function __construct($pdo, $sql, $driver = 'sqlite', $connRef = null) {
             $this->pdo = $pdo;
             $this->driver = $driver;
+            $this->connRef = $connRef;
             if ($driver === 'pgsql') {
                 $this->sql = str_ireplace("datetime('now')", "CURRENT_TIMESTAMP", $sql);
                 $this->sql = str_ireplace("NOW()", "CURRENT_TIMESTAMP", $this->sql);
@@ -83,6 +85,9 @@ if (!class_exists('ThamaniPolyfillStmt')) {
                             $this->lastInsertId = (int)$this->pdo->lastInsertId();
                         } catch (Exception $e) {
                             $this->lastInsertId = 0;
+                        }
+                        if ($this->connRef instanceof ThamaniPolyfillConn && $this->lastInsertId > 0) {
+                            $this->connRef->insert_id = $this->lastInsertId;
                         }
                     }
                     return true;
@@ -515,7 +520,9 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
                 ");
+            }
 
+            // Seed default streams, class fee rates, and bank integrations (both PostgreSQL & SQLite)
             try {
                 $stCheck = $this->pdo->query("SELECT COUNT(*) as cnt FROM school_streams");
                 $stRow = $stCheck ? $stCheck->fetch(PDO::FETCH_ASSOC) : null;
@@ -622,7 +629,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                             'active' => 1
                         ]
                     ];
-                    $insBk = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, environment, is_active, last_sync_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))");
+                    $insBk = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, environment, is_active, last_sync_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)");
                     foreach ($defaultBanks as $b) {
                         try {
                             $insBk->execute([$b['code'], $b['name'], $b['account'], $b['endpoint'], $b['key'], $b['secret'], $b['env'], $b['active']]);
@@ -633,7 +640,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 // Ensure SchoolPay integration exists in existing databases
                 $spCheck = $this->pdo->query("SELECT COUNT(*) FROM bank_integrations WHERE bank_code = 'SCHOOLPAY'");
                 if ($spCheck && $spCheck->fetchColumn() == 0) {
-                    $insSp = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, webhook_url, environment, is_active, last_sync_at) VALUES ('SCHOOLPAY', 'SchoolPay Uganda (PegPay Aggregator)', 'SCHPAY-UG-8802', 'https://api.schoolpay.co.ug/v1/collections/reconcile', 'SCHPAY-KEY-991823', 'SCHPAY-SEC-771209', 'http://localhost:8080/admin_fees_actions.php?webhook=1&bank=SCHOOLPAY', 'production', 1, datetime('now'))");
+                    $insSp = $this->pdo->prepare("INSERT INTO bank_integrations (bank_code, bank_name, account_number, api_endpoint, api_key, secret_key, webhook_url, environment, is_active, last_sync_at) VALUES ('SCHOOLPAY', 'SchoolPay Uganda (PegPay Aggregator)', 'SCHPAY-UG-8802', 'https://api.schoolpay.co.ug/v1/collections/reconcile', 'SCHPAY-KEY-991823', 'SCHPAY-SEC-771209', '', 'sandbox', 1, CURRENT_TIMESTAMP)");
                     $insSp->execute();
                 }
             } catch (Exception $e) {}
@@ -668,6 +675,7 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS academic_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS recommendation_doc_path TEXT"); } catch (Exception $e) {}
                 try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS medical_doc_path TEXT"); } catch (Exception $e) {}
+                try { $this->pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS pay_code VARCHAR(100)"); } catch (Exception $e) {}
                 try {
                     $this->pdo->exec("
                         CREATE TABLE IF NOT EXISTS teacher_personal_schedules (
@@ -764,26 +772,22 @@ if (!class_exists('ThamaniPolyfillConn')) {
                 try { $this->pdo->exec("ALTER TABLE teachers ADD COLUMN phone TEXT"); } catch (Exception $e) {}
             }
 
-            // Ensure default admin exists and has valid Admin@2026 hash
+            // Ensure default admin exists (never overwrite an already-changed live password)
             $validHash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
             try {
                 $stmtAdmin = $this->pdo->query("SELECT COUNT(*) FROM admins WHERE email = 'admin@thamani.ac.ug' OR admin_id = 'ADM-2026-001'");
                 if ($stmtAdmin && $stmtAdmin->fetchColumn() == 0) {
                     $insAdmin = $this->pdo->prepare("INSERT INTO admins (admin_id, full_name, email, password_hash, must_change_password, is_active) VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', ?, 0, 1)");
                     $insAdmin->execute([$validHash]);
-                } else {
-                    $this->pdo->exec("UPDATE admins SET password_hash = '$validHash' WHERE email = 'admin@thamani.ac.ug' OR admin_id = 'ADM-2026-001'");
                 }
             } catch (Exception $e) {}
 
-            // Ensure default teacher exists and has valid Admin@2026 hash & TOD permission
+            // Ensure default teacher exists (never overwrite an already-changed live password)
             try {
                 $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
                 if ($stmtTeacher && $stmtTeacher->fetchColumn() == 0) {
                     $insTeacher = $this->pdo->prepare("INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active, can_manage_duty_roster) VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', ?, 0, 1, 1)");
                     $insTeacher->execute([$validHash]);
-                } else {
-                    $this->pdo->exec("UPDATE teachers SET password_hash = '$validHash', can_manage_duty_roster = 1 WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
                 }
             } catch (Exception $e) {}
 
@@ -797,22 +801,10 @@ if (!class_exists('ThamaniPolyfillConn')) {
                     $insRoster->execute(['Week 3 (Sept 29 - Oct 5)', 'Dr. Kiggundu John (Biology Dept)', 'Ms. Atuhaire Brenda (History Dept)', 'Library Silence & Dormitory Lights Out', 'Ensure all students are in dorms by 9:30 PM.']);
                 }
             } catch (Exception $e) {}
-
-            // Ensure default teacher exists and has valid Admin@2026 hash
-            try {
-                $stmtTeacher = $this->pdo->query("SELECT COUNT(*) FROM teachers WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
-                if ($stmtTeacher && $stmtTeacher->fetchColumn() == 0) {
-                    $insTeacher = $this->pdo->prepare("INSERT INTO teachers (staff_id, full_name, email, department, password_hash, must_change_password, is_active) VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', ?, 0, 1)");
-                    $insTeacher->execute([$validHash]);
-                } else {
-                    $this->pdo->exec("UPDATE teachers SET password_hash = '$validHash' WHERE email = 'teacher@thamani.ac.ug' OR staff_id = 'TSC-2026-001'");
-                }
-            } catch (Exception $e) {}
-            }
         }
 
         public function prepare($sql) {
-            return new ThamaniPolyfillStmt($this->pdo, $sql, $this->driver);
+            return new ThamaniPolyfillStmt($this->pdo, $sql, $this->driver, $this);
         }
 
         public function __get($name) {
@@ -1050,6 +1042,18 @@ if (!function_exists('thamani_db_prepare')) {
         $connection = $connection ?: $conn;
         if (class_exists('mysqli') && $connection instanceof mysqli) {
             return mysqli_insert_id($connection);
+        }
+        if ($connection instanceof ThamaniPolyfillConn) {
+            if (!empty($connection->insert_id)) {
+                return (int)$connection->insert_id;
+            }
+            if ($connection->pdo) {
+                try {
+                    return (int)$connection->pdo->lastInsertId();
+                } catch (Exception $e) {
+                    return 0;
+                }
+            }
         }
         return (int)($connection->insert_id ?? 0);
     }
