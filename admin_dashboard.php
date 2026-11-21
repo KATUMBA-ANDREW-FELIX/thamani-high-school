@@ -695,18 +695,16 @@ if (!empty($_SESSION['admin_flash'])) {
                         </div>
                     </div>
                     <form id="sms-dash-credentials-form" class="space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                             <label class="text-xs font-bold text-gray-700">Username
                                 <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                             </label>
                             <label class="text-xs font-bold text-gray-700">Password
                                 <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
                             </label>
-                            <label class="text-xs font-bold text-gray-700">Sender ID <span class="font-normal text-gray-400">(max 11 chars)</span>
-                                <input id="dash-ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
-                            </label>
                             <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
                         </div>
+                        <p class="text-[11px] text-gray-500">Sender ID is managed automatically by Ego SMS using your account's default Sender ID.</p>
                         <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
                             <input type="checkbox" id="dash-ego-auto-receipts" name="ego_auto_fee_receipts" value="1" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span>Automatically send Ego SMS fee confirmation receipts to guardians whenever a verified Bank API / Webhook payment arrives</span>
@@ -4346,7 +4344,6 @@ if (!empty($_SESSION['admin_flash'])) {
                 try {
                     const d = await smsDashGet('get_sms_settings');
                     document.getElementById('dash-ego-username').value = d.username || '';
-                    document.getElementById('dash-ego-sender-id').value = d.sender_id || 'THAMANI';
                     const autoEl = document.getElementById('dash-ego-auto-receipts');
                     if (autoEl) autoEl.checked = !!d.auto_fee_receipts;
                     document.getElementById('sms-credential-state').textContent =

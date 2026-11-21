@@ -63,18 +63,16 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
                     <button type="button" id="sms-check-balance" class="rounded border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50">Check Ego SMS balance</button>
                 </div>
             </div>
-            <form id="sms-credentials-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <form id="sms-credentials-form" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 <label class="text-xs font-bold text-gray-700">Ego SMS username
                     <input id="ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
                 </label>
                 <label class="text-xs font-bold text-gray-700">Ego SMS password
                     <input id="ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Leave blank to keep saved password">
                 </label>
-                <label class="text-xs font-bold text-gray-700">Sender ID
-                    <input id="ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
-                </label>
                 <button class="rounded bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700">Save credentials</button>
             </form>
+            <p class="mt-2 text-[11px] text-gray-500">Sender ID uses the default configured by Ego SMS.</p>
             <form id="sms-test-form" class="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
                 <label class="text-xs font-bold text-gray-700">Test phone
                     <input name="test_phone" inputmode="tel" placeholder="0772 123 456" required class="mt-1 w-56 rounded border border-gray-300 px-3 py-2 text-sm">
@@ -225,7 +223,6 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
         async function loadSmsSettings() {
             const data = await smsGet('get_sms_settings');
             document.getElementById('ego-username').value = data.username || '';
-            document.getElementById('ego-sender-id').value = data.sender_id || 'THAMANI';
             document.getElementById('sms-credential-state').textContent = data.password_configured ? 'A provider password is saved. It is never displayed here.' : 'No provider password is saved.';
         }
 

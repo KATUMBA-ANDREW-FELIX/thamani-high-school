@@ -68,14 +68,11 @@ if ($action === 'save_sms_credentials') {
         $existingCredentials = get_egosms_credentials($db);
         $password = $existingCredentials['password'] ?? '';
     }
-    $senderId  = preg_replace('/[^A-Za-z0-9\-]/', '', trim($_POST['ego_sender_id'] ?? 'THAMANI'));
-    $senderId  = substr($senderId ?: 'THAMANI', 0, 11);
 
     $saved = true;
     foreach ([
         'ego_sms_username'          => $username,
         'ego_sms_password'          => $password,
-        'ego_sms_sender_id'         => $senderId,
         'ego_sms_auto_fee_receipts' => $autoFeeReceipts,
     ] as $key => $val) {
         $saved = thamani_set_setting($db, $key, $val) && $saved;
@@ -90,7 +87,6 @@ if ($action === 'get_sms_settings') {
     echo json_encode([
         'success'             => true,
         'username'            => $creds['username'] ?? '',
-        'sender_id'           => $creds['sender_id'] ?: 'THAMANI',
         'password_configured' => !empty($creds['password']),
         'auto_fee_receipts'   => !empty($creds['auto_fee_receipts']),
     ]);
@@ -126,7 +122,7 @@ if ($action === 'test_sms_credentials') {
     if (empty($creds['username']) || empty($creds['password'])) {
         echo json_encode(['success'=>false,'error'=>'Ego SMS credentials not configured. Please save credentials first.']); exit;
     }
-    $res = egosms_send($testPhone, 'Test SMS from Thamani High School Portal. If you received this, your Ego SMS integration is working correctly.', $creds['username'], $creds['password'], $creds['sender_id'] ?: 'THAMANI');
+    $res = egosms_send($testPhone, 'Test SMS from Thamani High School Portal. If you received this, your Ego SMS integration is working correctly.', $creds['username'], $creds['password']);
     echo json_encode($res);
     exit;
 }
@@ -413,7 +409,7 @@ if ($action === 'send_bulk_sms') {
     $overallOk = true;
 
     foreach ($chunks as $chunk) {
-        $res2 = egosms_send($chunk, $message, $creds['username'], $creds['password'], $creds['sender_id'] ?: 'THAMANI');
+        $res2 = egosms_send($chunk, $message, $creds['username'], $creds['password']);
         $totalSent  += $res2['sent_count'];
         $totalFailed = array_merge($totalFailed, $res2['failed'] ?? []);
         $lastRaw     = $res2['raw'];
@@ -522,7 +518,7 @@ if ($action === 'send_fee_reminder_sms') {
             number_format($bal),
             $payCode
         );
-        $res2 = egosms_send($phone, $msg, $creds['username'], $creds['password'], $creds['sender_id'] ?: 'THAMANI');
+        $res2 = egosms_send($phone, $msg, $creds['username'], $creds['password']);
         $lastRaw = $res2['raw'];
         if ($res2['success']) {
             $sentCount++;

@@ -57,7 +57,8 @@ function is_valid_ug_phone(string $phone): bool {
  *
  * Endpoint: POST https://comms.egosms.co/api/v1/json/
  * Auth:     "userdata": { "username": "...", "password": "..." }
- * Payload:  "msgdata": [ { "number": "256...", "message": "...", "senderid": "...", "priority": 1 }, ... ]
+ * Payload:  "msgdata": [ { "number": "256...", "message": "...", "priority": 1 }, ... ]
+ *           (senderid is intentionally omitted so Ego SMS uses its account default Sender ID)
  *
  * Success response: { "Status": "OK",     "Cost": 35, "MsgFollowUpUniqueCode": "..." }
  * Failure response: { "Status": "Failed", "Message": "Wrong Username or Password." }
@@ -66,7 +67,7 @@ function is_valid_ug_phone(string $phone): bool {
  * @param  string       $message     SMS body text (160 chars per part, max ~10 parts)
  * @param  string       $username    Ego SMS API username (from Settings → API Settings)
  * @param  string       $password    Ego SMS API password
- * @param  string       $senderId    Approved sender ID — max 11 alphanumeric chars (e.g. "THAMANI")
+ * @param  string       $senderId    Optional custom sender ID (leave empty to use Ego SMS default)
  * @return array {
  *     'success'    => bool,
  *     'sent_count' => int,
@@ -77,7 +78,7 @@ function is_valid_ug_phone(string $phone): bool {
  *     'cost'       => int,        // SMS units consumed (0 on failure)
  * }
  */
-function egosms_send($recipients, string $message, string $username, string $password, string $senderId = 'THAMANI'): array {
+function egosms_send($recipients, string $message, string $username, string $password, string $senderId = ''): array {
     // ── Validate cURL availability ──────────────────────────────────────────
     if (!function_exists('curl_init')) {
         return [
@@ -126,13 +127,17 @@ function egosms_send($recipients, string $message, string $username, string $pas
     // Do NOT pass a comma-separated list; pass individual objects.
     //
     $msgdata = [];
+    $senderId = trim($senderId);
     foreach ($valid as $number) {
-        $msgdata[] = [
+        $entry = [
             'number'   => $number,
             'message'  => $message,
-            'senderid' => $senderId,
             'priority' => 1,
         ];
+        if ($senderId !== '') {
+            $entry['senderid'] = $senderId;
+        }
+        $msgdata[] = $entry;
     }
 
     $payload = [
@@ -289,14 +294,13 @@ function egosms_check_balance(string $username, string $password, string $wallet
 
 /**
  * Fetch Ego SMS API credentials from school_settings (with .env fallback).
- * Returns array: ['username' => '', 'password' => '', 'sender_id' => 'THAMANI', 'auto_fee_receipts' => false]
+ * Returns array: ['username' => '', 'password' => '', 'auto_fee_receipts' => false]
  */
 function get_egosms_credentials($db): array {
-    $keys   = ['ego_sms_username', 'ego_sms_password', 'ego_sms_sender_id', 'ego_sms_auto_fee_receipts'];
+    $keys   = ['ego_sms_username', 'ego_sms_password', 'ego_sms_auto_fee_receipts'];
     $result = [
         'username'          => trim((string)(getenv('EGO_SMS_USERNAME') ?: '')),
         'password'          => trim((string)(getenv('EGO_SMS_PASSWORD') ?: '')),
-        'sender_id'         => trim((string)(getenv('EGO_SMS_SENDER_ID') ?: 'THAMANI')) ?: 'THAMANI',
         'auto_fee_receipts' => false,
     ];
 
@@ -309,11 +313,7 @@ function get_egosms_credentials($db): array {
             $row = $res ? thamani_db_fetch_assoc($res) : null;
             thamani_db_stmt_close($stmt);
             $shortKey = str_replace('ego_sms_', '', $k);
-            if ($shortKey === 'sender_id') {
-                if (!empty($row['setting_value'])) {
-                    $result['sender_id'] = $row['setting_value'];
-                }
-            } elseif ($shortKey === 'auto_fee_receipts') {
+            if ($shortKey === 'auto_fee_receipts') {
                 $result['auto_fee_receipts'] = (($row['setting_value'] ?? '0') === '1');
             } else {
                 if (isset($row['setting_value']) && $row['setting_value'] !== '') {
@@ -347,7 +347,7 @@ function egosms_send_fee_receipt($db, array $student, float $amount, float $bala
         $receiptNo,
         number_format(max(0.0, $balance))
     );
-    $res = egosms_send($phone, $msg, $creds['username'], $creds['password'], $creds['sender_id'] ?: 'THAMANI');
+    $res = egosms_send($phone, $msg, $creds['username'], $creds['password']);
     log_sms_batch($db, 0, 'system', $res['sent_count'], 'Fee Receipt', $msg, $res['success'] ? 'SUCCESS' : 'FAILED', $res['raw'] ?: $res['error']);
     return ['sent' => $res['success'], 'skipped' => false, 'error' => $res['error']];
 }

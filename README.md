@@ -101,8 +101,8 @@ The SMS Centre lets admins (and SMS-authorised teachers) send bulk SMS to saved 
 1. Log in to [comms.egosms.co](https://comms.egosms.co) → **Settings → API Settings**
 2. Copy your **API Username** and **API Password**
 3. In the admin dashboard, open the **SMS Centre** tab → **SMS Settings**
-4. Enter your username, password, and sender ID (max 11 chars, e.g. `THAMANI`)
-5. Click **Save & Test** to send a test SMS to your number
+4. Enter your username and password (Sender ID uses Ego SMS's account default automatically)
+5. Click **Save credentials**, then **Check Ego SMS Balance** or **Send test SMS**
 
 ### API Details (for reference)
 - **Endpoint:** `POST https://comms.egosms.co/api/v1/json/`
