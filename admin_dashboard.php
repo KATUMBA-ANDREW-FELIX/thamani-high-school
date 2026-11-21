@@ -133,7 +133,7 @@ $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email F
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, phone, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -678,6 +678,107 @@ if (!empty($_SESSION['admin_flash'])) {
                     <div class="flex items-center gap-2">
                         <div id="sms-notice" class="hidden rounded-lg border px-4 py-2 text-sm max-w-sm" role="status" aria-live="polite"></div>
                     </div>
+                </div>
+
+                <!-- ── Send Portal Login Credentials via SMS ─────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                            <h4 class="font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="key-round" class="w-4 h-4 text-amber-600"></i> Send Portal Login Credentials via SMS
+                            </h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Dispatch personalized portal login IDs, passwords, and PayCodes to Parents/Guardians, Teachers, Alumni Editors, or any individual via Ego SMS.</p>
+                        </div>
+                    </div>
+
+                    <form id="sms-dash-credentials-dispatch-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <label class="text-xs font-bold text-gray-700">Recipient Group
+                                <select id="cred-target-group" name="target_group" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold">
+                                    <option value="parents">Parents / Guardians (Student Portal)</option>
+                                    <option value="teachers">Teachers (Staff Portal)</option>
+                                    <option value="other">Other Person / Alumni Editor / Custom</option>
+                                </select>
+                            </label>
+
+                            <!-- Parents options -->
+                            <label id="cred-parent-class-wrap" class="text-xs font-bold text-gray-700">Filter by Class
+                                <select id="cred-class-level" name="class_level" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="ALL">All Enrolled Classes (S1–S6)</option>
+                                    <option value="Senior 1">Senior 1</option>
+                                    <option value="Senior 2">Senior 2</option>
+                                    <option value="Senior 3">Senior 3</option>
+                                    <option value="Senior 4">Senior 4</option>
+                                    <option value="Senior 5">Senior 5</option>
+                                    <option value="Senior 6">Senior 6</option>
+                                </select>
+                            </label>
+                            <label id="cred-parent-student-wrap" class="text-xs font-bold text-gray-700">Or One Specific Student/Parent
+                                <select id="cred-student-id" name="student_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="0">All in selected class</option>
+                                </select>
+                            </label>
+
+                            <!-- Teachers options -->
+                            <label id="cred-teacher-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Select Teacher(s)
+                                <select id="cred-teacher-id" name="teacher_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="0">All Active Teachers</option>
+                                </select>
+                            </label>
+
+                            <!-- Other / Custom options -->
+                            <label id="cred-other-picker-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Quick-fill from Contact / Alumni (Optional)
+                                <select id="cred-other-preset" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="">-- Type manually below or pick a saved person --</option>
+                                </select>
+                            </label>
+
+                            <!-- Password to send -->
+                            <div class="text-xs font-bold text-gray-700">Portal Password to Send
+                                <div class="mt-1 flex gap-1.5">
+                                    <input type="text" id="cred-temp-password" name="temp_password" value="Admin@2026" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+                                    <button type="button" id="cred-gen-pwd" class="rounded-lg border border-gray-300 px-2.5 py-2 text-xs font-bold hover:bg-gray-50 shrink-0" title="Generate random password">Random</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Other Person manual fields -->
+                        <div id="cred-other-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200">
+                            <input type="hidden" id="cred-alumnus-id" name="alumnus_id" value="0">
+                            <label class="text-xs font-bold text-gray-700">Recipient Name
+                                <input type="text" id="cred-recipient-name" name="recipient_name" placeholder="e.g. Eng. Mugisha David" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Phone Number <span class="text-rose-600">*</span>
+                                <input type="text" id="cred-recipient-phone" name="recipient_phone" placeholder="0772 123 456" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Login ID / Email <span class="text-rose-600">*</span>
+                                <input type="text" id="cred-login-identifier" name="login_identifier" placeholder="Email, Staff ID, or LIN" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Portal Role Label
+                                <select id="cred-role-label" name="role_label" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
+                                    <option value="Alumni Page Editor">Alumni Page Editor</option>
+                                    <option value="Staff Portal">Staff Portal</option>
+                                    <option value="Student Portal">Student Portal</option>
+                                    <option value="Admin Portal">Admin Portal</option>
+                                    <option value="Portal Access">General Portal Access</option>
+                                </select>
+                            </label>
+                            <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
+                                <input type="checkbox" id="cred-grant-alumni-editor" name="grant_alumni_editor" value="1" class="rounded border-gray-300 text-amber-600">
+                                <span>Also activate this Alumnus in the database as an <strong>Alumni Page Editor</strong> with the password above</span>
+                            </label>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <label id="cred-sync-pwd-wrap" class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                                <input type="checkbox" id="cred-sync-password" name="sync_password" value="1" checked class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                                <span>Set / reset recipient portal password(s) to the password above and require password change on first login</span>
+                            </label>
+                            <button type="submit" id="cred-send-btn" class="rounded-lg bg-amber-500 hover:bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 transition flex items-center gap-2 shadow-sm">
+                                <i data-lucide="key-round" class="w-4 h-4"></i> Send Portal Credentials SMS
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- ── Contact Book ────────────────────────────────────────────── -->
@@ -2222,10 +2323,14 @@ if (!empty($_SESSION['admin_flash'])) {
                             <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
                             <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number (SMS)</label>
+                            <input type="tel" name="phone" placeholder="0772 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
@@ -2386,10 +2491,14 @@ if (!empty($_SESSION['admin_flash'])) {
                             <input type="text" name="staff_id" id="edit_staff_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
                             <input type="email" name="email" id="edit_email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number (SMS)</label>
+                            <input type="tel" name="phone" id="edit_phone" placeholder="0772 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
@@ -3299,6 +3408,7 @@ if (!empty($_SESSION['admin_flash'])) {
             document.getElementById('edit_full_name').value = t.full_name || '';
             document.getElementById('edit_staff_id').value = t.staff_id || '';
             document.getElementById('edit_email').value = t.email || '';
+            if (document.getElementById('edit_phone')) document.getElementById('edit_phone').value = t.phone || '';
             document.getElementById('edit_department').value = t.department || '';
             document.getElementById('edit_is_active').value = t.is_active !== undefined ? t.is_active : 1;
 
@@ -4462,9 +4572,104 @@ if (!empty($_SESSION['admin_flash'])) {
                 }
             });
 
+            // ── Portal Credentials Dispatcher ─────────────────────────────────
+            let credTargets = {students: [], teachers: [], alumni: []};
+            async function dashLoadCredentialTargets() {
+                try {
+                    const d = await smsDashGet('get_credential_targets');
+                    credTargets = {
+                        students: d.students || [],
+                        teachers: d.teachers || [],
+                        alumni:   d.alumni || []
+                    };
+                    populateCredentialPickers();
+                } catch (e) {}
+            }
+
+            function populateCredentialPickers() {
+                const cls = document.getElementById('cred-class-level')?.value || 'ALL';
+                const stSel = document.getElementById('cred-student-id');
+                if (stSel) {
+                    const filtered = credTargets.students.filter(s => cls === 'ALL' || s.class_level === cls);
+                    const withPhone = filtered.filter(s => s.normalized_phone).length;
+                    stSel.innerHTML = `<option value="0">All in selection (${withPhone} with valid phone)</option>` +
+                        filtered.map(s => `<option value="${Number(s.id)}">${smsEsc(s.full_name)} (${smsEsc(s.class_level)}) · LIN: ${smsEsc(s.lin_number || 'N/A')} · ${smsEsc(s.guardian_phone || 'No phone')}</option>`).join('');
+                }
+
+                const tSel = document.getElementById('cred-teacher-id');
+                if (tSel) {
+                    const withPhone = credTargets.teachers.filter(t => t.normalized_phone).length;
+                    tSel.innerHTML = `<option value="0">All Active Teachers (${withPhone} of ${credTargets.teachers.length} with valid phone)</option>` +
+                        credTargets.teachers.map(t => `<option value="${Number(t.id)}">${smsEsc(t.full_name)} · ${smsEsc(t.staff_id)} · ${smsEsc(t.phone || 'No phone')}</option>`).join('');
+                }
+
+                const oSel = document.getElementById('cred-other-preset');
+                if (oSel) {
+                    const alOpts = credTargets.alumni.map(a =>
+                        `<option value="alumni:${Number(a.id)}" data-name="${smsEsc(a.name)}" data-phone="${smsEsc(a.phone || '')}" data-login="${smsEsc(a.email || '')}" data-role="Alumni Page Editor" data-alumnus="${Number(a.id)}">[Alumni] ${smsEsc(a.name)} · ${smsEsc(a.email || 'No email')} · ${smsEsc(a.phone || 'No phone')}</option>`
+                    ).join('');
+                    const ctOpts = smsAllContacts.map(c =>
+                        `<option value="contact:${Number(c.id)}" data-name="${smsEsc(c.full_name)}" data-phone="${smsEsc(c.phone || '')}" data-login="" data-role="Portal Access" data-alumnus="0">[${smsEsc(c.category)}] ${smsEsc(c.full_name)} · ${smsEsc(c.phone)}</option>`
+                    ).join('');
+                    oSel.innerHTML = '<option value="">-- Type manually below or pick a saved person --</option>' + alOpts + ctOpts;
+                }
+            }
+
+            document.getElementById('cred-target-group')?.addEventListener('change', ev => {
+                const g = ev.target.value;
+                document.getElementById('cred-parent-class-wrap')?.classList.toggle('hidden', g !== 'parents');
+                document.getElementById('cred-parent-student-wrap')?.classList.toggle('hidden', g !== 'parents');
+                document.getElementById('cred-teacher-wrap')?.classList.toggle('hidden', g !== 'teachers');
+                document.getElementById('cred-other-picker-wrap')?.classList.toggle('hidden', g !== 'other');
+                document.getElementById('cred-other-fields')?.classList.toggle('hidden', g !== 'other');
+                document.getElementById('cred-sync-pwd-wrap')?.classList.toggle('hidden', g === 'other');
+            });
+
+            document.getElementById('cred-class-level')?.addEventListener('change', populateCredentialPickers);
+
+            document.getElementById('cred-other-preset')?.addEventListener('change', ev => {
+                const opt = ev.target.selectedOptions[0];
+                if (!opt || !opt.value) return;
+                document.getElementById('cred-recipient-name').value = opt.dataset.name || '';
+                document.getElementById('cred-recipient-phone').value = opt.dataset.phone || '';
+                if (opt.dataset.login) document.getElementById('cred-login-identifier').value = opt.dataset.login;
+                if (opt.dataset.role) document.getElementById('cred-role-label').value = opt.dataset.role;
+                document.getElementById('cred-alumnus-id').value = opt.dataset.alumnus || '0';
+                document.getElementById('cred-grant-alumni-editor').checked = Number(opt.dataset.alumnus || 0) > 0;
+            });
+
+            document.getElementById('cred-gen-pwd')?.addEventListener('click', () => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let out = 'Thm@';
+                for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+                document.getElementById('cred-temp-password').value = out;
+            });
+
+            document.getElementById('sms-dash-credentials-dispatch-form')?.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                const f = ev.currentTarget;
+                const vals = Object.fromEntries(new FormData(f));
+                vals.sync_password = document.getElementById('cred-sync-password')?.checked ? '1' : '0';
+                vals.grant_alumni_editor = document.getElementById('cred-grant-alumni-editor')?.checked ? '1' : '0';
+                if (!window.confirm('Send portal login credentials via Ego SMS to the selected recipient(s)?')) return;
+
+                const btn = document.getElementById('cred-send-btn');
+                const orig = btn ? btn.innerHTML : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Sending Credentials…'; }
+                try {
+                    const d = await smsDashPost('send_portal_credentials', vals);
+                    showSmsMsg(d.message || 'Credentials sent.', !!d.success);
+                    await dashLoadLogs();
+                } catch (e) {
+                    showSmsMsg(e.message || 'Failed to send credentials.');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+                }
+            });
+
             // ── Initial load: trigger when SMS tab is active ───────────────────
             function smsDashInit() {
-                dashLoadContacts().catch(e => showSmsMsg(e.message));
+                dashLoadContacts().then(() => dashLoadCredentialTargets()).catch(e => showSmsMsg(e.message));
                 dashLoadLogs().catch(() => {});
             }
 

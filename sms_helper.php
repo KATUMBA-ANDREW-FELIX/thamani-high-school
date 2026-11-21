@@ -223,6 +223,139 @@ function egosms_send($recipients, string $message, string $username, string $pas
 }
 
 /**
+ * Send personalized SMS messages (different message text per recipient) in a single
+ * Ego SMS JSON-RPC batch request (up to 1,000 messages per chunk).
+ *
+ * @param array  $items     List of ['phone' => '...', 'message' => '...']
+ * @param string $username  Ego SMS API username
+ * @param string $password  Ego SMS API password
+ * @param string $senderId  Optional custom sender ID (empty = use Ego SMS default)
+ */
+function egosms_send_personalized(array $items, string $username, string $password, string $senderId = ''): array {
+    if (!function_exists('curl_init')) {
+        return [
+            'success'    => false,
+            'sent_count' => 0,
+            'failed'     => [],
+            'raw'        => '',
+            'error'      => 'PHP cURL extension is required to send SMS.',
+            'tracking'   => '',
+            'cost'       => 0,
+        ];
+    }
+
+    $senderId = trim($senderId);
+    $msgdata  = [];
+    $failed   = [];
+
+    foreach ($items as $item) {
+        $rawPhone = (string)($item['phone'] ?? '');
+        $msgText  = trim((string)($item['message'] ?? ''));
+        if ($msgText === '') continue;
+
+        $norm = normalize_ug_phone($rawPhone);
+        if (!is_valid_ug_phone($norm)) {
+            $failed[] = $rawPhone ?: '(empty)';
+            continue;
+        }
+        $entry = [
+            'number'   => $norm,
+            'message'  => $msgText,
+            'priority' => 1,
+        ];
+        if ($senderId !== '') {
+            $entry['senderid'] = $senderId;
+        }
+        $msgdata[] = $entry;
+    }
+
+    if (empty($msgdata)) {
+        return [
+            'success'    => false,
+            'sent_count' => 0,
+            'failed'     => $failed,
+            'raw'        => '',
+            'error'      => 'No recipients with valid Ugandan phone numbers (2567XXXXXXXX) were found.',
+            'tracking'   => '',
+            'cost'       => 0,
+        ];
+    }
+
+    $url = trim((string)(getenv('EGO_SMS_API_URL') ?: 'https://comms.egosms.co/api/v1/json/'));
+    $chunks = array_chunk($msgdata, 1000);
+    $totalSent = 0;
+    $totalCost = 0;
+    $lastRaw = '';
+    $lastErr = '';
+    $lastTracking = '';
+
+    foreach ($chunks as $chunk) {
+        $payload = [
+            'method'   => 'SendSms',
+            'userdata' => [
+                'username' => $username,
+                'password' => $password,
+            ],
+            'msgdata'  => $chunk,
+        ];
+        $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $jsonPayload,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'Content-Length: ' . strlen($jsonPayload),
+            ],
+            CURLOPT_TIMEOUT        => 45,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_USERAGENT      => 'ThamaniSchoolPortal/1.0',
+        ]);
+
+        $raw      = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr  = curl_error($ch);
+        unset($ch);
+
+        if ($curlErr || $raw === false) {
+            $lastErr = 'Network error connecting to Ego SMS: ' . $curlErr;
+            foreach ($chunk as $c) $failed[] = $c['number'];
+            continue;
+        }
+
+        $lastRaw   = (string)$raw;
+        $decoded   = json_decode($lastRaw, true);
+        $apiStatus = strtoupper((string)($decoded['Status'] ?? $decoded['status'] ?? ''));
+
+        if ($apiStatus === 'OK') {
+            $totalSent += count($chunk);
+            $totalCost += (int)($decoded['Cost'] ?? 0);
+            if (!empty($decoded['MsgFollowUpUniqueCode'])) {
+                $lastTracking = $decoded['MsgFollowUpUniqueCode'];
+            }
+        } else {
+            $lastErr = $decoded['Message'] ?? $decoded['message'] ?? "HTTP {$httpCode}: " . substr($lastRaw, 0, 240);
+            foreach ($chunk as $c) $failed[] = $c['number'];
+        }
+    }
+
+    return [
+        'success'    => $totalSent > 0,
+        'sent_count' => $totalSent,
+        'failed'     => $failed,
+        'raw'        => $lastRaw,
+        'error'      => $totalSent > 0 ? '' : $lastErr,
+        'tracking'   => $lastTracking,
+        'cost'       => $totalCost,
+    ];
+}
+
+/**
  * Check live credit balance on Ego SMS (Pahappa Comms) JSON-RPC API.
  * Endpoint: POST https://comms.egosms.co/api/v1/json/
  * Payload:  { "method": "Balance", "userdata": { "username": "...", "password": "..." }, "walletType": "Local" }

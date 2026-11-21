@@ -52,6 +52,90 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
         <div id="sms-notice" class="hidden rounded-lg border px-4 py-3 text-sm" role="status" aria-live="polite"></div>
 
         <?php if ($isAdmin): ?>
+        <section class="bg-white border border-amber-200 rounded-lg p-5 space-y-4">
+            <div>
+                <h2 class="font-bold text-lg">Send portal login credentials</h2>
+                <p class="text-xs text-gray-500 mt-1">Dispatch personalized portal login IDs, passwords, and PayCodes to Parents/Guardians, Teachers, Alumni Editors, or any person via Ego SMS.</p>
+            </div>
+            <form id="sms-credentials-dispatch-form" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <label class="text-xs font-bold text-gray-700">Recipient group
+                        <select id="sms-cred-group" name="target_group" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm font-semibold">
+                            <option value="parents">Parents / Guardians (Student Portal)</option>
+                            <option value="teachers">Teachers (Staff Portal)</option>
+                            <option value="other">Other Person / Alumni Editor / Custom</option>
+                        </select>
+                    </label>
+                    <label id="sms-cred-class-wrap" class="text-xs font-bold text-gray-700">Filter by class
+                        <select id="sms-cred-class" name="class_level" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                            <option value="ALL">All Enrolled Classes (S1–S6)</option>
+                            <option value="Senior 1">Senior 1</option>
+                            <option value="Senior 2">Senior 2</option>
+                            <option value="Senior 3">Senior 3</option>
+                            <option value="Senior 4">Senior 4</option>
+                            <option value="Senior 5">Senior 5</option>
+                            <option value="Senior 6">Senior 6</option>
+                        </select>
+                    </label>
+                    <label id="sms-cred-student-wrap" class="text-xs font-bold text-gray-700">Or specific student/parent
+                        <select id="sms-cred-student" name="student_id" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                            <option value="0">All in selected class</option>
+                        </select>
+                    </label>
+                    <label id="sms-cred-teacher-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Select teacher(s)
+                        <select id="sms-cred-teacher" name="teacher_id" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                            <option value="0">All Active Teachers</option>
+                        </select>
+                    </label>
+                    <label id="sms-cred-other-picker-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Quick-fill from contact / alumni
+                        <select id="sms-cred-other-preset" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                            <option value="">-- Type manually below or pick a saved person --</option>
+                        </select>
+                    </label>
+                    <div class="text-xs font-bold text-gray-700">Portal password to send
+                        <div class="mt-1 flex gap-1.5">
+                            <input type="text" id="sms-cred-pwd" name="temp_password" value="Admin@2026" required class="w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono">
+                            <button type="button" id="sms-cred-gen-pwd" class="rounded border border-gray-300 px-2.5 py-2 text-xs font-bold hover:bg-gray-50 shrink-0">Random</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sms-cred-other-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded bg-gray-50 border border-gray-200">
+                    <input type="hidden" id="sms-cred-alumnus-id" name="alumnus_id" value="0">
+                    <label class="text-xs font-bold text-gray-700">Recipient name
+                        <input type="text" id="sms-cred-name" name="recipient_name" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white">
+                    </label>
+                    <label class="text-xs font-bold text-gray-700">Phone number *
+                        <input type="text" id="sms-cred-phone" name="recipient_phone" placeholder="0772 123 456" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                    </label>
+                    <label class="text-xs font-bold text-gray-700">Login ID / Email *
+                        <input type="text" id="sms-cred-login" name="login_identifier" placeholder="Email, Staff ID, or LIN" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                    </label>
+                    <label class="text-xs font-bold text-gray-700">Portal role label
+                        <select id="sms-cred-role" name="role_label" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white">
+                            <option value="Alumni Page Editor">Alumni Page Editor</option>
+                            <option value="Staff Portal">Staff Portal</option>
+                            <option value="Student Portal">Student Portal</option>
+                            <option value="Admin Portal">Admin Portal</option>
+                            <option value="Portal Access">General Portal Access</option>
+                        </select>
+                    </label>
+                    <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
+                        <input type="checkbox" id="sms-cred-grant-alumni" name="grant_alumni_editor" value="1" class="rounded border-gray-300">
+                        <span>Also activate this Alumnus in the database as an <strong>Alumni Page Editor</strong> with the password above</span>
+                    </label>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <label id="sms-cred-sync-wrap" class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                        <input type="checkbox" id="sms-cred-sync" name="sync_password" value="1" checked class="rounded border-gray-300">
+                        <span>Set / reset recipient portal password(s) to the password above and require password change on first login</span>
+                    </label>
+                    <button type="submit" id="sms-cred-send" class="rounded bg-amber-500 px-4 py-2.5 text-sm font-bold text-gray-950 hover:bg-amber-400">Send portal credentials SMS</button>
+                </div>
+            </form>
+        </section>
+        <?php endif; ?>
+
+        <?php if ($isAdmin): ?>
         <section class="bg-white border border-gray-200 rounded-lg p-5">
             <div class="mb-4">
                 <h2 class="font-bold text-lg">Contact book</h2>
@@ -221,7 +305,79 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
             } catch (error) { showSmsNotice(error.message); }
         });
 
+        let smsCredTargets = {students: [], teachers: [], alumni: []};
+        async function loadSmsCredentialTargets() {
+            if (!SMS_IS_ADMIN) return;
+            const d = await smsGet('get_credential_targets');
+            smsCredTargets = {students: d.students || [], teachers: d.teachers || [], alumni: d.alumni || []};
+            populateSmsCredPickers();
+        }
+        function populateSmsCredPickers() {
+            const cls = document.getElementById('sms-cred-class')?.value || 'ALL';
+            const stSel = document.getElementById('sms-cred-student');
+            if (stSel) {
+                const filtered = smsCredTargets.students.filter(s => cls === 'ALL' || s.class_level === cls);
+                const withPhone = filtered.filter(s => s.normalized_phone).length;
+                stSel.innerHTML = `<option value="0">All in selection (${withPhone} with valid phone)</option>` +
+                    filtered.map(s => `<option value="${Number(s.id)}">${smsEscape(s.full_name)} (${smsEscape(s.class_level)}) · LIN: ${smsEscape(s.lin_number || 'N/A')} · ${smsEscape(s.guardian_phone || 'No phone')}</option>`).join('');
+            }
+            const tSel = document.getElementById('sms-cred-teacher');
+            if (tSel) {
+                const withPhone = smsCredTargets.teachers.filter(t => t.normalized_phone).length;
+                tSel.innerHTML = `<option value="0">All Active Teachers (${withPhone} of ${smsCredTargets.teachers.length} with valid phone)</option>` +
+                    smsCredTargets.teachers.map(t => `<option value="${Number(t.id)}">${smsEscape(t.full_name)} · ${smsEscape(t.staff_id)} · ${smsEscape(t.phone || 'No phone')}</option>`).join('');
+            }
+            const oSel = document.getElementById('sms-cred-other-preset');
+            if (oSel) {
+                const alOpts = smsCredTargets.alumni.map(a =>
+                    `<option value="alumni:${Number(a.id)}" data-name="${smsEscape(a.name)}" data-phone="${smsEscape(a.phone || '')}" data-login="${smsEscape(a.email || '')}" data-role="Alumni Page Editor" data-alumnus="${Number(a.id)}">[Alumni] ${smsEscape(a.name)} · ${smsEscape(a.email || 'No email')} · ${smsEscape(a.phone || 'No phone')}</option>`
+                ).join('');
+                const ctOpts = smsContacts.map(c =>
+                    `<option value="contact:${Number(c.id)}" data-name="${smsEscape(c.full_name)}" data-phone="${smsEscape(c.phone || '')}" data-login="" data-role="Portal Access" data-alumnus="0">[${smsEscape(c.category)}] ${smsEscape(c.full_name)} · ${smsEscape(c.phone)}</option>`
+                ).join('');
+                oSel.innerHTML = '<option value="">-- Type manually below or pick a saved person --</option>' + alOpts + ctOpts;
+            }
+        }
+
         if (SMS_IS_ADMIN) {
+            document.getElementById('sms-cred-group').addEventListener('change', ev => {
+                const g = ev.target.value;
+                document.getElementById('sms-cred-class-wrap').classList.toggle('hidden', g !== 'parents');
+                document.getElementById('sms-cred-student-wrap').classList.toggle('hidden', g !== 'parents');
+                document.getElementById('sms-cred-teacher-wrap').classList.toggle('hidden', g !== 'teachers');
+                document.getElementById('sms-cred-other-picker-wrap').classList.toggle('hidden', g !== 'other');
+                document.getElementById('sms-cred-other-fields').classList.toggle('hidden', g !== 'other');
+                document.getElementById('sms-cred-sync-wrap').classList.toggle('hidden', g === 'other');
+            });
+            document.getElementById('sms-cred-class').addEventListener('change', populateSmsCredPickers);
+            document.getElementById('sms-cred-other-preset').addEventListener('change', ev => {
+                const opt = ev.target.selectedOptions[0];
+                if (!opt || !opt.value) return;
+                document.getElementById('sms-cred-name').value = opt.dataset.name || '';
+                document.getElementById('sms-cred-phone').value = opt.dataset.phone || '';
+                if (opt.dataset.login) document.getElementById('sms-cred-login').value = opt.dataset.login;
+                if (opt.dataset.role) document.getElementById('sms-cred-role').value = opt.dataset.role;
+                document.getElementById('sms-cred-alumnus-id').value = opt.dataset.alumnus || '0';
+                document.getElementById('sms-cred-grant-alumni').checked = Number(opt.dataset.alumnus || 0) > 0;
+            });
+            document.getElementById('sms-cred-gen-pwd').addEventListener('click', () => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let out = 'Thm@';
+                for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+                document.getElementById('sms-cred-pwd').value = out;
+            });
+            document.getElementById('sms-credentials-dispatch-form').addEventListener('submit', async event => {
+                event.preventDefault();
+                if (!window.confirm('Send portal login credentials via Ego SMS to the selected recipient(s)?')) return;
+                const values = Object.fromEntries(new FormData(event.currentTarget));
+                values.sync_password = document.getElementById('sms-cred-sync').checked ? '1' : '0';
+                values.grant_alumni_editor = document.getElementById('sms-cred-grant-alumni').checked ? '1' : '0';
+                try {
+                    const result = await smsPost('send_portal_credentials', values);
+                    showSmsNotice(result.message, result.success);
+                    await loadSmsLogs();
+                } catch (error) { showSmsNotice(error.message); }
+            });
             document.getElementById('sms-contact-form').addEventListener('submit', async event => {
                 event.preventDefault();
                 try {
@@ -277,7 +433,7 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
         (async () => {
             try {
                 await loadSmsContacts();
-                if (SMS_IS_ADMIN) await loadSmsLogs();
+                if (SMS_IS_ADMIN) await Promise.all([loadSmsCredentialTargets(), loadSmsLogs()]);
             } catch (error) { showSmsNotice(error.message); }
         })();
     </script>

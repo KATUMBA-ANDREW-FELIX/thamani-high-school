@@ -557,6 +557,319 @@ if ($action === 'get_sms_logs') {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Fetch Portal Credential Targets (Parents/Students, Teachers, Alumni)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'get_credential_targets') {
+    if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
+
+    // Map teacher phones from sms_contacts as fallback when teachers.phone is blank
+    $contactTeacherPhones = [];
+    $ctRes = thamani_db_query($db, "SELECT full_name, phone FROM sms_contacts WHERE category = 'Teachers' AND is_active = 1");
+    if ($ctRes) {
+        while ($cr = thamani_db_fetch_assoc($ctRes)) {
+            $key = strtolower(trim((string)($cr['full_name'] ?? '')));
+            if ($key !== '' && !empty($cr['phone'])) {
+                $contactTeacherPhones[$key] = $cr['phone'];
+            }
+        }
+    }
+
+    $students = [];
+    $sRes = thamani_db_query($db, "SELECT id, full_name, class_level, stream, lin_number, pay_code, guardian_name, guardian_phone FROM students WHERE status = 'Enrolled' ORDER BY class_level ASC, full_name ASC");
+    if ($sRes) {
+        while ($sr = thamani_db_fetch_assoc($sRes)) {
+            $norm = normalize_ug_phone((string)($sr['guardian_phone'] ?? ''));
+            $sr['normalized_phone'] = is_valid_ug_phone($norm) ? $norm : '';
+            $students[] = $sr;
+        }
+    }
+
+    $teachers = [];
+    $tRes = thamani_db_query($db, "SELECT id, staff_id, full_name, email, phone, department FROM teachers WHERE is_active = 1 ORDER BY full_name ASC");
+    if ($tRes) {
+        while ($tr = thamani_db_fetch_assoc($tRes)) {
+            $rawP = trim((string)($tr['phone'] ?? ''));
+            if ($rawP === '') {
+                $lookupKey = strtolower(trim((string)($tr['full_name'] ?? '')));
+                $rawP = $contactTeacherPhones[$lookupKey] ?? '';
+            }
+            $norm = normalize_ug_phone($rawP);
+            $tr['phone'] = $rawP;
+            $tr['normalized_phone'] = is_valid_ug_phone($norm) ? $norm : '';
+            $teachers[] = $tr;
+        }
+    }
+
+    $alumni = [];
+    $aRes = thamani_db_query($db, "SELECT id, name, year, email, phone, is_page_editor, editor_active FROM alumni ORDER BY id DESC");
+    if ($aRes) {
+        while ($ar = thamani_db_fetch_assoc($aRes)) {
+            $norm = normalize_ug_phone((string)($ar['phone'] ?? ''));
+            $ar['normalized_phone'] = is_valid_ug_phone($norm) ? $norm : '';
+            $alumni[] = $ar;
+        }
+    }
+
+    echo json_encode([
+        'success'  => true,
+        'students' => $students,
+        'teachers' => $teachers,
+        'alumni'   => $alumni,
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Send Portal Login Credentials via Bulk / Individual SMS (Admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'send_portal_credentials') {
+    if (!$isAdmin) { echo json_encode(['success'=>false,'error'=>'Admin only']); exit; }
+
+    $creds = get_egosms_credentials($db);
+    if (empty($creds['username']) || empty($creds['password'])) {
+        echo json_encode(['success'=>false,'error'=>'Ego SMS credentials are not configured in .env (EGO_SMS_USERNAME / EGO_SMS_PASSWORD).']);
+        exit;
+    }
+
+    $targetGroup   = trim((string)($_POST['target_group'] ?? 'parents')); // parents | teachers | other
+    $tempPassword  = trim((string)($_POST['temp_password'] ?? 'Admin@2026'));
+    if ($tempPassword === '') $tempPassword = 'Admin@2026';
+    $syncPassword  = (($_POST['sync_password'] ?? '1') === '1');
+
+    $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        || ((int)($_SERVER['SERVER_PORT'] ?? 80) === 443);
+    $scheme = $https ? 'https' : 'http';
+    $host   = trim((string)($_SERVER['HTTP_HOST'] ?? 'thamaniacademy.work.gd'));
+    $baseDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+    $portalUrl = "{$scheme}://{$host}{$baseDir}/login.php";
+
+    $batchItems  = [];
+    $skipped     = 0;
+    $updatedPwds = 0;
+    $catLabel    = 'Credentials';
+
+    // 1. PARENTS / STUDENTS PORTAL CREDENTIALS
+    if ($targetGroup === 'parents') {
+        $studentId  = (int)($_POST['student_id'] ?? 0);
+        $classLevel = trim((string)($_POST['class_level'] ?? 'ALL'));
+        $rows = [];
+
+        if ($studentId > 0) {
+            $st = thamani_db_prepare($db, "SELECT id, full_name, class_level, lin_number, pay_code, guardian_name, guardian_phone, password_hash FROM students WHERE id = ? LIMIT 1");
+            if ($st) {
+                thamani_db_stmt_bind_param($st, 'i', $studentId);
+                thamani_db_stmt_execute($st);
+                $r = thamani_db_stmt_get_result($st);
+                if ($r && $row = thamani_db_fetch_assoc($r)) $rows[] = $row;
+                thamani_db_stmt_close($st);
+            }
+            $catLabel = 'Credentials (Parent)';
+        } elseif ($classLevel !== '' && $classLevel !== 'ALL') {
+            $st = thamani_db_prepare($db, "SELECT id, full_name, class_level, lin_number, pay_code, guardian_name, guardian_phone, password_hash FROM students WHERE status = 'Enrolled' AND class_level = ? ORDER BY full_name ASC");
+            if ($st) {
+                thamani_db_stmt_bind_param($st, 's', $classLevel);
+                thamani_db_stmt_execute($st);
+                $r = thamani_db_stmt_get_result($st);
+                if ($r) while ($row = thamani_db_fetch_assoc($r)) $rows[] = $row;
+                thamani_db_stmt_close($st);
+            }
+            $catLabel = "Credentials ({$classLevel} Parents)";
+        } else {
+            $r = thamani_db_query($db, "SELECT id, full_name, class_level, lin_number, pay_code, guardian_name, guardian_phone, password_hash FROM students WHERE status = 'Enrolled' ORDER BY class_level ASC, full_name ASC");
+            if ($r) while ($row = thamani_db_fetch_assoc($r)) $rows[] = $row;
+            $catLabel = 'Credentials (All Parents)';
+        }
+
+        if (empty($rows)) {
+            echo json_encode(['success'=>false,'error'=>'No matching enrolled students found.']);
+            exit;
+        }
+
+        $newHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+        foreach ($rows as $row) {
+            $phone = normalize_ug_phone((string)($row['guardian_phone'] ?? ''));
+            $lin   = trim((string)($row['lin_number'] ?? ''));
+            if (!is_valid_ug_phone($phone) || $lin === '') {
+                $skipped++;
+                continue;
+            }
+
+            // Initialize or reset student portal password so credentials in SMS are guaranteed valid
+            if ($syncPassword || empty($row['password_hash'])) {
+                $uStmt = thamani_db_prepare($db, "UPDATE students SET password_hash = ?, must_change_password = 1, account_active = 1 WHERE id = ?");
+                if ($uStmt) {
+                    $sid = (int)$row['id'];
+                    thamani_db_stmt_bind_param($uStmt, 'si', $newHash, $sid);
+                    if (thamani_db_stmt_execute($uStmt)) $updatedPwds++;
+                    thamani_db_stmt_close($uStmt);
+                }
+            }
+
+            $gName = trim((string)($row['guardian_name'] ?: 'Parent/Guardian'));
+            $sName = trim((string)$row['full_name']);
+            $cLvl  = trim((string)$row['class_level']);
+            $pCode = trim((string)($row['pay_code'] ?? ''));
+            $pcPart = $pCode !== '' ? " Fees PayCode: {$pCode}." : '';
+
+            $msg = "Thamani High School Portal: Dear {$gName}, access {$sName}'s ({$cLvl}) portal at {$portalUrl} . Login ID (LIN): {$lin} , Password: {$tempPassword} .{$pcPart} Change password on first login.";
+            $batchItems[] = ['phone' => $phone, 'message' => $msg];
+        }
+    }
+    // 2. TEACHERS PORTAL CREDENTIALS
+    elseif ($targetGroup === 'teachers') {
+        $teacherId = (int)($_POST['teacher_id'] ?? 0);
+
+        // Fallback phones from sms_contacts
+        $contactTeacherPhones = [];
+        $ctRes = thamani_db_query($db, "SELECT full_name, phone FROM sms_contacts WHERE category = 'Teachers' AND is_active = 1");
+        if ($ctRes) {
+            while ($cr = thamani_db_fetch_assoc($ctRes)) {
+                $k = strtolower(trim((string)($cr['full_name'] ?? '')));
+                if ($k !== '' && !empty($cr['phone'])) $contactTeacherPhones[$k] = $cr['phone'];
+            }
+        }
+
+        $rows = [];
+        if ($teacherId > 0) {
+            $st = thamani_db_prepare($db, "SELECT id, staff_id, full_name, email, phone FROM teachers WHERE id = ? AND is_active = 1 LIMIT 1");
+            if ($st) {
+                thamani_db_stmt_bind_param($st, 'i', $teacherId);
+                thamani_db_stmt_execute($st);
+                $r = thamani_db_stmt_get_result($st);
+                if ($r && $row = thamani_db_fetch_assoc($r)) $rows[] = $row;
+                thamani_db_stmt_close($st);
+            }
+            $catLabel = 'Credentials (Teacher)';
+        } else {
+            $r = thamani_db_query($db, "SELECT id, staff_id, full_name, email, phone FROM teachers WHERE is_active = 1 ORDER BY full_name ASC");
+            if ($r) while ($row = thamani_db_fetch_assoc($r)) $rows[] = $row;
+            $catLabel = 'Credentials (All Teachers)';
+        }
+
+        if (empty($rows)) {
+            echo json_encode(['success'=>false,'error'=>'No active teachers found.']);
+            exit;
+        }
+
+        $newHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+        foreach ($rows as $row) {
+            $rawPhone = trim((string)($row['phone'] ?? ''));
+            if ($rawPhone === '') {
+                $k = strtolower(trim((string)($row['full_name'] ?? '')));
+                $rawPhone = $contactTeacherPhones[$k] ?? '';
+            }
+            $phone = normalize_ug_phone($rawPhone);
+            if (!is_valid_ug_phone($phone)) {
+                $skipped++;
+                continue;
+            }
+
+            if ($syncPassword) {
+                $uStmt = thamani_db_prepare($db, "UPDATE teachers SET password_hash = ?, must_change_password = 1 WHERE id = ?");
+                if ($uStmt) {
+                    $tid = (int)$row['id'];
+                    thamani_db_stmt_bind_param($uStmt, 'si', $newHash, $tid);
+                    if (thamani_db_stmt_execute($uStmt)) $updatedPwds++;
+                    thamani_db_stmt_close($uStmt);
+                }
+            }
+
+            $tName   = trim((string)$row['full_name']);
+            $staffId = trim((string)$row['staff_id']);
+            $tEmail  = trim((string)$row['email']);
+            $msg = "Thamani High School Staff Portal: Dear {$tName}, sign in at {$portalUrl} . Staff ID: {$staffId} (or Email: {$tEmail}), Password: {$tempPassword} . Please change your password on first login.";
+            $batchItems[] = ['phone' => $phone, 'message' => $msg];
+        }
+    }
+    // 3. OTHER PERSON / ALUMNI EDITOR / CUSTOM RECIPIENT
+    elseif ($targetGroup === 'other') {
+        $recipientName = trim((string)($_POST['recipient_name'] ?? 'User'));
+        $rawPhone      = trim((string)($_POST['recipient_phone'] ?? ''));
+        $loginId       = trim((string)($_POST['login_identifier'] ?? ''));
+        $roleLabel     = trim((string)($_POST['role_label'] ?? 'Portal Access'));
+        $alumnusId     = (int)($_POST['alumnus_id'] ?? 0);
+        $makeAlumniEditor = (($_POST['grant_alumni_editor'] ?? '0') === '1');
+
+        $phone = normalize_ug_phone($rawPhone);
+        if (!is_valid_ug_phone($phone)) {
+            echo json_encode(['success'=>false,'error'=>'Please provide a valid Ugandan mobile number (e.g. 0772 123 456).']);
+            exit;
+        }
+        if ($loginId === '') {
+            echo json_encode(['success'=>false,'error'=>'Please enter the Login ID or Email for this person.']);
+            exit;
+        }
+
+        // If granting Alumni Page Editor access, update the alumni record password hash & editor flags
+        if ($makeAlumniEditor) {
+            $newHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+            if ($alumnusId > 0) {
+                $uAl = thamani_db_prepare($db, "UPDATE alumni SET email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(?, ''), phone), editor_password_hash = ?, is_page_editor = 1, editor_active = 1 WHERE id = ?");
+                if ($uAl) {
+                    thamani_db_stmt_bind_param($uAl, 'sssi', $loginId, $phone, $newHash, $alumnusId);
+                    if (thamani_db_stmt_execute($uAl)) $updatedPwds++;
+                    thamani_db_stmt_close($uAl);
+                }
+            } else {
+                $uAl = thamani_db_prepare($db, "UPDATE alumni SET editor_password_hash = ?, is_page_editor = 1, editor_active = 1 WHERE LOWER(email) = LOWER(?)");
+                if ($uAl) {
+                    thamani_db_stmt_bind_param($uAl, 'ss', $newHash, $loginId);
+                    if (thamani_db_stmt_execute($uAl)) $updatedPwds++;
+                    thamani_db_stmt_close($uAl);
+                }
+            }
+        }
+
+        $nameDisp = $recipientName !== '' ? $recipientName : 'User';
+        $msg = "Thamani High School ({$roleLabel}): Dear {$nameDisp}, sign in at {$portalUrl} . Login ID: {$loginId} , Password: {$tempPassword} .";
+        $batchItems[] = ['phone' => $phone, 'message' => $msg];
+        $catLabel = "Credentials ({$roleLabel})";
+    } else {
+        echo json_encode(['success'=>false,'error'=>'Invalid target group.']);
+        exit;
+    }
+
+    if (empty($batchItems)) {
+        echo json_encode([
+            'success' => false,
+            'error'   => "No recipients with valid Ugandan phone numbers were found ({$skipped} skipped without a valid phone number). For teachers, add their phone in Edit Teacher or import them into the Contact Book.",
+        ]);
+        exit;
+    }
+
+    $sendRes = egosms_send_personalized($batchItems, $creds['username'], $creds['password']);
+    $logStatus = $sendRes['success']
+        ? (empty($sendRes['failed']) ? 'SUCCESS' : 'PARTIAL')
+        : 'FAILED';
+
+    log_sms_batch(
+        $db,
+        $actorId,
+        $actorRole,
+        (int)$sendRes['sent_count'],
+        $catLabel,
+        "Dispatched portal login credentials to {$sendRes['sent_count']} recipient(s)",
+        $logStatus,
+        $sendRes['raw'] ?: $sendRes['error']
+    );
+
+    echo json_encode([
+        'success'          => $sendRes['success'],
+        'sent_count'       => $sendRes['sent_count'],
+        'skipped_count'    => $skipped,
+        'passwords_synced' => $updatedPwds,
+        'error'            => $sendRes['error'],
+        'message'          => $sendRes['success']
+            ? "✅ Sent portal login credentials to {$sendRes['sent_count']} recipient(s)"
+                . ($updatedPwds > 0 ? " ({$updatedPwds} portal password(s) synchronized)" : '')
+                . ($skipped > 0 ? ", {$skipped} skipped (missing valid phone)" : '') . '.'
+            : "❌ Failed to send credentials SMS: " . ($sendRes['error'] ?: 'Check Ego SMS credentials and balance.'),
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Unknown action
 // ─────────────────────────────────────────────────────────────────────────────
 echo json_encode(['success' => false, 'error' => 'Unknown action: ' . htmlspecialchars($action)]);
