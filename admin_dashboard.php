@@ -673,49 +673,11 @@ if (!empty($_SESSION['admin_flash'])) {
                         <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
                             <i data-lucide="message-square" class="w-6 h-6 text-rose-700"></i> School SMS Centre
                         </h3>
-                        <p class="text-sm text-gray-500 mt-1">Manage contacts, configure Ego SMS, compose and send bulk or individual messages, and review delivery history.</p>
+                        <p class="text-sm text-gray-500 mt-1">Manage contacts, compose and send bulk or individual messages, and review delivery history.</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <div id="sms-notice" class="hidden rounded-lg border px-4 py-2 text-sm max-w-sm" role="status" aria-live="polite"></div>
                     </div>
-                </div>
-
-                <!-- ── Provider Credentials (admin only) ──────────────────────── -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
-                        <div>
-                            <h4 class="font-black text-gray-900 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-gray-500"></i> Ego SMS Credentials</h4>
-                            <p id="sms-credential-state" class="text-xs text-gray-500 mt-0.5">Loading...</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span id="sms-dash-balance-pill" class="hidden rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 tabular-nums"></span>
-                            <button type="button" id="sms-dash-check-balance" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50 transition flex items-center gap-1.5">
-                                <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-700"></i> Check Ego SMS Balance
-                            </button>
-                        </div>
-                    </div>
-                    <form id="sms-dash-credentials-form" class="space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                            <label class="text-xs font-bold text-gray-700">Username
-                                <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                            </label>
-                            <label class="text-xs font-bold text-gray-700">Password
-                                <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
-                            </label>
-                            <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
-                        </div>
-                        <p class="text-[11px] text-gray-500">Sender ID is managed automatically by Ego SMS using your account's default Sender ID.</p>
-                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
-                            <input type="checkbox" id="dash-ego-auto-receipts" name="ego_auto_fee_receipts" value="1" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                            <span>Automatically send Ego SMS fee confirmation receipts to guardians whenever a verified Bank API / Webhook payment arrives</span>
-                        </label>
-                    </form>
-                    <form id="sms-dash-test-form" class="flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
-                        <label class="text-xs font-bold text-gray-700">Test phone number
-                            <input name="test_phone" inputmode="tel" placeholder="0772 123 456" required class="mt-1 w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        </label>
-                        <button class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold hover:bg-gray-50 transition">Send test SMS</button>
-                    </form>
                 </div>
 
                 <!-- ── Contact Book ────────────────────────────────────────────── -->
@@ -4339,22 +4301,6 @@ if (!empty($_SESSION['admin_flash'])) {
                 if (window.lucide) lucide.createIcons();
             }
 
-            // ── Settings / Credentials ────────────────────────────────────────
-            async function dashLoadSettings() {
-                try {
-                    const d = await smsDashGet('get_sms_settings');
-                    document.getElementById('dash-ego-username').value = d.username || '';
-                    const autoEl = document.getElementById('dash-ego-auto-receipts');
-                    if (autoEl) autoEl.checked = !!d.auto_fee_receipts;
-                    document.getElementById('sms-credential-state').textContent =
-                        d.password_configured
-                        ? '✅ A provider password is saved (not shown for security).'
-                        : '⚠️ No provider password saved — credentials incomplete.';
-                } catch (e) {
-                    document.getElementById('sms-credential-state').textContent = 'Unable to load credential status.';
-                }
-            }
-
             // ── SMS Logs ──────────────────────────────────────────────────────
             async function dashLoadLogs() {
                 try {
@@ -4451,42 +4397,6 @@ if (!empty($_SESSION['admin_flash'])) {
                 document.getElementById('sms-dash-contact-cancel').classList.add('hidden');
             });
 
-            // ── Credentials form ──────────────────────────────────────────────
-            document.getElementById('sms-dash-credentials-form').addEventListener('submit', async ev => {
-                ev.preventDefault();
-                const vals = Object.fromEntries(new FormData(ev.currentTarget));
-                if (!vals.ego_password) delete vals.ego_password;
-                vals.ego_auto_fee_receipts = document.getElementById('dash-ego-auto-receipts')?.checked ? '1' : '0';
-                try {
-                    await smsDashPost('save_sms_credentials', vals);
-                    document.getElementById('dash-ego-password').value = '';
-                    showSmsMsg('Ego SMS credentials saved.', true);
-                    await dashLoadSettings();
-                } catch (e) { showSmsMsg(e.message); }
-            });
-
-            // ── Check Live Balance button ─────────────────────────────────────
-            document.getElementById('sms-dash-check-balance')?.addEventListener('click', async () => {
-                const pill = document.getElementById('sms-dash-balance-pill');
-                try {
-                    const d = await smsDashPost('check_sms_balance');
-                    if (pill) {
-                        pill.textContent = `Balance: ${d.balance} ${d.currency || ''}`.trim();
-                        pill.classList.remove('hidden');
-                    }
-                    showSmsMsg(`✅ Ego SMS live balance: ${d.balance} ${d.currency || ''}`.trim(), true);
-                } catch (e) { showSmsMsg(e.message); }
-            });
-
-            // ── Test form ─────────────────────────────────────────────────────
-            document.getElementById('sms-dash-test-form').addEventListener('submit', async ev => {
-                ev.preventDefault();
-                try {
-                    const d = await smsDashPost('test_sms_credentials', Object.fromEntries(new FormData(ev.currentTarget)));
-                    showSmsMsg(d.success ? `✅ Test SMS sent (${d.sent_count}).` : (d.error || 'Failed.'), d.success);
-                } catch (e) { showSmsMsg(e.message); }
-            });
-
             // ── Filters / refresh ─────────────────────────────────────────────
             document.getElementById('sms-dash-contact-filter').addEventListener('change', () =>
                 dashLoadContacts().catch(e => showSmsMsg(e.message)));
@@ -4554,7 +4464,6 @@ if (!empty($_SESSION['admin_flash'])) {
 
             // ── Initial load: trigger when SMS tab is active ───────────────────
             function smsDashInit() {
-                dashLoadSettings().catch(() => {});
                 dashLoadContacts().catch(e => showSmsMsg(e.message));
                 dashLoadLogs().catch(() => {});
             }

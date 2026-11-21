@@ -53,37 +53,6 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
 
         <?php if ($isAdmin): ?>
         <section class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div>
-                    <h2 class="font-bold text-lg">Provider settings</h2>
-                    <p id="sms-credential-state" class="text-xs text-gray-500 mt-1">Credentials are stored in school settings.</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span id="sms-balance-pill" class="hidden rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 sms-tabular"></span>
-                    <button type="button" id="sms-check-balance" class="rounded border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-50">Check Ego SMS balance</button>
-                </div>
-            </div>
-            <form id="sms-credentials-form" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                <label class="text-xs font-bold text-gray-700">Ego SMS username
-                    <input id="ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                </label>
-                <label class="text-xs font-bold text-gray-700">Ego SMS password
-                    <input id="ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Leave blank to keep saved password">
-                </label>
-                <button class="rounded bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700">Save credentials</button>
-            </form>
-            <p class="mt-2 text-[11px] text-gray-500">Sender ID uses the default configured by Ego SMS.</p>
-            <form id="sms-test-form" class="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
-                <label class="text-xs font-bold text-gray-700">Test phone
-                    <input name="test_phone" inputmode="tel" placeholder="0772 123 456" required class="mt-1 w-56 rounded border border-gray-300 px-3 py-2 text-sm">
-                </label>
-                <button class="rounded border border-gray-300 px-4 py-2 text-sm font-bold hover:bg-gray-50">Send test SMS</button>
-            </form>
-        </section>
-        <?php endif; ?>
-
-        <?php if ($isAdmin): ?>
-        <section class="bg-white border border-gray-200 rounded-lg p-5">
             <div class="mb-4">
                 <h2 class="font-bold text-lg">Contact book</h2>
                 <p class="text-xs text-gray-500 mt-1">Active contacts are available to SMS-authorized users.</p>
@@ -220,12 +189,6 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
             }
         }
 
-        async function loadSmsSettings() {
-            const data = await smsGet('get_sms_settings');
-            document.getElementById('ego-username').value = data.username || '';
-            document.getElementById('sms-credential-state').textContent = data.password_configured ? 'A provider password is saved. It is never displayed here.' : 'No provider password is saved.';
-        }
-
         async function loadSmsLogs() {
             const data = await smsGet('get_sms_logs', {limit: '50'});
             const rows = document.getElementById('sms-log-rows');
@@ -259,33 +222,6 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
         });
 
         if (SMS_IS_ADMIN) {
-            document.getElementById('sms-credentials-form').addEventListener('submit', async event => {
-                event.preventDefault();
-                const values = Object.fromEntries(new FormData(event.currentTarget));
-                if (!values.ego_password) delete values.ego_password;
-                try {
-                    const result = await smsPost('save_sms_credentials', values);
-                    document.getElementById('ego-password').value = '';
-                    showSmsNotice(result.message, true);
-                    await loadSmsSettings();
-                } catch (error) { showSmsNotice(error.message); }
-            });
-            document.getElementById('sms-check-balance').addEventListener('click', async () => {
-                const pill = document.getElementById('sms-balance-pill');
-                try {
-                    const res = await smsPost('check_sms_balance');
-                    pill.textContent = `Balance: ${res.balance} ${res.currency || ''}`.trim();
-                    pill.classList.remove('hidden');
-                    showSmsNotice(`Ego SMS live balance: ${res.balance} ${res.currency || ''}`.trim(), true);
-                } catch (error) { showSmsNotice(error.message); }
-            });
-            document.getElementById('sms-test-form').addEventListener('submit', async event => {
-                event.preventDefault();
-                try {
-                    const result = await smsPost('test_sms_credentials', Object.fromEntries(new FormData(event.currentTarget)));
-                    showSmsNotice(result.success ? `Test SMS sent (${result.sent_count}).` : result.error, result.success);
-                } catch (error) { showSmsNotice(error.message); }
-            });
             document.getElementById('sms-contact-form').addEventListener('submit', async event => {
                 event.preventDefault();
                 try {
@@ -341,7 +277,7 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
         (async () => {
             try {
                 await loadSmsContacts();
-                if (SMS_IS_ADMIN) await Promise.all([loadSmsSettings(), loadSmsLogs()]);
+                if (SMS_IS_ADMIN) await loadSmsLogs();
             } catch (error) { showSmsNotice(error.message); }
         })();
     </script>

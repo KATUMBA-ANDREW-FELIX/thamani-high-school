@@ -26,6 +26,9 @@ services:
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
       - CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET:-}
+      - EGO_SMS_API_URL=${EGO_SMS_API_URL:-https://comms.egosms.co/api/v1/json/}
+      - EGO_SMS_USERNAME=${EGO_SMS_USERNAME:-}
+      - EGO_SMS_PASSWORD=${EGO_SMS_PASSWORD:-}
     depends_on:
       - db
     labels:

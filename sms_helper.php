@@ -297,11 +297,26 @@ function egosms_check_balance(string $username, string $password, string $wallet
  * Returns array: ['username' => '', 'password' => '', 'auto_fee_receipts' => false]
  */
 function get_egosms_credentials($db): array {
+    // Also load from local .env file if getenv() is not populated (e.g. standalone php -S)
+    $envMap = [];
+    $envPath = __DIR__ . '/.env';
+    if (is_readable($envPath)) {
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#' || !str_contains($line, '=')) continue;
+            [$k, $v] = explode('=', $line, 2);
+            $envMap[trim($k)] = trim(trim($v), "\"'");
+        }
+    }
+
+    $envUser = trim((string)(getenv('EGO_SMS_USERNAME') ?: ($envMap['EGO_SMS_USERNAME'] ?? '')));
+    $envPass = trim((string)(getenv('EGO_SMS_PASSWORD') ?: ($envMap['EGO_SMS_PASSWORD'] ?? '')));
+
     $keys   = ['ego_sms_username', 'ego_sms_password', 'ego_sms_auto_fee_receipts'];
     $result = [
-        'username'          => trim((string)(getenv('EGO_SMS_USERNAME') ?: '')),
-        'password'          => trim((string)(getenv('EGO_SMS_PASSWORD') ?: '')),
-        'auto_fee_receipts' => false,
+        'username'          => $envUser,
+        'password'          => $envPass,
+        'auto_fee_receipts' => true,
     ];
 
     foreach ($keys as $k) {
@@ -314,9 +329,12 @@ function get_egosms_credentials($db): array {
             thamani_db_stmt_close($stmt);
             $shortKey = str_replace('ego_sms_', '', $k);
             if ($shortKey === 'auto_fee_receipts') {
-                $result['auto_fee_receipts'] = (($row['setting_value'] ?? '0') === '1');
-            } else {
                 if (isset($row['setting_value']) && $row['setting_value'] !== '') {
+                    $result['auto_fee_receipts'] = ($row['setting_value'] === '1');
+                }
+            } else {
+                // Use DB setting only if .env did not define it
+                if ($result[$shortKey] === '' && isset($row['setting_value']) && $row['setting_value'] !== '') {
                     $result[$shortKey] = $row['setting_value'];
                 }
             }
