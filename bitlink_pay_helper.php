@@ -51,10 +51,10 @@ if (!function_exists('bitlink_pay_config')) {
             'unit_price_ugx'         => $unitPrice,
             'collection_fee_percent' => $collPct,
             'clearing_fee_tiers'     => [
-                ['min_ugx' => 500,       'max_ugx' => 60000,   'fee_ugx' => 700],
-                ['min_ugx' => 60001,     'max_ugx' => 500000,  'fee_ugx' => 1100],
-                ['min_ugx' => 500001,    'max_ugx' => 1000000, 'fee_ugx' => 1700],
-                ['min_ugx' => 1000001,   'max_ugx' => null,    'fee_ugx' => 2100],
+                ['min_ugx' => 500,       'max_ugx' => 60000,   'fee_ugx' => 500],
+                ['min_ugx' => 60001,     'max_ugx' => 500000,  'fee_ugx' => 800],
+                ['min_ugx' => 500001,    'max_ugx' => 1000000, 'fee_ugx' => 1000],
+                ['min_ugx' => 1000001,   'max_ugx' => null,    'fee_ugx' => 2000],
             ],
             'packages' => [
                 ['sms_units' => 300,  'label' => 'Starter Pack · 300 SMS'],
@@ -83,7 +83,7 @@ if (!function_exists('bitlink_pay_calculate_fees')) {
         $subtotal  = $smsUnits * $unitPrice;
 
         $collectionFee = (int)round($subtotal * ((float)$cfg['collection_fee_percent'] / 100.0));
-        $clearingFee   = 700;
+        $clearingFee   = 500;
         foreach ($cfg['clearing_fee_tiers'] as $tier) {
             if ($subtotal < $tier['min_ugx']) continue;
             if ($tier['max_ugx'] === null || $subtotal <= $tier['max_ugx']) {

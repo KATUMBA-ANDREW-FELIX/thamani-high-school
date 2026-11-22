@@ -4774,10 +4774,10 @@ if (!empty($_SESSION['admin_flash'])) {
                 const unitPrice = Number(bitlinkWalletCfg.unit_price_ugx || 50);
                 const subtotal = units * unitPrice;
                 const collFee = Math.round(subtotal * (Number(bitlinkWalletCfg.collection_fee_percent || 4.0) / 100));
-                let clearFee = 700;
-                if (subtotal > 1000000) clearFee = 2100;
-                else if (subtotal > 500000) clearFee = 1700;
-                else if (subtotal > 60000) clearFee = 1100;
+                let clearFee = 500;
+                if (subtotal > 1000000) clearFee = 2000;
+                else if (subtotal > 500000) clearFee = 1000;
+                else if (subtotal > 60000) clearFee = 800;
                 const procFees = collFee + clearFee;
                 const total = subtotal + procFees;
 
