@@ -675,8 +675,92 @@ if (!empty($_SESSION['admin_flash'])) {
                         </h3>
                         <p class="text-sm text-gray-500 mt-1">Manage contacts, compose and send bulk or individual messages, and review delivery history.</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2.5">
                         <div id="sms-notice" class="hidden rounded-lg border px-4 py-2 text-sm max-w-sm" role="status" aria-live="polite"></div>
+                        <span class="rounded-xl bg-slate-900 text-white px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 tabular-nums">
+                            <i data-lucide="message-circle" class="w-3.5 h-3.5 text-orange-400"></i>
+                            <span>SMS Credits:</span>
+                            <strong id="sms-dash-wallet-balance" class="text-orange-400">—</strong>
+                        </span>
+                        <button type="button" onclick="openBitlinkSmsTopupModal();" class="rounded-xl bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Buy More SMS · bitlink pay
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MODAL: BUY MORE SMS VIA BITLINK PAY (Yo! Uganda Mobile Money) -->
+                <div id="modal-bitlink-sms-topup" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+                    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col my-auto max-h-[92vh]">
+                        <div class="px-6 py-4 flex justify-between items-center bg-[#0b1220] text-white shrink-0">
+                            <div>
+                                <div class="text-[11px] font-bold uppercase tracking-widest text-[#fb923c]">bitlink pay</div>
+                                <h3 class="text-base sm:text-lg font-black mt-0.5">Buy More SMS Credits</h3>
+                            </div>
+                            <button type="button" onclick="closeBitlinkSmsTopupModal();" class="text-slate-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        </div>
+                        <form id="bitlink-sms-topup-form" class="p-6 space-y-4 overflow-y-auto">
+                            <div id="bitlink-topup-status" class="hidden rounded-xl border px-4 py-3 text-xs font-semibold"></div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Choose SMS Bundle</label>
+                                <div class="grid grid-cols-2 gap-2" id="bitlink-bundle-cards">
+                                    <button type="button" data-sms-pack="300" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">300 SMS</div>
+                                        <div class="text-[11px] text-gray-500">Starter Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="600" class="bitlink-pack-btn rounded-xl border-2 border-orange-500 bg-orange-50/40 p-3 text-left transition">
+                                        <div class="text-sm font-black text-gray-900">600 SMS</div>
+                                        <div class="text-[11px] text-orange-700 font-semibold">Termly Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="1200" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">1,200 SMS</div>
+                                        <div class="text-[11px] text-gray-500">School Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="3000" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">3,000 SMS</div>
+                                        <div class="text-[11px] text-gray-500">Bulk Campus Pack</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="text-xs font-bold text-gray-700">SMS Credits to Buy *
+                                    <input type="number" id="bitlink-sms-units" name="sms_units" value="600" min="20" max="500000" step="10" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm font-mono font-bold">
+                                </label>
+                                <label class="text-xs font-bold text-gray-700">Mobile Money Phone (MTN / Airtel) *
+                                    <input type="tel" id="bitlink-payer-phone" name="payer_phone" placeholder="0772 123 456" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm font-mono">
+                                </label>
+                            </div>
+
+                            <label class="block text-xs font-bold text-gray-700">Thamani Receipt Email (bitlink pay receipt) *
+                                <input type="email" id="bitlink-receipt-email" name="receipt_email" value="info@thamani.ac.ug" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
+                            </label>
+
+                            <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-1.5 text-xs">
+                                <div class="flex justify-between text-slate-600">
+                                    <span>SMS Subtotal (<span id="bitlink-calc-units">600</span> SMS)</span>
+                                    <span id="bitlink-calc-subtotal" class="font-mono font-semibold">UGX 30,000</span>
+                                </div>
+                                <div class="flex justify-between text-slate-600">
+                                    <span>Processing &amp; transactional fees</span>
+                                    <span id="bitlink-calc-fees" class="font-mono font-semibold">UGX 1,900</span>
+                                </div>
+                                <div class="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-slate-200">
+                                    <span>Total to Pay</span>
+                                    <span id="bitlink-calc-total" class="font-mono text-orange-600">UGX 31,900</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 pt-1">
+                                <span class="text-[11px] text-slate-400 font-semibold">Powered by <strong class="text-slate-700">bitlink pay</strong></span>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="closeBitlinkSmsTopupModal();" class="rounded-xl border border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50">Close</button>
+                                    <button type="submit" id="bitlink-pay-submit-btn" class="rounded-xl bg-[#0b1220] hover:bg-slate-800 text-white px-5 py-2.5 text-xs font-black transition flex items-center gap-1.5 shadow">
+                                        <span class="text-[#fb923c]">●</span> Pay with bitlink pay
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -4668,7 +4752,127 @@ if (!empty($_SESSION['admin_flash'])) {
             });
 
             // ── Initial load: trigger when SMS tab is active ───────────────────
+            let bitlinkWalletCfg = {unit_price_ugx: 50, collection_fee_percent: 4.0, thamani_receipt_email: 'info@thamani.ac.ug'};
+            let bitlinkPollTimer = null;
+
+            async function dashLoadSmsWallet() {
+                try {
+                    const d = await smsDashGet('get_sms_wallet');
+                    const balEl = document.getElementById('sms-dash-wallet-balance');
+                    if (balEl) balEl.textContent = Number(d.wallet_balance || 0).toLocaleString();
+                    if (d.config) {
+                        bitlinkWalletCfg = d.config;
+                        const em = document.getElementById('bitlink-receipt-email');
+                        if (em && !em.dataset.touched) em.value = d.config.thamani_receipt_email || 'info@thamani.ac.ug';
+                    }
+                    recalcBitlinkTopup();
+                } catch (e) {}
+            }
+
+            function recalcBitlinkTopup() {
+                const units = Math.max(20, parseInt(document.getElementById('bitlink-sms-units')?.value || '600', 10) || 600);
+                const unitPrice = Number(bitlinkWalletCfg.unit_price_ugx || 50);
+                const subtotal = units * unitPrice;
+                const collFee = Math.round(subtotal * (Number(bitlinkWalletCfg.collection_fee_percent || 4.0) / 100));
+                let clearFee = 700;
+                if (subtotal > 1000000) clearFee = 2100;
+                else if (subtotal > 500000) clearFee = 1700;
+                else if (subtotal > 60000) clearFee = 1100;
+                const procFees = collFee + clearFee;
+                const total = subtotal + procFees;
+
+                const uEl = document.getElementById('bitlink-calc-units');
+                const sEl = document.getElementById('bitlink-calc-subtotal');
+                const fEl = document.getElementById('bitlink-calc-fees');
+                const tEl = document.getElementById('bitlink-calc-total');
+                if (uEl) uEl.textContent = units.toLocaleString();
+                if (sEl) sEl.textContent = 'UGX ' + subtotal.toLocaleString();
+                if (fEl) fEl.textContent = 'UGX ' + procFees.toLocaleString();
+                if (tEl) tEl.textContent = 'UGX ' + total.toLocaleString();
+            }
+
+            window.openBitlinkSmsTopupModal = function() {
+                recalcBitlinkTopup();
+                document.getElementById('modal-bitlink-sms-topup')?.classList.remove('hidden');
+            };
+            window.closeBitlinkSmsTopupModal = function() {
+                clearInterval(bitlinkPollTimer);
+                document.getElementById('modal-bitlink-sms-topup')?.classList.add('hidden');
+            };
+
+            document.querySelectorAll('.bitlink-pack-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.bitlink-pack-btn').forEach(b => {
+                        b.className = 'bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition';
+                    });
+                    btn.className = 'bitlink-pack-btn rounded-xl border-2 border-orange-500 bg-orange-50/40 p-3 text-left transition';
+                    const u = document.getElementById('bitlink-sms-units');
+                    if (u) { u.value = btn.dataset.smsPack; recalcBitlinkTopup(); }
+                });
+            });
+            document.getElementById('bitlink-sms-units')?.addEventListener('input', recalcBitlinkTopup);
+            document.getElementById('bitlink-receipt-email')?.addEventListener('input', ev => { ev.target.dataset.touched = '1'; });
+
+            function showBitlinkTopupStatus(msg, style = 'info') {
+                const box = document.getElementById('bitlink-topup-status');
+                if (!box) return;
+                box.textContent = msg;
+                box.className = 'rounded-xl border px-4 py-3 text-xs font-semibold ' +
+                    (style === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' :
+                     style === 'error' ? 'border-rose-200 bg-rose-50 text-rose-900' :
+                     'border-orange-200 bg-orange-50 text-orange-950');
+                box.classList.remove('hidden');
+            }
+
+            document.getElementById('bitlink-sms-topup-form')?.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                clearInterval(bitlinkPollTimer);
+                const btn = document.getElementById('bitlink-pay-submit-btn');
+                const orig = btn ? btn.innerHTML : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Sending Mobile Money Prompt…'; }
+                try {
+                    const vals = Object.fromEntries(new FormData(ev.currentTarget));
+                    const d = await smsDashPost('initiate_sms_topup', vals);
+                    if (d.wallet_balance !== undefined) {
+                        const balEl = document.getElementById('sms-dash-wallet-balance');
+                        if (balEl) balEl.textContent = Number(d.wallet_balance).toLocaleString();
+                    }
+                    if (d.payment_status === 'PAID') {
+                        showBitlinkTopupStatus(d.message, 'success');
+                        showSmsMsg(d.message, true);
+                        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                        return;
+                    }
+                    showBitlinkTopupStatus(d.message, 'info');
+                    let attempts = 0;
+                    bitlinkPollTimer = setInterval(async () => {
+                        attempts++;
+                        try {
+                            const p = await smsDashPost('poll_sms_topup', {order_number: d.order_number});
+                            if (p.wallet_balance !== undefined) {
+                                const balEl = document.getElementById('sms-dash-wallet-balance');
+                                if (balEl) balEl.textContent = Number(p.wallet_balance).toLocaleString();
+                            }
+                            if (p.payment_status === 'PAID') {
+                                clearInterval(bitlinkPollTimer);
+                                showBitlinkTopupStatus(p.message, 'success');
+                                showSmsMsg(p.message, true);
+                                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                            } else if (p.payment_status === 'FAILED' || attempts >= 40) {
+                                clearInterval(bitlinkPollTimer);
+                                showBitlinkTopupStatus(p.message || 'Payment timed out.', 'error');
+                                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                            }
+                        } catch (err) {}
+                    }, 3500);
+                } catch (e) {
+                    showBitlinkTopupStatus(e.message || 'Could not start bitlink pay payment.', 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                }
+            });
+
             function smsDashInit() {
+                dashLoadSmsWallet().catch(() => {});
                 dashLoadContacts().then(() => dashLoadCredentialTargets()).catch(e => showSmsMsg(e.message));
                 dashLoadLogs().catch(() => {});
             }

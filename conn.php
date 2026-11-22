@@ -519,6 +519,32 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         api_response TEXT DEFAULT '',
                         sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS sms_topup_orders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        order_number TEXT UNIQUE NOT NULL,
+                        sms_units INTEGER NOT NULL,
+                        unit_price_ugx INTEGER NOT NULL DEFAULT 50,
+                        subtotal_ugx INTEGER NOT NULL,
+                        collection_fee_ugx INTEGER NOT NULL DEFAULT 0,
+                        clearing_fee_ugx INTEGER NOT NULL DEFAULT 0,
+                        total_ugx INTEGER NOT NULL,
+                        payer_name TEXT DEFAULT 'Thamani High School',
+                        payer_phone TEXT NOT NULL,
+                        receipt_email TEXT DEFAULT 'info@thamani.ac.ug',
+                        external_reference TEXT UNIQUE NOT NULL,
+                        provider_reference TEXT DEFAULT '',
+                        provider_status TEXT DEFAULT 'PENDING',
+                        status TEXT DEFAULT 'PENDING',
+                        failure_reason TEXT DEFAULT '',
+                        raw_response TEXT DEFAULT '',
+                        email_receipt_sent_at DATETIME,
+                        sms_receipt_sent_at DATETIME,
+                        credited_at DATETIME,
+                        created_by INTEGER DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
                 ");
             }
 
@@ -728,6 +754,35 @@ if (!class_exists('ThamaniPolyfillConn')) {
                             status TEXT DEFAULT 'SUCCESS',
                             api_response TEXT DEFAULT '',
                             sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        );
+                    ");
+                } catch (Exception $e) {}
+                try {
+                    $this->pdo->exec("
+                        CREATE TABLE IF NOT EXISTS sms_topup_orders (
+                            id SERIAL PRIMARY KEY,
+                            order_number VARCHAR(40) UNIQUE NOT NULL,
+                            sms_units INT NOT NULL,
+                            unit_price_ugx INT NOT NULL DEFAULT 50,
+                            subtotal_ugx INT NOT NULL,
+                            collection_fee_ugx INT NOT NULL DEFAULT 0,
+                            clearing_fee_ugx INT NOT NULL DEFAULT 0,
+                            total_ugx INT NOT NULL,
+                            payer_name VARCHAR(255) DEFAULT 'Thamani High School',
+                            payer_phone VARCHAR(30) NOT NULL,
+                            receipt_email VARCHAR(255) DEFAULT 'info@thamani.ac.ug',
+                            external_reference VARCHAR(80) UNIQUE NOT NULL,
+                            provider_reference VARCHAR(120) DEFAULT '',
+                            provider_status VARCHAR(40) DEFAULT 'PENDING',
+                            status VARCHAR(30) DEFAULT 'PENDING',
+                            failure_reason TEXT DEFAULT '',
+                            raw_response TEXT DEFAULT '',
+                            email_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+                            sms_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+                            credited_at TIMESTAMP WITH TIME ZONE,
+                            created_by INT DEFAULT 0,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                         );
                     ");
                 } catch (Exception $e) {}

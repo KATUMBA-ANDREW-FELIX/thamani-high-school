@@ -24,7 +24,7 @@ if (!$currentAdmin && !$currentTeacher && $currentStudent !== $studentId) {
     if ($currentStudent > 0) {
         $studentId = $currentStudent;
     } else {
-        header('Location: student-login.php');
+        header('Location: login.php');
         exit;
     }
 }

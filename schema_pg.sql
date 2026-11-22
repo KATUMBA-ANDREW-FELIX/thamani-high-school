@@ -202,6 +202,32 @@ CREATE TABLE IF NOT EXISTS sms_logs (
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS sms_topup_orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(40) UNIQUE NOT NULL,
+    sms_units INT NOT NULL,
+    unit_price_ugx INT NOT NULL DEFAULT 50,
+    subtotal_ugx INT NOT NULL,
+    collection_fee_ugx INT NOT NULL DEFAULT 0,
+    clearing_fee_ugx INT NOT NULL DEFAULT 0,
+    total_ugx INT NOT NULL,
+    payer_name VARCHAR(255) DEFAULT 'Thamani High School',
+    payer_phone VARCHAR(30) NOT NULL,
+    receipt_email VARCHAR(255) DEFAULT 'info@thamani.ac.ug',
+    external_reference VARCHAR(80) UNIQUE NOT NULL,
+    provider_reference VARCHAR(120) DEFAULT '',
+    provider_status VARCHAR(40) DEFAULT 'PENDING',
+    status VARCHAR(30) DEFAULT 'PENDING',
+    failure_reason TEXT DEFAULT '',
+    raw_response TEXT DEFAULT '',
+    email_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+    sms_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+    credited_at TIMESTAMP WITH TIME ZONE,
+    created_by INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Safe migrations for existing installations
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50);

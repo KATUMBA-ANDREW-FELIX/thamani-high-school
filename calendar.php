@@ -363,7 +363,7 @@ $docsPayload = json_encode(array_map(function($d) {
                         <li><a href="library.php" class="hover:text-brand-gold transition-colors">Digital Library</a></li>
                         <li><a href="calendar.php" class="hover:text-brand-gold transition-colors">Academic Calendar</a></li>
                         <li><a href="alumni.php" class="hover:text-brand-gold transition-colors">Achievements &amp; Alumni</a></li>
-                        <li><a href="teacher-login.php" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
+                        <li><a href="login.php" class="hover:text-brand-gold transition-colors">Teacher Portal</a></li>
                     </ul>
                 </div>
                 <div>

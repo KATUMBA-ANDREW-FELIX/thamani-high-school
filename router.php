@@ -13,6 +13,25 @@ if ($uri === '/admin' || $uri === '/admin.html') {
     exit;
 }
 
+// Redirect legacy login pages to unified login.php
+if (in_array($uri, ['/teacher-login', '/teacher-login.php', '/teacher-login.html', '/student-login', '/student-login.php', '/student-login.html'], true)) {
+    header('Location: login.php');
+    exit;
+}
+
+// Redirect raw .html templates to their active PHP controllers
+$templateRedirects = [
+    '/enrollment.html' => 'enrollment.php',
+    '/alumni.html'     => 'alumni.php',
+    '/library.html'    => 'library.php',
+    '/calendar.html'   => 'calendar.php',
+    '/gallery.html'    => 'gallery.php',
+];
+if (isset($templateRedirects[$uri])) {
+    header('Location: ' . $templateRedirects[$uri]);
+    exit;
+}
+
 // Serve existing static files (css, js, images, html) directly
 $file = __DIR__ . $uri;
 if ($uri !== '/' && file_exists($file) && !is_dir($file)) {

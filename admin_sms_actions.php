@@ -4,6 +4,7 @@ require_once 'conn.php';
 require_once 'auth_admin.php';
 require_once 'auth_teacher.php';
 require_once 'sms_helper.php';
+require_once 'bitlink_pay_helper.php';
 
 // Allow admins or active teachers explicitly granted SMS permission.
 $isAdmin   = false;
@@ -435,6 +436,9 @@ if ($action === 'send_bulk_sms') {
     }
 
     log_sms_batch($db, $actorId, $actorRole, $totalSent, $catLabel, $message, $logStatus, $lastRaw ?: $lastError);
+    if ($totalSent > 0) {
+        bitlink_pay_adjust_wallet_balance($db, -$totalSent);
+    }
 
     $failReason = $lastError !== '' ? $lastError : 'Check your Ego SMS credentials and account balance.';
     echo json_encode([
@@ -529,6 +533,9 @@ if ($action === 'send_fee_reminder_sms') {
 
     $logStatus = $sentCount > 0 ? ($lastError === '' ? 'SUCCESS' : 'PARTIAL') : 'FAILED';
     log_sms_batch($db, $actorId, $actorRole, $sentCount, $studentId > 0 ? 'Fee Reminder (Single)' : 'Fee Reminders (Unpaid)', 'Automated school fees balance reminder', $logStatus, $lastRaw ?: $lastError);
+    if ($sentCount > 0) {
+        bitlink_pay_adjust_wallet_balance($db, -$sentCount);
+    }
 
     echo json_encode([
         'success' => $sentCount > 0,
@@ -853,6 +860,9 @@ if ($action === 'send_portal_credentials') {
         $logStatus,
         $sendRes['raw'] ?: $sendRes['error']
     );
+    if (!empty($sendRes['sent_count'])) {
+        bitlink_pay_adjust_wallet_balance($db, -(int)$sendRes['sent_count']);
+    }
 
     echo json_encode([
         'success'          => $sendRes['success'],
@@ -865,6 +875,222 @@ if ($action === 'send_portal_credentials') {
                 . ($updatedPwds > 0 ? " ({$updatedPwds} portal password(s) synchronized)" : '')
                 . ($skipped > 0 ? ", {$skipped} skipped (missing valid phone)" : '') . '.'
             : "❌ Failed to send credentials SMS: " . ($sendRes['error'] ?: 'Check Ego SMS credentials and balance.'),
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Get SMS Credit Wallet & bitlink pay Top-Up Config / History
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'get_sms_wallet') {
+    $balance = bitlink_pay_get_wallet_balance($db);
+    $cfg     = bitlink_pay_config();
+    $orders  = [];
+    $res = thamani_db_query($db, "SELECT id, order_number, sms_units, subtotal_ugx, collection_fee_ugx, clearing_fee_ugx, total_ugx, payer_phone, receipt_email, provider_reference, status, created_at FROM sms_topup_orders ORDER BY id DESC LIMIT 20");
+    if ($res) {
+        while ($r = thamani_db_fetch_assoc($res)) {
+            $orders[] = $r;
+        }
+    }
+    echo json_encode([
+        'success'        => true,
+        'wallet_balance' => $balance,
+        'config'         => $cfg,
+        'orders'         => $orders,
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Initiate "Buy More SMS" Top-Up via bitlink pay (Yo! Uganda Mobile Money)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'initiate_sms_topup') {
+    $smsUnits     = (int)($_POST['sms_units'] ?? 0);
+    $payerPhone   = trim((string)($_POST['payer_phone'] ?? ''));
+    $payerName    = trim((string)($_POST['payer_name'] ?? 'Thamani High School')) ?: 'Thamani High School';
+    $cfg          = bitlink_pay_config();
+    $receiptEmail = trim((string)($_POST['receipt_email'] ?? $cfg['thamani_receipt_email'])) ?: $cfg['thamani_receipt_email'];
+
+    if ($smsUnits < 20 || $smsUnits > 500000) {
+        echo json_encode(['success' => false, 'error' => 'Please enter between 20 and 500,000 SMS credits to purchase.']);
+        exit;
+    }
+
+    $normPhone = normalize_ug_phone($payerPhone);
+    if (!is_valid_ug_phone($normPhone)) {
+        echo json_encode(['success' => false, 'error' => 'Enter a valid Ugandan Mobile Money phone number (e.g. 0772 123 456 or 0701 123 456).']);
+        exit;
+    }
+
+    if ($receiptEmail !== '' && !filter_var($receiptEmail, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'error' => 'Enter a valid email address for the bitlink pay receipt.']);
+        exit;
+    }
+
+    $fees        = bitlink_pay_calculate_fees($smsUnits);
+    $orderNumber = 'THM-SMS-' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+    $externalRef = $orderNumber . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+    $ins = thamani_db_prepare(
+        $db,
+        "INSERT INTO sms_topup_orders
+            (order_number, sms_units, unit_price_ugx, subtotal_ugx, collection_fee_ugx, clearing_fee_ugx, total_ugx,
+             payer_name, payer_phone, receipt_email, external_reference, status, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+    );
+    if (!$ins) {
+        echo json_encode(['success' => false, 'error' => 'Unable to create SMS top-up order.']);
+        exit;
+    }
+    thamani_db_stmt_bind_param(
+        $ins,
+        'siiiiiissssi',
+        $orderNumber,
+        $fees['sms_units'],
+        $fees['unit_price_ugx'],
+        $fees['subtotal_ugx'],
+        $fees['collection_fee_ugx'],
+        $fees['clearing_fee_ugx'],
+        $fees['total_ugx'],
+        $payerName,
+        $normPhone,
+        $receiptEmail,
+        $externalRef,
+        $actorId
+    );
+    $created = thamani_db_stmt_execute($ins);
+    thamani_db_stmt_close($ins);
+
+    if (!$created) {
+        echo json_encode(['success' => false, 'error' => 'Database error saving SMS top-up order.']);
+        exit;
+    }
+
+    // Lookup inserted order ID
+    $orderId = (int)thamani_db_insert_id($db);
+    if ($orderId <= 0) {
+        $lk = thamani_db_prepare($db, "SELECT id FROM sms_topup_orders WHERE order_number = ? LIMIT 1");
+        if ($lk) {
+            thamani_db_stmt_bind_param($lk, 's', $orderNumber);
+            thamani_db_stmt_execute($lk);
+            $lr = thamani_db_stmt_get_result($lk);
+            if ($lr && $lrow = thamani_db_fetch_assoc($lr)) $orderId = (int)$lrow['id'];
+            thamani_db_stmt_close($lk);
+        }
+    }
+
+    $narrative = "bitlink pay · Thamani SMS Top-Up {$orderNumber} ({$fees['sms_units']} SMS)";
+    $collect   = bitlink_pay_collect_funds($normPhone, (int)$fees['total_ugx'], $narrative, $externalRef);
+
+    if (!$collect['ok']) {
+        $errReason = (string)($collect['error'] ?? 'Mobile Money prompt failed.');
+        $rawStr    = json_encode($collect['raw'] ?? ['error' => $errReason], JSON_UNESCAPED_UNICODE);
+        $uFail = thamani_db_prepare($db, "UPDATE sms_topup_orders SET status = 'FAILED', provider_status = 'FAILED', failure_reason = ?, raw_response = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        if ($uFail) {
+            thamani_db_stmt_bind_param($uFail, 'ssi', $errReason, $rawStr, $orderId);
+            thamani_db_stmt_execute($uFail);
+            thamani_db_stmt_close($uFail);
+        }
+        echo json_encode(['success' => false, 'error' => $errReason, 'order_number' => $orderNumber]);
+        exit;
+    }
+
+    $provRef  = (string)($collect['transaction_reference'] ?? '');
+    $provStat = strtoupper((string)($collect['transaction_status'] ?? 'PENDING'));
+    $rawStr   = json_encode($collect['raw'] ?? [], JSON_UNESCAPED_UNICODE);
+
+    $uPend = thamani_db_prepare($db, "UPDATE sms_topup_orders SET provider_reference = ?, provider_status = ?, raw_response = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    if ($uPend) {
+        thamani_db_stmt_bind_param($uPend, 'sssi', $provRef, $provStat, $rawStr, $orderId);
+        thamani_db_stmt_execute($uPend);
+        thamani_db_stmt_close($uPend);
+    }
+
+    if (in_array($provStat, ['SUCCEEDED', 'SUCCESS'], true)) {
+        bitlink_pay_finalize_order($db, $orderId, $collect);
+        $newBal = bitlink_pay_get_wallet_balance($db);
+        echo json_encode([
+            'success'        => true,
+            'order_number'   => $orderNumber,
+            'payment_status' => 'PAID',
+            'wallet_balance' => $newBal,
+            'message'        => "✅ Payment confirmed via bitlink pay! Added " . number_format($fees['sms_units']) . " SMS credits. Receipt emailed to {$cfg['thamani_receipt_email']}.",
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        'success'        => true,
+        'order_number'   => $orderNumber,
+        'payment_status' => 'PENDING',
+        'wallet_balance' => bitlink_pay_get_wallet_balance($db),
+        'message'        => "📲 Approve the bitlink pay Mobile Money prompt of UGX " . number_format($fees['total_ugx']) . " on {$normPhone}...",
+    ]);
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTION: Poll Pending bitlink pay SMS Top-Up Order
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'poll_sms_topup') {
+    $orderNumber = trim((string)($_POST['order_number'] ?? $_GET['order_number'] ?? ''));
+    if ($orderNumber === '') {
+        echo json_encode(['success' => false, 'error' => 'Order number is required.']);
+        exit;
+    }
+
+    $stmt = thamani_db_prepare($db, "SELECT * FROM sms_topup_orders WHERE order_number = ? LIMIT 1");
+    $order = null;
+    if ($stmt) {
+        thamani_db_stmt_bind_param($stmt, 's', $orderNumber);
+        thamani_db_stmt_execute($stmt);
+        $res = thamani_db_stmt_get_result($stmt);
+        $order = $res ? thamani_db_fetch_assoc($res) : null;
+        thamani_db_stmt_close($stmt);
+    }
+    if (!$order) {
+        echo json_encode(['success' => false, 'error' => 'Top-up order not found.']);
+        exit;
+    }
+
+    $curStatus = strtoupper((string)$order['status']);
+    $cfg       = bitlink_pay_config();
+
+    if ($curStatus === 'PENDING') {
+        $poll = bitlink_pay_check_status((string)$order['provider_reference'], (string)$order['external_reference']);
+        if (!empty($poll['ok'])) {
+            $txStat = strtoupper((string)($poll['transaction_status'] ?? 'PENDING'));
+            if (in_array($txStat, ['SUCCEEDED', 'SUCCESS'], true)) {
+                $order = bitlink_pay_finalize_order($db, (int)$order['id'], $poll) ?: $order;
+                $curStatus = 'PAID';
+            } elseif (in_array($txStat, ['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED'], true)) {
+                $reason = (string)($poll['status_message'] ?: 'The Mobile Money payment failed or was declined.');
+                $rawStr = json_encode($poll['raw'] ?? [], JSON_UNESCAPED_UNICODE);
+                $oid    = (int)$order['id'];
+                $uFail  = thamani_db_prepare($db, "UPDATE sms_topup_orders SET status = 'FAILED', provider_status = ?, failure_reason = ?, raw_response = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                if ($uFail) {
+                    thamani_db_stmt_bind_param($uFail, 'sssi', $txStat, $reason, $rawStr, $oid);
+                    thamani_db_stmt_execute($uFail);
+                    thamani_db_stmt_close($uFail);
+                }
+                $curStatus = 'FAILED';
+                $order['failure_reason'] = $reason;
+            }
+        }
+    }
+
+    $bal = bitlink_pay_get_wallet_balance($db);
+    echo json_encode([
+        'success'        => true,
+        'order_number'   => $orderNumber,
+        'payment_status' => $curStatus,
+        'wallet_balance' => $bal,
+        'failure_reason' => $order['failure_reason'] ?? '',
+        'message'        => $curStatus === 'PAID'
+            ? "✅ Payment confirmed via bitlink pay! Added " . number_format((int)$order['sms_units']) . " SMS credits. Receipt emailed to {$cfg['thamani_receipt_email']}."
+            : ($curStatus === 'FAILED'
+                ? "❌ Payment failed: " . ($order['failure_reason'] ?: 'Transaction declined.')
+                : "⏳ Waiting for Mobile Money PIN approval on {$order['payer_phone']}..."),
     ]);
     exit;
 }

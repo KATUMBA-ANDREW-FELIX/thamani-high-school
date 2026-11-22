@@ -9,7 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function require_admin_login(): void {
     if (empty($_SESSION['admin_id'])) {
-        header('Location: teacher-login.php?role=admin');
+        header('Location: login.php');
         exit;
     }
 }

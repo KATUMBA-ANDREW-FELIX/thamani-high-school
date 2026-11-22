@@ -44,9 +44,52 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
                 <a href="<?= $isAdmin ? 'admin_dashboard.php' : 'teacher_dashboard.php' ?>" class="text-xs text-amber-300 hover:text-white">← Back to dashboard</a>
                 <h1 class="text-xl sm:text-2xl font-black mt-1">SMS Messaging</h1>
             </div>
-            <span class="text-xs font-bold uppercase tracking-wide text-gray-300"><?= $isAdmin ? 'Administrator' : 'Authorized teacher' ?></span>
+            <div class="flex flex-wrap items-center gap-2.5">
+                <span class="rounded-lg bg-gray-900 border border-gray-800 px-3 py-1.5 text-xs font-bold text-gray-200 sms-tabular">
+                    SMS Credits: <strong id="sms-page-wallet-balance" class="text-orange-400">—</strong>
+                </span>
+                <button type="button" id="sms-open-bitlink-modal" class="rounded-lg bg-orange-600 hover:bg-orange-500 px-3.5 py-1.5 text-xs font-black text-white">
+                    + Buy More SMS · bitlink pay
+                </button>
+                <span class="text-xs font-bold uppercase tracking-wide text-gray-300"><?= $isAdmin ? 'Administrator' : 'Authorized teacher' ?></span>
+            </div>
         </div>
     </header>
+
+    <div id="sms-bitlink-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-200">
+            <div class="px-5 py-4 bg-[#0b1220] text-white flex justify-between items-center">
+                <div>
+                    <div class="text-[11px] font-bold uppercase tracking-widest text-[#fb923c]">bitlink pay</div>
+                    <h2 class="text-base font-black mt-0.5">Buy More SMS Credits</h2>
+                </div>
+                <button type="button" id="sms-close-bitlink-modal" class="text-gray-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <form id="sms-bitlink-form" class="p-5 space-y-4">
+                <div id="sms-bitlink-status" class="hidden rounded-lg border px-3.5 py-2.5 text-xs font-semibold"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="text-xs font-bold text-gray-700">SMS Credits to Buy *
+                        <input type="number" id="sms-bitlink-units" name="sms_units" value="600" min="20" max="500000" step="10" required class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono font-bold">
+                    </label>
+                    <label class="text-xs font-bold text-gray-700">Mobile Money Phone (MTN / Airtel) *
+                        <input type="tel" name="payer_phone" placeholder="0772 123 456" required class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono">
+                    </label>
+                </div>
+                <label class="block text-xs font-bold text-gray-700">Thamani Receipt Email (bitlink pay receipt) *
+                    <input type="email" id="sms-bitlink-email" name="receipt_email" value="info@thamani.ac.ug" required class="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                </label>
+                <div class="rounded-lg bg-gray-50 border border-gray-200 p-3.5 space-y-1 text-xs">
+                    <div class="flex justify-between text-gray-600"><span>SMS Subtotal</span><span id="sms-bitlink-sub" class="font-mono font-bold">UGX 30,000</span></div>
+                    <div class="flex justify-between text-gray-600"><span>Processing &amp; transactional fees</span><span id="sms-bitlink-fee" class="font-mono font-bold">UGX 1,900</span></div>
+                    <div class="flex justify-between text-gray-900 font-black text-sm pt-1.5 border-t border-gray-200"><span>Total to Pay</span><span id="sms-bitlink-tot" class="font-mono text-orange-600">UGX 31,900</span></div>
+                </div>
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-[11px] text-gray-400">Powered by <strong class="text-gray-700">bitlink pay</strong></span>
+                    <button type="submit" id="sms-bitlink-submit" class="rounded-lg bg-[#0b1220] hover:bg-gray-800 text-white px-4 py-2 text-xs font-black">Pay with bitlink pay</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div id="sms-notice" class="hidden rounded-lg border px-4 py-3 text-sm" role="status" aria-live="polite"></div>
@@ -430,9 +473,73 @@ $_SESSION['sms_csrf_token'] = $csrfToken;
             });
         }
 
+        let smsPageWalletCfg = {unit_price_ugx: 50, collection_fee_percent: 4.0, thamani_receipt_email: 'info@thamani.ac.ug'};
+        let smsPagePollTimer = null;
+        async function loadSmsPageWallet() {
+            const d = await smsGet('get_sms_wallet');
+            document.getElementById('sms-page-wallet-balance').textContent = Number(d.wallet_balance || 0).toLocaleString();
+            if (d.config) {
+                smsPageWalletCfg = d.config;
+                document.getElementById('sms-bitlink-email').value = d.config.thamani_receipt_email || 'info@thamani.ac.ug';
+            }
+            recalcSmsPageBitlink();
+        }
+        function recalcSmsPageBitlink() {
+            const units = Math.max(20, parseInt(document.getElementById('sms-bitlink-units').value || '600', 10) || 600);
+            const sub = units * Number(smsPageWalletCfg.unit_price_ugx || 50);
+            const coll = Math.round(sub * (Number(smsPageWalletCfg.collection_fee_percent || 4.0) / 100));
+            const clr = sub > 1000000 ? 2100 : (sub > 500000 ? 1700 : (sub > 60000 ? 1100 : 700));
+            document.getElementById('sms-bitlink-sub').textContent = 'UGX ' + sub.toLocaleString();
+            document.getElementById('sms-bitlink-fee').textContent = 'UGX ' + (coll + clr).toLocaleString();
+            document.getElementById('sms-bitlink-tot').textContent = 'UGX ' + (sub + coll + clr).toLocaleString();
+        }
+        document.getElementById('sms-open-bitlink-modal').addEventListener('click', () => {
+            recalcSmsPageBitlink();
+            document.getElementById('sms-bitlink-modal').classList.remove('hidden');
+        });
+        document.getElementById('sms-close-bitlink-modal').addEventListener('click', () => {
+            clearInterval(smsPagePollTimer);
+            document.getElementById('sms-bitlink-modal').classList.add('hidden');
+        });
+        document.getElementById('sms-bitlink-units').addEventListener('input', recalcSmsPageBitlink);
+        document.getElementById('sms-bitlink-form').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            clearInterval(smsPagePollTimer);
+            const btn = document.getElementById('sms-bitlink-submit');
+            const st = document.getElementById('sms-bitlink-status');
+            btn.disabled = true;
+            try {
+                const d = await smsPost('initiate_sms_topup', Object.fromEntries(new FormData(ev.currentTarget)));
+                st.textContent = d.message;
+                st.className = 'rounded-lg border px-3.5 py-2.5 text-xs font-semibold ' + (d.payment_status === 'PAID' ? 'border-green-200 bg-green-50 text-green-900' : 'border-orange-200 bg-orange-50 text-orange-950');
+                st.classList.remove('hidden');
+                if (d.wallet_balance !== undefined) document.getElementById('sms-page-wallet-balance').textContent = Number(d.wallet_balance).toLocaleString();
+                if (d.payment_status === 'PAID') { btn.disabled = false; return; }
+                let tries = 0;
+                smsPagePollTimer = setInterval(async () => {
+                    tries++;
+                    try {
+                        const p = await smsPost('poll_sms_topup', {order_number: d.order_number});
+                        if (p.wallet_balance !== undefined) document.getElementById('sms-page-wallet-balance').textContent = Number(p.wallet_balance).toLocaleString();
+                        if (p.payment_status === 'PAID' || p.payment_status === 'FAILED' || tries >= 40) {
+                            clearInterval(smsPagePollTimer);
+                            st.textContent = p.message;
+                            st.className = 'rounded-lg border px-3.5 py-2.5 text-xs font-semibold ' + (p.payment_status === 'PAID' ? 'border-green-200 bg-green-50 text-green-900' : 'border-red-200 bg-red-50 text-red-900');
+                            btn.disabled = false;
+                        }
+                    } catch (err) {}
+                }, 3500);
+            } catch (e) {
+                st.textContent = e.message;
+                st.className = 'rounded-lg border px-3.5 py-2.5 text-xs font-semibold border-red-200 bg-red-50 text-red-900';
+                st.classList.remove('hidden');
+                btn.disabled = false;
+            }
+        });
+
         (async () => {
             try {
-                await loadSmsContacts();
+                await Promise.all([loadSmsContacts(), loadSmsPageWallet()]);
                 if (SMS_IS_ADMIN) await Promise.all([loadSmsCredentialTargets(), loadSmsLogs()]);
             } catch (error) { showSmsNotice(error.message); }
         })();

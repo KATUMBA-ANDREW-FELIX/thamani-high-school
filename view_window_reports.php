@@ -16,7 +16,7 @@ $isAdmin = !empty($_SESSION['admin_id']);
 $isTeacher = !empty($_SESSION['teacher_id']);
 
 if (!$isAdmin && !$isTeacher) {
-    header('Location: teacher-login.php');
+    header('Location: login.php');
     exit;
 }
 
