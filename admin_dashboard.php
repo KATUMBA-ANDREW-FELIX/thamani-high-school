@@ -17,6 +17,17 @@ if (!function_exists('format_thamani_date')) {
     }
 }
 
+function calendar_event_badge_class(string $category): string {
+    $classes = [
+        'Election' => 'calendar-event-tag-election',
+        'Assembly' => 'calendar-event-tag-assembly',
+        'Campaign' => 'calendar-event-tag-campaign',
+        'Meeting' => 'calendar-event-tag-meeting',
+        'Other' => 'calendar-event-tag-other',
+    ];
+    return $classes[$category] ?? $classes['Other'];
+}
+
 require_once 'conn.php';
 
 // ---------- Stat counters ----------
@@ -139,6 +150,21 @@ $allCalendar = [];
 $rc = thamani_db_query($conn, "SELECT id, title, doc_type, description, file_path, file_name, file_size, uploaded_at FROM calendar_documents WHERE is_active = 1 ORDER BY uploaded_at DESC");
 if ($rc) while ($r = thamani_db_fetch_assoc($rc)) $allCalendar[] = $r;
 
+$allCalendarEvents = [];
+$calendarEventsLoadError = '';
+$calendarEventsRes = thamani_db_query(
+    $conn,
+    "SELECT id, title, description, event_date, event_time, location, category, visibility
+     FROM calendar_events
+     ORDER BY event_date ASC, CASE WHEN event_time IS NULL THEN 1 ELSE 0 END ASC, event_time ASC, id ASC"
+);
+if ($calendarEventsRes) {
+    while ($r = thamani_db_fetch_assoc($calendarEventsRes)) $allCalendarEvents[] = $r;
+} else {
+    error_log('[Admin Calendar Events Fetch] ' . thamani_db_error($conn));
+    $calendarEventsLoadError = 'Could not load calendar events. Please refresh the page.';
+}
+
 $allGallery = [];
 $rg = thamani_db_query($conn, "SELECT id, title, caption, category, file_path, uploaded_at FROM gallery_photos WHERE is_active = 1 ORDER BY uploaded_at DESC");
 if ($rg) while ($r = thamani_db_fetch_assoc($rg)) $allGallery[] = $r;
@@ -170,6 +196,10 @@ $systemStreamsList = get_system_streams($conn);
 // Generate CSRF token for SMS actions (stored in session, embedded in JS)
 $smsCsrfToken = bin2hex(random_bytes(32));
 $_SESSION['sms_csrf_token'] = $smsCsrfToken;
+if (empty($_SESSION['calendar_events_csrf_token'])) {
+    $_SESSION['calendar_events_csrf_token'] = bin2hex(random_bytes(32));
+}
+$calendarEventsCsrfToken = $_SESSION['calendar_events_csrf_token'];
 
 $allowedAdminTabs = [
     'tab-admin-overview',
@@ -228,6 +258,26 @@ if (!empty($_SESSION['admin_flash'])) {
             box-shadow: 0 4px 12px rgba(31, 41, 55, 0.15);
         }
         .tab-btn.active i { color: #D4AF37 !important; }
+        .calendar-events-table { min-width: 900px; }
+        .calendar-event-tag-election { background: #ede9fe; color: #5b21b6; }
+        .calendar-event-tag-assembly { background: #dbeafe; color: #1e40af; }
+        .calendar-event-tag-campaign { background: #ffedd5; color: #9a3412; }
+        .calendar-event-tag-meeting { background: #dcfce7; color: #166534; }
+        .calendar-event-tag-other { background: #f3f4f6; color: #374151; }
+        #tab-admin-reporting .reporting-banner { border-left: 4px solid #D4AF37; }
+        #tab-admin-reporting .reporting-table { min-width: 100%; }
+        #tab-admin-reporting .reporting-table--windows { min-width: 1180px; }
+        #tab-admin-reporting .reporting-table--assignments { min-width: 820px; }
+        #tab-admin-reporting .reporting-table--grading { min-width: 920px; }
+        #tab-admin-reporting .reporting-table--streams { min-width: 860px; }
+        #tab-admin-reporting .reporting-table-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: .5rem;
+            min-width: 28rem;
+        }
+        #tab-admin-reporting .reporting-table-actions form { display: inline-flex; }
         #page-loader {
             position: fixed; inset: 0; background: #1F2937;
             display: flex; align-items: center; justify-content: center;
@@ -980,7 +1030,7 @@ if (!empty($_SESSION['admin_flash'])) {
 
                             <form action="admin_fees_actions.php" method="post" class="inline">
                                 <input type="hidden" name="action" value="pull_all_bank_feeds">
-                                <button type="submit" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 text-gray-950 font-black rounded-xl text-xs hover:from-amber-400 hover:to-amber-300 shadow-md flex items-center gap-1.5 transition-all hover:scale-[1.02]">
+                                <button type="submit" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 text-gray-950 font-black rounded-xl text-xs text-white hover:from-amber-400 hover:to-amber-300 shadow-md flex items-center gap-1.5 transition-all hover:scale-[1.02]">
                                     <i data-lucide="download-cloud" class="w-4 h-4"></i> Pull &amp; Reconcile Everything From Bank Feeds
                                 </button>
                             </form>
@@ -1529,16 +1579,21 @@ if (!empty($_SESSION['admin_flash'])) {
             <!-- TAB 5: CALENDAR & FEES -->
             <div id="tab-admin-calendar" class="admin-tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 border-b border-gray-100 pb-4">
                         <div>
                             <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
                                 <i data-lucide="calendar-days" class="w-6 h-6 text-amber-600"></i> Published Calendar & Fees Documents
                             </h3>
                             <p class="text-xs text-gray-500 mt-1">All official circulars, timetables, and fee structures visible to parents, teachers, and students.</p>
                         </div>
-                        <button onclick="openModal('modal-upload-calendar');" class="px-4 py-2 bg-gray-900 text-amber-400 font-extrabold rounded-xl text-xs hover:bg-gray-800 shadow flex items-center gap-1.5">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Upload Document
-                        </button>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="openModal('modal-upload-calendar');" class="px-4 py-3 bg-white text-gray-800 border border-gray-300 font-bold rounded-xl text-sm hover:bg-gray-50 flex items-center gap-2">
+                                <i data-lucide="upload" class="w-4 h-4 text-amber-600"></i> Upload Document
+                            </button>
+                            <button onclick="openCalendarEventModal();" class="px-4 py-3 bg-gray-900 text-white font-bold rounded-xl text-sm hover:bg-gray-700 flex items-center gap-2">
+                                <i data-lucide="calendar-plus" class="w-4 h-4 text-amber-400"></i> Create New Event
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm border-collapse">
@@ -1584,6 +1639,98 @@ if (!empty($_SESSION['admin_flash'])) {
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-6 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="calendar-check-2" class="w-6 h-6 text-amber-600"></i> Manage Events
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Create and maintain upcoming school events displayed on the public calendar.</p>
+                        </div>
+                        <span class="text-xs font-bold text-gray-500"><?= count($allCalendarEvents) ?> event<?= count($allCalendarEvents) === 1 ? '' : 's' ?></span>
+                    </div>
+
+                    <?php if ($calendarEventsLoadError !== ''): ?>
+                        <p class="p-4 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-800"><?= htmlspecialchars($calendarEventsLoadError, ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php else: ?>
+                        <div class="overflow-x-auto">
+                            <table class="calendar-events-table w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-700 font-bold border-b border-gray-200">
+                                        <th class="p-3.5">Event</th>
+                                        <th class="p-3.5">Date</th>
+                                        <th class="p-3.5">Time &amp; Location</th>
+                                        <th class="p-3.5">Category</th>
+                                        <th class="p-3.5">Visibility</th>
+                                        <th class="p-3.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <?php if (!empty($allCalendarEvents)): ?>
+                                        <?php foreach ($allCalendarEvents as $event): ?>
+                                            <?php
+                                                $eventTimeValue = !empty($event['event_time']) ? substr((string)$event['event_time'], 0, 5) : '';
+                                                $eventTimeLabel = $eventTimeValue !== '' ? date('g:i A', strtotime($eventTimeValue)) : 'Not set';
+                                                $eventDescription = (string)($event['description'] ?? '');
+                                            ?>
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="p-3.5">
+                                                    <div class="font-bold text-gray-900"><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></div>
+                                                    <?php if ($eventDescription !== ''): ?>
+                                                        <div class="text-xs text-gray-500 mt-1 max-w-md truncate"><?= htmlspecialchars($eventDescription, ENT_QUOTES, 'UTF-8') ?></div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="p-3.5 whitespace-nowrap text-gray-700"><?= htmlspecialchars(format_thamani_date($event['event_date'] ?? null, 'D, d M Y'), ENT_QUOTES, 'UTF-8') ?></td>
+                                                <td class="p-3.5 text-gray-600">
+                                                    <div><?= htmlspecialchars($eventTimeLabel, ENT_QUOTES, 'UTF-8') ?></div>
+                                                    <div class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($event['location'] ?: 'Location not set', ENT_QUOTES, 'UTF-8') ?></div>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold <?= calendar_event_badge_class((string)$event['category']) ?>">
+                                                        <?= htmlspecialchars($event['category'], ENT_QUOTES, 'UTF-8') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="p-3.5">
+                                                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold <?= $event['visibility'] === 'public' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' ?>">
+                                                        <?= htmlspecialchars(ucfirst($event['visibility']), ENT_QUOTES, 'UTF-8') ?>
+                                                    </span>
+                                                </td>
+                                                <td class="p-3.5 text-right whitespace-nowrap">
+                                                    <button type="button"
+                                                            data-edit-calendar-event
+                                                            data-event-id="<?= (int)$event['id'] ?>"
+                                                            data-event-title="<?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-description="<?= htmlspecialchars($eventDescription, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-date="<?= htmlspecialchars((string)$event['event_date'], ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-time="<?= htmlspecialchars($eventTimeValue, ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-location="<?= htmlspecialchars((string)($event['location'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-category="<?= htmlspecialchars($event['category'], ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-event-visibility="<?= htmlspecialchars($event['visibility'], ENT_QUOTES, 'UTF-8') ?>"
+                                                            class="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white font-bold rounded-lg text-xs hover:bg-gray-700">
+                                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
+                                                    </button>
+                                                    <form action="admin_calendar_actions.php" method="post" class="inline-block ml-1" onsubmit="return confirm('Delete this calendar event?');">
+                                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($calendarEventsCsrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                                        <input type="hidden" name="action" value="delete_event">
+                                                        <input type="hidden" name="event_id" value="<?= (int)$event['id'] ?>">
+                                                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-bold rounded-lg text-xs hover:bg-red-100">
+                                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="6" class="p-8 text-center text-gray-500 text-sm">No events have been added yet. Create an event to publish it on the public calendar.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -1804,52 +1951,38 @@ if (!empty($_SESSION['admin_flash'])) {
             </div>
 
             <!-- TAB 9: ACADEMIC REPORTING CONTROL -->
-            <div id="tab-admin-reporting" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-reporting' ? '' : 'hidden' ?> space-y-8">
+            <div id="tab-admin-reporting" class="admin-tab-content <?= $activeAdminTab === 'tab-admin-reporting' ? '' : 'hidden' ?> space-y-6">
 
                 <!-- Header Action Banner -->
-                <div class="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 text-white p-8 rounded-3xl shadow-xl border-b-4 border-brand-gold">
-                    <div>
-                        <span class="bg-brand-gold text-gray-950 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider inline-block mb-2 shadow-sm">Academic Operations</span>
-                        <h2 class="text-2xl sm:text-3xl font-black text-white">Academic Reporting & Marks Control Center</h2>
-                        <p class="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">Open or lock marks entry windows for teachers, assign specific subject teachers per class & stream, set custom grading scales, and publish report cards.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="view_window_reports.php" class="px-4 py-2.5 bg-brand-gold text-gray-950 font-black rounded-xl text-xs hover:bg-yellow-400 shadow-md flex items-center gap-2 transition-transform hover:-translate-y-0.5 active:scale-95">
-                            <i data-lucide="folder-open" class="w-4 h-4"></i> View Class & Stream Reports
-                        </a>
-                        <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2.5 bg-gray-800 text-amber-400 border border-amber-500/30 font-bold rounded-xl text-xs hover:bg-gray-700 flex items-center gap-2 shadow-md">
-                            <i data-lucide="calendar-plus" class="w-4 h-4"></i> + Create Reporting Window
-                        </button>
-                        <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-2.5 bg-gray-800 text-white border border-amber-500/30 hover:bg-gray-700 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md">
-                            <i data-lucide="user-plus" class="w-4 h-4 text-amber-400"></i> + Assign Subject Teacher
-                        </button>
-                        <button onclick="openModal('modal-add-grading-scale');" class="px-4 py-2.5 bg-white text-gray-900 font-bold rounded-xl text-xs hover:bg-gray-100 shadow-md">
-                            <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i> + Configure Grade Rule
-                        </button>
+                <div class="reporting-banner flex flex-col xl:flex-row xl:justify-between xl:items-center gap-6 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="max-w-3xl">
+                        <span class="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block mb-2">Academic Operations</span>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Academic Reporting & Marks Control</h2>
+                        <p class="text-sm text-gray-600 mt-2">Manage marks entry windows, subject assignments, grading scales, and report publication.</p>
                     </div>
                 </div>
 
                 <!-- 1. Exam Reporting Windows Card -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 pb-4 border-b border-gray-100">
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 <i data-lucide="lock" class="w-5 h-5 text-amber-600"></i> Reporting Windows & Marks Locking
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">Control whether teachers can enter or edit marks for specific exams & terms.</p>
+                            <p class="text-sm text-gray-500 mt-1">Control whether teachers can enter or edit marks for specific exams & terms.</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-3">
                             <a href="view_window_reports.php" class="px-4 py-2 bg-amber-500 text-gray-950 font-black rounded-xl text-xs hover:bg-amber-400 flex items-center gap-1.5 shadow-sm">
                                 <i data-lucide="file-text" class="w-4 h-4"></i> View All Window Reports
                             </a>
-                            <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
-                                <i data-lucide="plus" class="w-4 h-4"></i> New Window
+                            <button onclick="openModal('modal-create-reporting-window');" class="px-4 py-3 bg-gray-900 text-white font-semibold rounded-xl text-sm hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Create Window
                             </button>
                         </div>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                        <table class="reporting-table reporting-table--windows w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
                                     <th class="p-3.5">Window Title</th>
@@ -1917,57 +2050,59 @@ if (!empty($_SESSION['admin_flash'])) {
                                                     <span class="block text-[10px] font-bold text-green-700 uppercase">✓ Points Shown (All)</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
-                                                <!-- View Reports -->
-                                                <a href="view_window_reports.php?window_id=<?= (int)$rw['id'] ?>" class="px-3 py-1.5 bg-amber-500 text-gray-950 font-black rounded-lg text-xs hover:bg-amber-400 shadow-sm inline-flex items-center gap-1 transition-all">
-                                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Reports
-                                                </a>
+                                            <td class="p-3.5">
+                                                <div class="reporting-table-actions">
+                                                    <!-- View Reports -->
+                                                    <a href="view_window_reports.php?window_id=<?= (int)$rw['id'] ?>" class="px-3 py-1.5 bg-amber-500 text-gray-950 font-black rounded-lg text-xs hover:bg-amber-400 shadow-sm inline-flex items-center gap-1 transition-all">
+                                                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Reports
+                                                    </a>
 
-                                                <!-- Configure Points per Level Modal Trigger -->
-                                                <button type="button" 
-                                                        onclick="openPointsConfigModal(<?= (int)$rw['id'] ?>, '<?= htmlspecialchars(addslashes($rw['title']), ENT_QUOTES) ?>', <?= (int)($rw['show_points'] ?? 1) ?>, '<?= htmlspecialchars(addslashes($rw['disabled_points_levels'] ?? ''), ENT_QUOTES) ?>')" 
-                                                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-900 text-amber-400 hover:bg-gray-800 shadow-sm inline-flex items-center gap-1 transition-all">
-                                                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Points per Level
-                                                </button>
-
-                                                <!-- Toggle Open/Close -->
-                                                <form action="admin_reporting_actions.php" method="post" class="inline">
-                                                    <input type="hidden" name="action" value="toggle_window_open">
-                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
-                                                    <input type="hidden" name="status" value="<?= !empty($rw['is_open']) ? 0 : 1 ?>">
-                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_open']) ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' ?>">
-                                                        <?= !empty($rw['is_open']) ? '🔒 Close' : '🟢 Open' ?>
+                                                    <!-- Configure Points per Level Modal Trigger -->
+                                                    <button type="button" 
+                                                            onclick="openPointsConfigModal(<?= (int)$rw['id'] ?>, '<?= htmlspecialchars(addslashes($rw['title']), ENT_QUOTES) ?>', <?= (int)($rw['show_points'] ?? 1) ?>, '<?= htmlspecialchars(addslashes($rw['disabled_points_levels'] ?? ''), ENT_QUOTES) ?>')" 
+                                                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-900 text-amber-400 hover:bg-gray-800 shadow-sm inline-flex items-center gap-1 transition-all">
+                                                        <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Points per Level
                                                     </button>
-                                                </form>
 
-                                                <!-- Toggle Publish -->
-                                                <form action="admin_reporting_actions.php" method="post" class="inline">
-                                                    <input type="hidden" name="action" value="toggle_window_published">
-                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
-                                                    <input type="hidden" name="status" value="<?= !empty($rw['is_published']) ? 0 : 1 ?>">
-                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_published']) ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' ?>">
-                                                        <?= !empty($rw['is_published']) ? 'Unpublish' : '📢 Publish' ?>
-                                                    </button>
-                                                </form>
+                                                    <!-- Toggle Open/Close -->
+                                                    <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                        <input type="hidden" name="action" value="toggle_window_open">
+                                                        <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                        <input type="hidden" name="status" value="<?= !empty($rw['is_open']) ? 0 : 1 ?>">
+                                                        <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_open']) ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' ?>">
+                                                            <?= !empty($rw['is_open']) ? '🔒 Close' : '🟢 Open' ?>
+                                                        </button>
+                                                    </form>
 
-                                                <!-- Toggle Positions -->
-                                                <form action="admin_reporting_actions.php" method="post" class="inline">
-                                                    <input type="hidden" name="action" value="toggle_show_positions">
-                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
-                                                    <input type="hidden" name="status" value="<?= !empty($rw['show_positions']) ? 0 : 1 ?>">
-                                                    <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
-                                                        <?= !empty($rw['show_positions']) ? 'Hide Ranks' : 'Show Ranks' ?>
-                                                    </button>
-                                                </form>
+                                                    <!-- Toggle Publish -->
+                                                    <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                        <input type="hidden" name="action" value="toggle_window_published">
+                                                        <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                        <input type="hidden" name="status" value="<?= !empty($rw['is_published']) ? 0 : 1 ?>">
+                                                        <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm border <?= !empty($rw['is_published']) ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' ?>">
+                                                            <?= !empty($rw['is_published']) ? 'Unpublish' : '📢 Publish' ?>
+                                                        </button>
+                                                    </form>
 
-                                                <!-- Delete -->
-                                                <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Delete this reporting window?');">
-                                                    <input type="hidden" name="action" value="delete_window">
-                                                    <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
-                                                    <button type="submit" class="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                                    </button>
-                                                </form>
+                                                    <!-- Toggle Positions -->
+                                                    <form action="admin_reporting_actions.php" method="post" class="inline">
+                                                        <input type="hidden" name="action" value="toggle_show_positions">
+                                                        <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                        <input type="hidden" name="status" value="<?= !empty($rw['show_positions']) ? 0 : 1 ?>">
+                                                        <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
+                                                            <?= !empty($rw['show_positions']) ? 'Hide Ranks' : 'Show Ranks' ?>
+                                                        </button>
+                                                    </form>
+
+                                                    <!-- Delete -->
+                                                    <form action="admin_reporting_actions.php" method="post" class="inline" onsubmit="return confirm('Delete this reporting window?');">
+                                                        <input type="hidden" name="action" value="delete_window">
+                                                        <input type="hidden" name="window_id" value="<?= (int)$rw['id'] ?>">
+                                                        <button type="submit" class="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -1984,21 +2119,21 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
 
                 <!-- 2. Subject Teacher Allocations Card -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 pb-4 border-b border-gray-100">
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 <i data-lucide="user-check" class="w-5 h-5 text-amber-600"></i> Subject Teacher Allocations (Per Class & Stream)
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">Assign teachers to specific subjects for individual classes & streams (e.g. Mathematics in S1 Stream A).</p>
+                            <p class="text-sm text-gray-500 mt-1">Assign teachers to specific subjects for individual classes & streams (e.g. Mathematics in S1 Stream A).</p>
                         </div>
-                        <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                        <button onclick="openModal('modal-assign-subject-teacher');" class="px-4 py-3 bg-gray-900 text-white font-semibold rounded-xl text-sm hover:bg-gray-700 flex items-center gap-2 transition-colors">
                             <i data-lucide="plus" class="w-4 h-4"></i> Assign Teacher
                         </button>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                        <table class="reporting-table reporting-table--assignments w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
                                     <th class="p-3.5">Class Level</th>
@@ -2042,21 +2177,21 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
 
                 <!-- 3. Customizable Grading Scales Card -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 pb-4 border-b border-gray-100">
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 <i data-lucide="sliders" class="w-5 h-5 text-amber-600"></i> Customizable Grading Scales Engine
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">Configure mark percentage ranges, grades (e.g. D1–F9, A–F), points, and default remarks.</p>
+                            <p class="text-sm text-gray-500 mt-1">Configure mark percentage ranges, grades (e.g. D1–F9, A–F), points, and default remarks.</p>
                         </div>
-                        <button onclick="openModal('modal-add-grading-scale');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5">
+                        <button onclick="openModal('modal-add-grading-scale');" class="px-4 py-3 bg-gray-900 text-white font-semibold rounded-xl text-sm hover:bg-gray-700 flex items-center gap-2 transition-colors">
                             <i data-lucide="plus" class="w-4 h-4"></i> Add Grade Rule
                         </button>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                        <table class="reporting-table reporting-table--grading w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
                                     <th class="p-3.5">Education Level</th>
@@ -2106,21 +2241,21 @@ if (!empty($_SESSION['admin_flash'])) {
                 </div>
 
                 <!-- 4. System Streams & Class Divisions Card -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200/80">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200">
                     <div class="flex flex-wrap justify-between items-center mb-6 pb-4 border-b border-gray-100 gap-3">
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 <i data-lucide="layers" class="w-5 h-5 text-amber-600"></i> System Streams & Class Divisions Management
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">Add new custom streams, edit existing stream names/codes, or toggle active system status across all forms and report cards.</p>
+                            <p class="text-sm text-gray-500 mt-1">Add new custom streams, edit existing stream names/codes, or toggle active system status across all forms and report cards.</p>
                         </div>
-                        <button onclick="openModal('modal-add-stream');" class="px-4 py-2 bg-gray-900 text-amber-400 font-bold rounded-xl text-xs hover:bg-gray-800 flex items-center gap-1.5 shadow">
+                        <button onclick="openModal('modal-add-stream');" class="px-4 py-3 bg-gray-900 text-white font-semibold rounded-xl text-sm hover:bg-gray-700 flex items-center gap-2 transition-colors">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i> + Add Custom Stream
                         </button>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                        <table class="reporting-table reporting-table--streams w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr class="bg-gray-100 text-gray-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-gray-200">
                                     <th class="p-3.5">Stream Name</th>
@@ -2570,6 +2705,74 @@ if (!empty($_SESSION['admin_flash'])) {
         </div>
     </div>
 
+    <!-- MODAL: CREATE OR EDIT CALENDAR EVENT -->
+    <div id="modal-calendar-event" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="calendar-event-modal-title">
+        <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                <h3 id="calendar-event-modal-title" class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-amber-600"></i> Create New Event
+                </h3>
+                <button type="button" onclick="closeModal('modal-calendar-event');" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100" aria-label="Close event form">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="calendar-event-form" action="admin_calendar_actions.php" method="post" class="flex flex-col flex-grow overflow-hidden min-h-0">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($calendarEventsCsrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="action" value="save_event">
+                <input type="hidden" name="event_id" id="calendar-event-id" value="">
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow min-h-0">
+                    <div>
+                        <label for="calendar-event-title" class="block text-xs font-bold text-gray-700 uppercase mb-1">Event Title <span class="text-amber-600">*</span></label>
+                        <input id="calendar-event-title" name="title" type="text" required maxlength="255" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="calendar-event-date" class="block text-xs font-bold text-gray-700 uppercase mb-1">Event Date <span class="text-amber-600">*</span></label>
+                            <input id="calendar-event-date" name="event_date" type="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label for="calendar-event-time" class="block text-xs font-bold text-gray-700 uppercase mb-1">Time <span class="text-gray-400 font-normal normal-case">(optional)</span></label>
+                            <input id="calendar-event-time" name="event_time" type="time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="calendar-event-location" class="block text-xs font-bold text-gray-700 uppercase mb-1">Location</label>
+                            <input id="calendar-event-location" name="location" type="text" maxlength="255" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label for="calendar-event-category" class="block text-xs font-bold text-gray-700 uppercase mb-1">Category</label>
+                            <select id="calendar-event-category" name="category" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                <option value="Election">Election</option>
+                                <option value="Assembly">Assembly</option>
+                                <option value="Campaign">Campaign</option>
+                                <option value="Meeting">Meeting</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="calendar-event-visibility" class="block text-xs font-bold text-gray-700 uppercase mb-1">Visibility</label>
+                        <select id="calendar-event-visibility" name="visibility" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <option value="public">Public - shown on the school calendar</option>
+                            <option value="private">Private - admin only</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="calendar-event-description" class="block text-xs font-bold text-gray-700 uppercase mb-1">Description</label>
+                        <textarea id="calendar-event-description" name="description" rows="4" maxlength="5000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none resize-y"></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex gap-3">
+                    <button id="calendar-event-submit" type="submit" class="flex-1 py-3 bg-gray-900 text-amber-400 font-extrabold rounded-xl hover:bg-gray-800 text-xs flex items-center justify-center gap-2 shadow">
+                        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Create Event
+                    </button>
+                    <button type="button" onclick="closeModal('modal-calendar-event');" class="w-28 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 text-xs">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL 4: UPLOAD GALLERY PHOTO -->
     <div id="modal-upload-gallery" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto">
@@ -2936,6 +3139,46 @@ if (!empty($_SESSION['admin_flash'])) {
 
         function openModal(id)  { document.getElementById(id)?.classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+        function openCalendarEventModal(button) {
+            const form = document.getElementById('calendar-event-form');
+            if (!form) return;
+            form.reset();
+
+            const eventId = document.getElementById('calendar-event-id');
+            const title = document.getElementById('calendar-event-title');
+            const description = document.getElementById('calendar-event-description');
+            const eventDate = document.getElementById('calendar-event-date');
+            const eventTime = document.getElementById('calendar-event-time');
+            const location = document.getElementById('calendar-event-location');
+            const category = document.getElementById('calendar-event-category');
+            const visibility = document.getElementById('calendar-event-visibility');
+            const modalTitle = document.getElementById('calendar-event-modal-title');
+            const submitButton = document.getElementById('calendar-event-submit');
+            const isEditing = Boolean(button && button.dataset.eventId);
+
+            eventId.value = isEditing ? button.dataset.eventId : '';
+            title.value = isEditing ? button.dataset.eventTitle : '';
+            description.value = isEditing ? button.dataset.eventDescription : '';
+            eventDate.value = isEditing ? button.dataset.eventDate : '';
+            eventTime.value = isEditing ? button.dataset.eventTime : '';
+            location.value = isEditing ? button.dataset.eventLocation : '';
+            category.value = isEditing ? button.dataset.eventCategory : 'Other';
+            visibility.value = isEditing ? button.dataset.eventVisibility : 'public';
+            modalTitle.innerHTML = isEditing
+                ? '<i data-lucide="calendar-days" class="w-5 h-5 text-amber-600"></i> Edit Calendar Event'
+                : '<i data-lucide="calendar-plus" class="w-5 h-5 text-amber-600"></i> Create New Event';
+            submitButton.innerHTML = isEditing
+                ? '<i data-lucide="save" class="w-4 h-4"></i> Save Changes'
+                : '<i data-lucide="calendar-plus" class="w-4 h-4"></i> Create Event';
+
+            openModal('modal-calendar-event');
+            lucide.createIcons();
+        }
+
+        document.querySelectorAll('[data-edit-calendar-event]').forEach(button => {
+            button.addEventListener('click', () => openCalendarEventModal(button));
+        });
 
         function showFeesUiNotice(event) {
             event.preventDefault();

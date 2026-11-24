@@ -101,6 +101,8 @@ $photosPayload = json_encode(array_map(function($p) {
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/public-nav.css">
+    <script defer src="js/public-nav.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .nav-link-active { background-color: #1F2937; color: #ffffff !important; }
@@ -171,6 +173,11 @@ $photosPayload = json_encode(array_map(function($p) {
                            class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                         </a>
+                    <?php else: ?>
+                        <a href="login.php"
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
+                        </a>
                     <?php endif; ?>
                 </div>
                 <div class="lg:hidden flex items-center">
@@ -196,6 +203,12 @@ $photosPayload = json_encode(array_map(function($p) {
                     </a>
                     <a href="<?= $logoutLink ?>" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-maroon text-center flex items-center justify-center gap-2">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="pt-2 border-t border-gray-100">
+                    <a href="login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-green text-center flex items-center justify-center gap-2">
+                        <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
                     </a>
                 </div>
             <?php endif; ?>

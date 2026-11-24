@@ -1,0 +1,32 @@
+nav a[href="login.php"] {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+    border-color: #1f2937 !important;
+}
+
+nav a[href="login.php"]:hover,
+nav a[href="login.php"]:focus-visible {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+}
+
+nav a.site-nav-current {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+    border-color: #1f2937 !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+nav a.site-nav-current:hover,
+nav a.site-nav-current:focus-visible {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+}
+
+nav #mobile-menu a.site-nav-current,
+nav .mobile-menu a.site-nav-current {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}

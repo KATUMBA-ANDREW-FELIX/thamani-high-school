@@ -243,6 +243,12 @@ if (!empty($window['assessment_type'])) {
     elseif ($type === 'EOT') $assTitleLabel = 'END OF TERM';
     else $assTitleLabel = strtoupper($window['title']);
 }
+$safeStudentName = trim((string)preg_replace('/[^A-Za-z0-9_-]+/', '_', trim($student['full_name'])), '_');
+$safeAcademicYear = trim((string)preg_replace('/[^A-Za-z0-9_-]+/', '_', (string)$window['academic_year']), '_');
+$safeTerm = trim((string)preg_replace('/[^A-Za-z0-9_-]+/', '_', (string)$window['term']), '_');
+$reportFileName = 'Thamani_Report_Card_' . ($safeStudentName !== '' ? $safeStudentName : 'Student')
+    . '_' . ($safeAcademicYear !== '' ? $safeAcademicYear : date('Y'))
+    . '_Term_' . ($safeTerm !== '' ? $safeTerm : 'Report') . '.pdf';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -281,6 +287,18 @@ if (!empty($window['assessment_type'])) {
             font-size: 13px;
             cursor: pointer;
         }
+        .btn-download {
+            background-color: #D4AF37;
+            color: #111827;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn-print:disabled, .btn-download:disabled { opacity: .65; cursor: wait; }
+        .download-status { color: #555; font-size: 12px; }
         .btn-back {
             background-color: #e2e8f0;
             color: #333;
@@ -438,7 +456,11 @@ if (!empty($window['assessment_type'])) {
             <a href="javascript:history.back()" class="btn-back">← Back</a>
             <span style="margin-left: 10px; font-weight: bold; color: #555;">Official Uganda Academic Report Card View</span>
         </div>
-        <button onclick="window.print();" class="btn-print">🖨️ Print / Download PDF</button>
+        <span id="download-status" class="download-status" role="status" aria-live="polite"></span>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" id="download-report-card" onclick="downloadReportCard();" class="btn-download">Download PDF</button>
+            <button type="button" onclick="window.print();" class="btn-print">Print</button>
+        </div>
     </div>
 
     <!-- Official Report Card Page -->
@@ -618,5 +640,53 @@ if (!empty($window['assessment_type'])) {
 
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        const REPORT_PDF_FILENAME = <?= json_encode($reportFileName, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const AUTO_DOWNLOAD_REPORT = <?= isset($_GET['download']) && $_GET['download'] === '1' ? 'true' : 'false' ?>;
+
+        async function downloadReportCard() {
+            const button = document.getElementById('download-report-card');
+            const status = document.getElementById('download-status');
+            const report = document.querySelector('.report-page');
+            if (!button || !status || !report) return;
+
+            if (typeof window.html2pdf !== 'function') {
+                status.textContent = 'PDF download is unavailable. Please try again or use Print.';
+                return;
+            }
+
+            button.disabled = true;
+            status.textContent = 'Preparing PDF…';
+            try {
+                await Promise.all(Array.from(report.querySelectorAll('img')).map(image => {
+                    if (image.complete) return Promise.resolve();
+                    return new Promise(resolve => {
+                        image.addEventListener('load', resolve, { once: true });
+                        image.addEventListener('error', resolve, { once: true });
+                    });
+                }));
+
+                await window.html2pdf().set({
+                    margin: 8,
+                    filename: REPORT_PDF_FILENAME,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
+                }).from(report).save();
+                status.textContent = 'PDF downloaded.';
+            } catch (error) {
+                console.error('Report card PDF download failed:', error);
+                status.textContent = 'PDF download failed. Please try again or use Print.';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        if (AUTO_DOWNLOAD_REPORT) {
+            window.addEventListener('load', downloadReportCard, { once: true });
+        }
+    </script>
 </body>
 </html>

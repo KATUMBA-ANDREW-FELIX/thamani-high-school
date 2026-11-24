@@ -430,10 +430,10 @@ $backUrl = $isAdmin ? 'admin_dashboard.php?tab=tab-admin-reporting#tab-admin-rep
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="p-3.5 text-right space-x-1 whitespace-nowrap">
-                                                        <a href="print_report_card.php?student_id=<?= (int)$st['id'] ?>&window_id=<?= $windowId ?>" 
+                                                        <a href="print_report_card.php?student_id=<?= (int)$st['id'] ?>&window_id=<?= $windowId ?>&download=1" 
                                                            target="_blank" 
                                                            class="px-3.5 py-2 bg-brand-green text-white font-black rounded-xl text-xs hover:bg-green-800 transition-all inline-flex items-center gap-1.5 shadow-sm">
-                                                            <i data-lucide="printer" class="w-3.5 h-3.5"></i> View Report Card
+                                                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download PDF
                                                         </a>
                                                     </td>
                                                 </tr>

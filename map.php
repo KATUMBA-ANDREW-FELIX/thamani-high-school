@@ -2,6 +2,16 @@
 /**
  * Thamani High School - Campus Map & Directions Page
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$isStudent = !empty($_SESSION['student_id']);
+$isTeacher = !empty($_SESSION['teacher_id']);
+$isAdmin = !empty($_SESSION['admin_id']);
+$isLoggedIn = $isStudent || $isTeacher || $isAdmin;
+$dashboardLink = $isStudent ? 'student-dashboard.php' : ($isTeacher ? 'teacher_dashboard.php' : 'admin_dashboard.php');
+$logoutLink = $isStudent ? 'student_logout.php' : ($isTeacher ? 'teacher_logout.php' : 'admin_logout.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -11,6 +21,8 @@
     <title>Campus Map & Directions - THAMANI HIGH SCHOOL - Kakiri</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/public-nav.css">
+    <script defer src="js/public-nav.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
@@ -47,7 +59,28 @@
                     <a href="calendar.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Calendar & Fees</a>
                     <a href="alumni.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-700 hover:bg-gray-900 hover:text-white">Achievements &amp; Alumni</a>
                     <a href="map.php" class="nav-link whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-gray-900 bg-white border border-gray-300 shadow-sm hover:bg-gray-900 hover:text-white hover:border-gray-900">Campus Map</a>
+                    <?php if ($isLoggedIn): ?>
+                        <a href="<?= htmlspecialchars($dashboardLink, ENT_QUOTES, 'UTF-8') ?>" class="inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i> Back to Dashboard
+                        </a>
+                        <a href="<?= htmlspecialchars($logoutLink, ENT_QUOTES, 'UTF-8') ?>" class="inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow">
+                            <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                        </a>
+                    <?php else: ?>
+                        <a href="login.php" class="inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow">
+                            <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
+                        </a>
+                    <?php endif; ?>
                 </div>
+                <?php if ($isLoggedIn): ?>
+                    <a href="<?= htmlspecialchars($dashboardLink, ENT_QUOTES, 'UTF-8') ?>" class="inline-flex lg:hidden items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow shrink-0">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i><span>Dashboard</span>
+                    </a>
+                <?php else: ?>
+                    <a href="login.php" class="inline-flex lg:hidden items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow shrink-0">
+                        <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i><span>Portal Login</span>
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </nav>

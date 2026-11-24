@@ -10,5 +10,5 @@ unset(
     $_SESSION['student_logged_in_at']
 );
 
-header('Location: student-login.php');
+header('Location: login.php');
 exit;

@@ -701,9 +701,9 @@ function formatSize($bytes) {
                         </div>
                     </div>
                     <?php if ($selectedWindow): ?>
-                        <a href="print_report_card.php?student_id=<?= $studentId ?>&window_id=<?= $selectedWindowId ?>" target="_blank"
+                        <a href="print_report_card.php?student_id=<?= $studentId ?>&window_id=<?= $selectedWindowId ?>&download=1" target="_blank"
                            class="px-6 py-3 bg-brand-green hover:bg-brand-darkGreen text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md hover:-translate-y-0.5 transition-all">
-                            <i data-lucide="printer" class="w-4 h-4"></i> Download / Print Official PDF Report
+                            <i data-lucide="download" class="w-4 h-4"></i> Download Official PDF Report
                         </a>
                     <?php endif; ?>
                 </div>

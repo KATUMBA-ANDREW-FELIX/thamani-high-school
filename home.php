@@ -34,6 +34,8 @@ if ($isStudent) {
     <title>THAMANI HIGH SCHOOL - Kakiri | Excellence in Every Endeavor</title>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/public-nav.css">
+    <script defer src="js/public-nav.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">

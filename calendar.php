@@ -2,7 +2,7 @@
 /**
  * Thamani High School - Academic Calendar & Fees (Public View)
  * --------------------------------------------------------
- * - Displays all uploaded calendar, fees, timetable documents
+ * - Displays uploaded calendar documents and upcoming public events
  * - Admin gets an upload button + modal on this page
  * - Teachers can view only
  */
@@ -60,10 +60,51 @@ if ($res === false) {
     while ($row = thamani_db_fetch_assoc($res)) $documents[] = $row;
 }
 
+$events = [];
+$eventsError = '';
+$publicVisibility = 'public';
+$eventsStmt = thamani_db_prepare(
+    $conn,
+    "SELECT id, title, description, event_date, event_time, location, category
+     FROM calendar_events
+     WHERE visibility = ? AND event_date >= CURRENT_DATE
+     ORDER BY event_date ASC, CASE WHEN event_time IS NULL THEN 1 ELSE 0 END ASC, event_time ASC, id ASC"
+);
+if ($eventsStmt === false) {
+    error_log('[Calendar Events Prepare] ' . thamani_db_error($conn));
+    $eventsError = 'Upcoming events could not be loaded right now.';
+} else {
+    thamani_db_stmt_bind_param($eventsStmt, 's', $publicVisibility);
+    if (!thamani_db_stmt_execute($eventsStmt)) {
+        error_log('[Calendar Events Execute] ' . thamani_db_stmt_error($eventsStmt));
+        $eventsError = 'Upcoming events could not be loaded right now.';
+    } else {
+        $eventsResult = thamani_db_stmt_get_result($eventsStmt);
+        if ($eventsResult === false) {
+            error_log('[Calendar Events Result] ' . thamani_db_stmt_error($eventsStmt));
+            $eventsError = 'Upcoming events could not be loaded right now.';
+        } else {
+            while ($row = thamani_db_fetch_assoc($eventsResult)) $events[] = $row;
+        }
+    }
+    thamani_db_stmt_close($eventsStmt);
+}
+
 function formatFileSize(int $bytes): string {
     if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
     if ($bytes >= 1024)    return round($bytes / 1024, 1) . ' KB';
     return $bytes . ' B';
+}
+
+function calendar_event_category_classes(string $category): string {
+    $classes = [
+        'Election' => 'event-tag-election',
+        'Assembly' => 'event-tag-assembly',
+        'Campaign' => 'event-tag-campaign',
+        'Meeting' => 'event-tag-meeting',
+        'Other' => 'event-tag-other',
+    ];
+    return $classes[$category] ?? $classes['Other'];
 }
 
 // ---------- Flash ----------
@@ -100,18 +141,33 @@ $docsPayload = json_encode(array_map(function($d) {
         'uploadedBy'  => (int)($d['uploaded_by'] ?? 0),
     ];
 }, $documents), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
+
+$eventsPayload = json_encode(array_map(function($event) {
+    $timestamp = strtotime((string)$event['event_date']);
+    $eventTime = !empty($event['event_time']) ? strtotime((string)$event['event_time']) : false;
+    return [
+        'title' => (string)$event['title'],
+        'description' => (string)($event['description'] ?? ''),
+        'dateLabel' => $timestamp !== false ? date('l, d F Y', $timestamp) : 'Date to be confirmed',
+        'timeLabel' => $eventTime !== false ? date('g:i A', $eventTime) : 'Time to be announced',
+        'location' => (string)($event['location'] ?? ''),
+        'category' => (string)$event['category'],
+    ];
+}, $events), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar & Fees - THAMANI HIGH SCHOOL - Kakiri</title>
+    <title>Termly Calendar & Programmes - THAMANI HIGH SCHOOL</title>
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/public-nav.css">
+    <script defer src="js/public-nav.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .nav-link-active { background-color: #1F2937; color: #ffffff !important; }
@@ -122,6 +178,11 @@ $docsPayload = json_encode(array_map(function($d) {
         }
         #page-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; display: none !important; }
         .filter-pill.active { background-color: #1F2937 !important; color: #D4AF37 !important; }
+        .event-tag-election { background: #ede9fe; color: #5b21b6; }
+        .event-tag-assembly { background: #dbeafe; color: #1e40af; }
+        .event-tag-campaign { background: #ffedd5; color: #9a3412; }
+        .event-tag-meeting { background: #dcfce7; color: #166534; }
+        .event-tag-other { background: #f3f4f6; color: #374151; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans flex flex-col min-h-screen">
@@ -181,6 +242,11 @@ $docsPayload = json_encode(array_map(function($d) {
                            class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-maroon hover:bg-red-900 transition-colors shadow flex items-center gap-1.5">
                             <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                         </a>
+                    <?php else: ?>
+                        <a href="login.php"
+                           class="px-3.5 py-2 rounded-md text-xs font-bold text-white bg-brand-green hover:bg-brand-darkGreen transition-colors shadow flex items-center gap-1.5">
+                            <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
+                        </a>
                     <?php endif; ?>
                 </div>
                 <div class="lg:hidden flex items-center">
@@ -208,52 +274,176 @@ $docsPayload = json_encode(array_map(function($d) {
                         <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                     </a>
                 </div>
+            <?php else: ?>
+                <div class="pt-2 border-t border-gray-100">
+                    <a href="login.php" class="w-full py-2.5 rounded-md font-bold text-white bg-brand-green text-center flex items-center justify-center gap-2">
+                        <i data-lucide="log-in" class="w-4 h-4 text-brand-gold"></i> Portal Login
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
     </nav>
 
     <!-- Main -->
     <main class="flex-grow">
-        <section class="py-12 bg-gray-50">
+        <section class="bg-gray-950 text-white border-b-4 border-brand-gold">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+                <div class="max-w-3xl">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xs uppercase tracking-wider mb-5">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i> School Calendar
+                    </span>
+                    <h1 class="text-3xl sm:text-5xl font-black text-white mb-4">Termly Calendar &amp; Programmes</h1>
+                    <p class="text-gray-300 text-base sm:text-lg">Official school circulars, fee notices, term dates, and upcoming events for the Thamani community.</p>
+                </div>
+                <?php if ($isAdmin): ?>
+                    <button onclick="openModal('modal-upload-calendar');" class="inline-flex shrink-0 items-center justify-center gap-2 px-5 py-3 bg-brand-gold text-gray-950 font-bold rounded-xl hover:bg-yellow-400 transition-colors shadow-md">
+                        <i data-lucide="upload-cloud" class="w-5 h-5"></i> Upload Document
+                    </button>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <section class="py-10 sm:py-14 bg-gray-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
                 <?= $flashHtml ?>
-
-                <!-- Page Title -->
-                <div class="text-center mb-12">
-                    <span class="inline-block px-4 py-1.5 rounded-full bg-brand-lightGreen text-brand-green font-bold text-xs uppercase tracking-wider mb-4">Official Documents</span>
-                    <h1 class="text-4xl font-bold text-brand-green mb-4">Academic Calendar & Fee Structure</h1>
-                    <p class="text-gray-600 max-w-2xl mx-auto">Official term dates, visitation days, UNEB examination schedules, and tuition structures for Thamani High School.</p>
-
-                    <?php if ($isAdmin): ?>
-                        <button onclick="openModal('modal-upload-calendar');" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-brand-maroon text-white font-bold rounded-lg hover:bg-red-900 transition-all shadow-md hover:shadow-lg">
-                            <i data-lucide="upload-cloud" class="w-5 h-5"></i> Upload Document
-                        </button>
-                    <?php endif; ?>
+                <?php if ($dbError !== ''): ?>
+                    <div class="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-800">
+                        <?= htmlspecialchars($dbError, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                <?php endif; ?>
+                <div class="mb-7">
+                    <span class="text-amber-700 font-bold text-xs uppercase tracking-widest">Official Notices</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-gray-950 mt-2">Circulars &amp; Documents</h2>
+                    <p class="text-gray-600 mt-2">Browse the latest academic calendars, fee structures, and school notices.</p>
                 </div>
 
-                <!-- Filter Tabs -->
-                <div id="type-filters" class="flex overflow-x-auto pb-3 gap-2 no-scrollbar mb-10 border-b border-gray-200"></div>
-
-                <!-- Count -->
-                <div class="mb-6 flex items-center justify-between">
+                <div id="type-filters" class="flex overflow-x-auto pb-3 gap-2 no-scrollbar mb-7 border-b border-gray-200"></div>
+                <div class="mb-5 flex items-center justify-between">
                     <p id="doc-count" class="text-sm text-gray-500 font-medium"></p>
-                    <span class="bg-brand-lightGreen text-brand-green font-bold px-4 py-1.5 rounded-full text-xs">Updated 2026</span>
+                    <span class="bg-amber-100 text-amber-800 font-bold px-4 py-1.5 rounded-full text-xs">School Documents</span>
                 </div>
 
-                <!-- Grid -->
                 <div id="documents-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-
-                <!-- Empty -->
-                <div id="documents-empty" class="hidden text-center py-20">
-                    <i data-lucide="calendar-x" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                <div id="documents-empty" class="hidden text-center py-16 bg-white rounded-2xl border border-gray-200">
+                    <i data-lucide="folder-open" class="w-14 h-14 text-gray-300 mx-auto mb-4"></i>
                     <h3 class="text-xl font-bold text-gray-700 mb-2">No documents published yet</h3>
-                    <p class="text-gray-500 text-sm">Check back soon — the school administration publishes updates here.</p>
+                    <p class="text-gray-500 text-sm">School circulars and fee notices will appear here when published.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-10 sm:py-14 bg-white border-t border-gray-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+                    <div>
+                        <span class="text-amber-700 font-bold text-xs uppercase tracking-widest">What’s Coming Up</span>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-950 mt-2">Upcoming Events</h2>
+                        <p class="text-gray-600 mt-2">Select an event to view its full details.</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 text-sm font-semibold text-gray-500">
+                        <i data-lucide="calendar-check" class="w-4 h-4 text-amber-600"></i>
+                        <?= count($events) ?> upcoming event<?= count($events) === 1 ? '' : 's' ?>
+                    </span>
                 </div>
 
+                <?php if ($eventsError !== ''): ?>
+                    <div class="p-5 rounded-2xl border border-red-200 bg-red-50 text-sm font-semibold text-red-800">
+                        <?= htmlspecialchars($eventsError, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                <?php elseif (!empty($events)): ?>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                        <?php foreach ($events as $index => $event): ?>
+                            <?php
+                                $eventTimestamp = strtotime((string)$event['event_date']);
+                                $eventTimeTimestamp = !empty($event['event_time']) ? strtotime((string)$event['event_time']) : false;
+                            ?>
+                            <button type="button" onclick="openEventDetails(<?= (int)$index ?>);" aria-haspopup="dialog"
+                                    class="w-full text-left bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-amber-300 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <span class="flex items-start gap-4">
+                                    <span class="w-16 h-16 shrink-0 rounded-xl bg-gray-950 text-white flex flex-col items-center justify-center border-b-4 border-brand-gold">
+                                        <span class="text-2xl font-black leading-none"><?= $eventTimestamp !== false ? date('d', $eventTimestamp) : '--' ?></span>
+                                        <span class="text-[10px] font-bold uppercase text-amber-400 mt-1"><?= $eventTimestamp !== false ? date('M', $eventTimestamp) : 'TBA' ?></span>
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold <?= calendar_event_category_classes((string)$event['category']) ?>">
+                                            <?= htmlspecialchars($event['category'], ENT_QUOTES, 'UTF-8') ?>
+                                        </span>
+                                        <span class="block text-lg font-bold text-gray-900 mt-2 leading-snug"><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <span class="block text-sm text-gray-500 mt-2 flex items-center gap-2">
+                                            <i data-lucide="calendar-days" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                            <?= $eventTimestamp !== false ? htmlspecialchars(date('D, d M Y', $eventTimestamp), ENT_QUOTES, 'UTF-8') : 'Date to be confirmed' ?>
+                                        </span>
+                                        <span class="block text-sm text-gray-500 mt-1 flex items-center gap-2">
+                                            <i data-lucide="clock" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                            <?= $eventTimeTimestamp !== false ? htmlspecialchars(date('g:i A', $eventTimeTimestamp), ENT_QUOTES, 'UTF-8') : 'Time to be announced' ?>
+                                        </span>
+                                        <?php if (!empty($event['location'])): ?>
+                                            <span class="block text-sm text-gray-500 mt-1 flex items-center gap-2">
+                                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                                <span class="truncate"><?= htmlspecialchars($event['location'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            </span>
+                                        <?php endif; ?>
+                                    </span>
+                                    <i data-lucide="arrow-up-right" class="w-4 h-4 text-gray-400 shrink-0 mt-1"></i>
+                                </span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center py-16 bg-gray-50 rounded-2xl border border-gray-200">
+                        <i data-lucide="calendar-x" class="w-14 h-14 text-gray-300 mx-auto mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-700 mb-2">No upcoming events</h3>
+                        <p class="text-gray-500 text-sm">There are no public events scheduled at the moment. Please check back soon.</p>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
     </main>
+
+    <!-- PUBLIC EVENT DETAILS MODAL -->
+    <div id="event-details-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-sm"
+         role="dialog" aria-modal="true" aria-labelledby="event-modal-title" onclick="if (event.target === this) closeEventDetails();">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-5 bg-gray-950 text-white flex items-start justify-between gap-4 border-b-4 border-brand-gold">
+                <div class="min-w-0">
+                    <span id="event-modal-category" class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold event-tag-other">Event</span>
+                    <h2 id="event-modal-title" class="text-xl sm:text-2xl font-bold mt-3 break-words"></h2>
+                </div>
+                <button type="button" onclick="closeEventDetails();" class="p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white" aria-label="Close event details">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 sm:p-8 overflow-y-auto space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                        <i data-lucide="calendar-days" class="w-5 h-5 text-amber-600 mt-0.5 shrink-0"></i>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">Date</div>
+                            <div id="event-modal-date" class="text-sm font-semibold text-gray-900 mt-1"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                        <i data-lucide="clock" class="w-5 h-5 text-amber-600 mt-0.5 shrink-0"></i>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">Time</div>
+                            <div id="event-modal-time" class="text-sm font-semibold text-gray-900 mt-1"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl sm:col-span-2">
+                        <i data-lucide="map-pin" class="w-5 h-5 text-amber-600 mt-0.5 shrink-0"></i>
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-gray-500">Location</div>
+                            <div id="event-modal-location" class="text-sm font-semibold text-gray-900 mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Event Details</h3>
+                    <p id="event-modal-description" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ADMIN UPLOAD MODAL -->
     <?php if ($isAdmin): ?>
@@ -384,6 +574,7 @@ $docsPayload = json_encode(array_map(function($d) {
 
     <script>
         const DOCUMENTS = <?= $docsPayload ?: '[]' ?>;
+        const EVENTS = <?= $eventsPayload ?: '[]' ?>;
         const IS_ADMIN = <?= $isAdmin ? 'true' : 'false' ?>;
         const CURRENT_USER_ID = <?= (int)($_SESSION['teacher_id'] ?? $_SESSION['admin_id'] ?? 0) ?>;
 
@@ -494,6 +685,38 @@ $docsPayload = json_encode(array_map(function($d) {
         function openModal(id)  { document.getElementById(id)?.classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
+        function openEventDetails(index) {
+            const event = EVENTS[index];
+            if (!event) return;
+
+            const categoryClasses = {
+                Election: 'event-tag-election',
+                Assembly: 'event-tag-assembly',
+                Campaign: 'event-tag-campaign',
+                Meeting: 'event-tag-meeting',
+                Other: 'event-tag-other'
+            };
+            const category = document.getElementById('event-modal-category');
+            document.getElementById('event-modal-title').textContent = event.title;
+            document.getElementById('event-modal-date').textContent = event.dateLabel;
+            document.getElementById('event-modal-time').textContent = event.timeLabel;
+            document.getElementById('event-modal-location').textContent = event.location || 'Location to be announced';
+            document.getElementById('event-modal-description').textContent = event.description || 'More event details will be shared soon.';
+            category.className = `inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${categoryClasses[event.category] || categoryClasses.Other}`;
+            category.textContent = event.category;
+
+            document.getElementById('event-details-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        function closeEventDetails() {
+            document.getElementById('event-details-modal')?.classList.add('hidden');
+            if (document.getElementById('modal-preview')?.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            }
+        }
+
         function openPreview(url, title, fmt) {
             const modal = document.getElementById('modal-preview');
             const frame = document.getElementById('preview-frame');
@@ -510,7 +733,11 @@ $docsPayload = json_encode(array_map(function($d) {
             frame.src = '';
 
             if (PREVIEWABLE.includes(fmt.toUpperCase())) {
-                frame.src = url + '#toolbar=1&navpanes=0&view=FitH';
+                const isCloudinaryRawPdf = url.startsWith('https://res.cloudinary.com/') && url.includes('/raw/upload/');
+                const previewUrl = isCloudinaryRawPdf
+                    ? `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`
+                    : `${url}#toolbar=1&navpanes=0&view=FitH`;
+                frame.src = previewUrl;
                 frame.classList.remove('hidden');
                 let done = false;
                 const stop = () => { if (!done) { done = true; loader.classList.add('hidden'); } };
@@ -536,7 +763,10 @@ $docsPayload = json_encode(array_map(function($d) {
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closePreview();
+            if (e.key === 'Escape') {
+                closePreview();
+                closeEventDetails();
+            }
         });
 
         lucide.createIcons();

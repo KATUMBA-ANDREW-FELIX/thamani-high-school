@@ -120,7 +120,23 @@ CREATE TABLE IF NOT EXISTS calendar_documents (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Photo Gallery Table
+-- 6. School Calendar Events
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    event_date DATE NOT NULL,
+    event_time TIME,
+    location VARCHAR(255),
+    category VARCHAR(50) NOT NULL DEFAULT 'Other'
+        CHECK (category IN ('Election', 'Assembly', 'Campaign', 'Meeting', 'Other')),
+    visibility VARCHAR(10) NOT NULL DEFAULT 'public'
+        CHECK (visibility IN ('public', 'private')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Photo Gallery Table
 CREATE TABLE IF NOT EXISTS gallery_photos (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -136,7 +152,7 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. E-Library Resources Table
+-- 8. E-Library Resources Table
 CREATE TABLE IF NOT EXISTS library_resources (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -215,6 +231,7 @@ CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
 CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_level);
 CREATE INDEX IF NOT EXISTS idx_teachers_active ON teachers(is_active);
 CREATE INDEX IF NOT EXISTS idx_calendar_active ON calendar_documents(is_active, uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_visibility_date ON calendar_events(visibility, event_date, event_time);
 CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery_photos(is_active, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_library_active ON library_resources(is_active, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_announcements_class ON class_announcements(class_level, created_at DESC);

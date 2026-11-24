@@ -947,10 +947,10 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                                            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-green bg-white disabled:bg-gray-100 disabled:text-gray-500">
                                                 </td>
                                                 <td class="p-3.5 text-right">
-                                                    <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>"
+                                                    <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>&download=1"
                                                        target="_blank"
                                                        class="px-2.5 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-green-800 inline-flex items-center gap-1 shadow-sm">
-                                                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> PDF Report
+                                                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Download PDF
                                                     </a>
                                                 </td>
                                             </tr>
@@ -1052,10 +1052,10 @@ if (!empty($teacher['is_class_teacher']) && $selectedWinId > 0) {
                                                                class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-600 bg-white">
                                                     </td>
                                                     <td class="p-3.5 text-right">
-                                                        <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>"
+                                                        <a href="print_report_card.php?student_id=<?= $stId ?>&window_id=<?= $selectedWinId ?>&download=1"
                                                            target="_blank"
                                                            class="px-3 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-green-800 inline-flex items-center gap-1 shadow-sm">
-                                                            <i data-lucide="printer" class="w-3.5 h-3.5"></i> PDF Report
+                                                                <i data-lucide="download" class="w-3.5 h-3.5"></i> Download PDF
                                                         </a>
                                                     </td>
                                                 </tr>

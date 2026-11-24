@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/public-nav.css">
+    <script defer src="js/public-nav.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -297,7 +299,7 @@
                     <a href="<?= $backLink ?>" class="btn btn--gold" style="padding:8px 14px; font-size:12.5px;"><i data-lucide="layout-dashboard"></i> Back to Dashboard</a>
                     <a href="<?= $logoutLink ?>" class="btn btn--dark" style="padding:8px 14px; font-size:12.5px; width:auto; background:var(--green-900);"><i data-lucide="log-out"></i> Logout</a>
                 <?php else: ?>
-                    <a href="login.php" class="btn btn--gold" style="padding:8px 14px; font-size:12.5px;"><i data-lucide="log-in"></i> Portal Login</a>
+                    <a href="login.php" class="btn btn-dark" style="padding:8px 8px; font-size:11.5px;"><i data-lucide="log-in"></i> Portal Login</a>
                 <?php endif; ?>
                 <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileMenu();">
                     <i data-lucide="menu"></i>

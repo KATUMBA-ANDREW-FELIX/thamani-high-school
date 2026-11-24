@@ -306,6 +306,24 @@ if (!class_exists('ThamaniPolyfillConn')) {
                         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS calendar_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        event_date DATE NOT NULL,
+                        event_time TIME,
+                        location TEXT,
+                        category TEXT NOT NULL DEFAULT 'Other'
+                            CHECK (category IN ('Election', 'Assembly', 'Campaign', 'Meeting', 'Other')),
+                        visibility TEXT NOT NULL DEFAULT 'public'
+                            CHECK (visibility IN ('public', 'private')),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_calendar_events_visibility_date
+                        ON calendar_events(visibility, event_date, event_time);
+
                     CREATE TABLE IF NOT EXISTS gallery_photos (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         title TEXT,
