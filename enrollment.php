@@ -305,10 +305,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (thamani_db_stmt_execute($stmt)) {
                     $newStudentId = thamani_db_insert_id($conn);
-                    if ($newStudentId) {
+                    if ($newStudentId <= 0) {
+                        $idLookup = thamani_db_prepare($conn, "SELECT id FROM students WHERE lin_number = ? ORDER BY id DESC LIMIT 1");
+                        if ($idLookup) {
+                            thamani_db_stmt_bind_param($idLookup, "s", $lin_number);
+                            thamani_db_stmt_execute($idLookup);
+                            $idRes = thamani_db_stmt_get_result($idLookup);
+                            if ($idRes && $idRow = thamani_db_fetch_assoc($idRes)) {
+                                $newStudentId = (int)$idRow['id'];
+                            }
+                            thamani_db_stmt_close($idLookup);
+                        }
+                    }
+                    if ($newStudentId > 0) {
                         $generatedPayCode = generate_student_pay_code($conn, $newStudentId, $class_level, $stream, date('Y-m-d'));
-                        $escPc = thamani_db_real_escape_string($conn, $generatedPayCode);
-                        thamani_db_query($conn, "UPDATE students SET pay_code = '{$escPc}' WHERE id = {$newStudentId}");
+                        $updPc = thamani_db_prepare($conn, "UPDATE students SET pay_code = ? WHERE id = ?");
+                        if ($updPc) {
+                            thamani_db_stmt_bind_param($updPc, "si", $generatedPayCode, $newStudentId);
+                            thamani_db_stmt_execute($updPc);
+                            thamani_db_stmt_close($updPc);
+                        }
                         
                         $defClassFee = (str_contains($class_level, 'Senior 5') || str_contains($class_level, 'Senior 6')) ? 950000.0 : 850000.0;
                         if (function_exists('thamani_get_class_fee')) {

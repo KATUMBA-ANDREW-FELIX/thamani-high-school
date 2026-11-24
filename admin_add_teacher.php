@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $fullName       = trim($_POST['full_name'] ?? '');
 $staffId        = trim($_POST['staff_id'] ?? $_POST['teacher_id'] ?? '');
 $email          = trim($_POST['email'] ?? '');
+$phone          = trim($_POST['phone'] ?? '');
 $department     = trim($_POST['department'] ?? $_POST['subject'] ?? '');
 $isClassTeacher      = !empty($_POST['is_class_teacher']) ? 1 : 0;
 $classTeacherOf      = $isClassTeacher ? trim($_POST['class_teacher_of'] ?? '') : null;
@@ -94,13 +95,13 @@ $defaultPassword = 'Admin@2026';
 $hash = password_hash($defaultPassword, PASSWORD_BCRYPT);
 $now  = date('Y-m-d H:i:s');
 
-$insertSql = "INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, password_hash, must_change_password, is_active, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
+$insertSql = "INSERT INTO teachers (staff_id, full_name, email, phone, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, password_hash, must_change_password, is_active, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)";
 
 $insStmt = thamani_db_prepare($conn, $insertSql);
 
 if ($insStmt) {
-    thamani_db_stmt_bind_param($insStmt, "ssssisssiiiss", $staffId, $fullName, $email, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $canSendSms, $hash, $now);
+    thamani_db_stmt_bind_param($insStmt, "sssssisssiiiss", $staffId, $fullName, $email, $phone, $department, $isClassTeacher, $classTeacherOf, $classTeacherStream, $classesTaught, $canViewEnrollments, $canManageDutyRoster, $canSendSms, $hash, $now);
     if (thamani_db_stmt_execute($insStmt)) {
         thamani_db_stmt_close($insStmt);
 

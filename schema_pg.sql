@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS students (
     emergency_name VARCHAR(255),
     emergency_phone VARCHAR(50),
     medical_notes TEXT,
+    academic_doc_path TEXT,
+    recommendation_doc_path TEXT,
+    medical_doc_path TEXT,
+    pay_code VARCHAR(100),
     status VARCHAR(50) DEFAULT 'Pending',
     password_hash VARCHAR(255),
     must_change_password INT DEFAULT 1,
@@ -214,17 +218,49 @@ CREATE TABLE IF NOT EXISTS sms_logs (
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS sms_topup_orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(40) UNIQUE NOT NULL,
+    sms_units INT NOT NULL,
+    unit_price_ugx INT NOT NULL DEFAULT 50,
+    subtotal_ugx INT NOT NULL,
+    collection_fee_ugx INT NOT NULL DEFAULT 0,
+    clearing_fee_ugx INT NOT NULL DEFAULT 0,
+    total_ugx INT NOT NULL,
+    payer_name VARCHAR(255) DEFAULT 'Thamani High School',
+    payer_phone VARCHAR(30) NOT NULL,
+    receipt_email VARCHAR(255) DEFAULT 'info@thamani.ac.ug',
+    external_reference VARCHAR(80) UNIQUE NOT NULL,
+    provider_reference VARCHAR(120) DEFAULT '',
+    provider_status VARCHAR(40) DEFAULT 'PENDING',
+    status VARCHAR(30) DEFAULT 'PENDING',
+    failure_reason TEXT DEFAULT '',
+    raw_response TEXT DEFAULT '',
+    email_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+    sms_receipt_sent_at TIMESTAMP WITH TIME ZONE,
+    credited_at TIMESTAMP WITH TIME ZONE,
+    created_by INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Safe migrations for existing installations
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_class_teacher INT DEFAULT 0;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_of VARCHAR(50);
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS class_teacher_stream VARCHAR(50) DEFAULT 'Stream A';
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS classes_taught VARCHAR(255);
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_view_enrollments INT DEFAULT 0;
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_manage_duty_roster INT DEFAULT 0;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_send_sms INT DEFAULT 0;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 ALTER TABLE students ADD COLUMN IF NOT EXISTS must_change_password INT DEFAULT 1;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS account_active INT DEFAULT 1;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS academic_doc_path TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS recommendation_doc_path TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS medical_doc_path TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS pay_code VARCHAR(100);
 
 -- Database Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
@@ -236,16 +272,16 @@ CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery_photos(is_active, uploa
 CREATE INDEX IF NOT EXISTS idx_library_active ON library_resources(is_active, uploaded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_announcements_class ON class_announcements(class_level, created_at DESC);
 
--- Initial Default System Data
+-- Initial Default System Data (DO NOTHING on conflict so live changed passwords are preserved)
 -- Default Admin Account (password: Admin@2026)
 INSERT INTO admins (admin_id, full_name, email, password_hash, must_change_password, is_active)
 VALUES ('ADM-2026-001', 'System Administrator', 'admin@thamani.ac.ug', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
-ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O';
+ON CONFLICT (email) DO NOTHING;
 
 -- Default Teacher Account (password: Admin@2026)
 INSERT INTO teachers (staff_id, full_name, email, department, is_class_teacher, class_teacher_of, classes_taught, password_hash, must_change_password, is_active)
 VALUES ('TSC-2026-001', 'Mr. Denis Mukasa', 'teacher@thamani.ac.ug', 'Science & Technology', 1, 'Form 1', 'Form 1, Form 2, Form 3', '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', 0, 1)
-ON CONFLICT (email) DO UPDATE SET password_hash = '$2y$10$NmyZfb876NINiIdxUOgROOSHCRe5SmBF5nt1Ja1DTXjr7/zVj8J6O', is_class_teacher = 1, class_teacher_of = 'Form 1', classes_taught = 'Form 1, Form 2, Form 3';
+ON CONFLICT (email) DO NOTHING;
 
 
 

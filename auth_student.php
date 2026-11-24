@@ -9,14 +9,14 @@ if (!defined('THAMANI_STUDENT_DEFAULT_PASSWORD')) {
 
 function require_student_login() {
     if (empty($_SESSION['student_id'])) {
-        header('Location: student-login.php');
+        header('Location: login.php');
         exit;
     }
 }
 
 function require_student_or_admin_login() {
     if (empty($_SESSION['student_id']) && empty($_SESSION['admin_id'])) {
-        header('Location: student-login.php');
+        header('Location: login.php');
         exit;
     }
 }

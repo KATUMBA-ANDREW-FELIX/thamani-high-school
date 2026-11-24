@@ -58,9 +58,36 @@ if ($studentClassNorm) {
 $timetableSlots = $timetable ? (json_decode($timetable['schedule_json'] ?: '[]', true) ?: []) : [];
 
 require_once 'grading_helper.php';
+require_once 'bank_api_helper.php';
+
+// ---------- Fetch Student Fees & Bank Transactions (fast local read; live poll via button) ----------
+$studentId = (int)$student['id'];
+if (empty($_SESSION['student_fees_csrf'])) {
+    $_SESSION['student_fees_csrf'] = bin2hex(random_bytes(32));
+}
+$studentFeesCsrf = $_SESSION['student_fees_csrf'];
+$studentFeeData  = bank_api_check_student_fees($db, $studentId, false);
+$studentFeeSummary = $studentFeeData['fee_summary'] ?? [
+    'total_fee'   => 850000.0,
+    'paid_amount' => 0.0,
+    'balance'     => 850000.0,
+    'status'      => 'UNPAID',
+    'term'        => 'Term III 2026',
+    'pay_code'    => '',
+];
+$studentFeeTransactions = $studentFeeData['transactions'] ?? [];
+$studentPayCode = $studentFeeData['student']['pay_code'] ?? ($studentFeeSummary['pay_code'] ?? '');
+$studentLinNumber = $studentFeeData['student']['lin_number'] ?? '';
+
+$activeBanksForFees = [];
+$abRes = thamani_db_query($db, "SELECT bank_code, bank_name, account_number FROM bank_integrations WHERE is_active = 1 ORDER BY id ASC");
+if ($abRes) {
+    while ($abRow = thamani_db_fetch_assoc($abRes)) {
+        $activeBanksForFees[] = $abRow;
+    }
+}
 
 // ---------- Fetch Academic Reports visible to this student ----------
-$studentId = (int)$student['id'];
 $publishedWindows = [];
 
 // 1) Windows the admin has explicitly published
@@ -474,6 +501,23 @@ function formatSize($bytes) {
                     <div class="font-bold text-brand-green text-lg card-title">Class Timetable</div>
                     <div class="text-xs text-gray-500 mt-0.5 card-desc">
                         <?= $timetable ? 'Available' : 'Not yet published' ?>
+                    </div>
+                </div>
+            </button>
+
+            <button type="button" onclick="switchStudentView('fees');" data-view="fees"
+                    class="feature-card bg-white p-6 rounded-2xl shadow-sm border-2 border-gray-100 hover:shadow-md hover:border-brand-green/30 transition-all text-left group flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-700 flex-shrink-0 card-icon-wrap transition-colors">
+                    <i data-lucide="landmark" class="w-6 h-6 card-icon"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="font-bold text-brand-green text-lg card-title">School Fees</div>
+                    <div id="fee-card-subtitle" class="text-xs text-gray-500 mt-0.5 card-desc">
+                        <?php if (($studentFeeSummary['status'] ?? '') === 'PAID'): ?>
+                            Fully Paid ✓
+                        <?php else: ?>
+                            Bal: UGX <?= number_format((float)($studentFeeSummary['balance'] ?? 0)) ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </button>
@@ -967,6 +1011,152 @@ function formatSize($bytes) {
             </div>
         </div>
 
+        <!-- ============================================================ -->
+        <!-- VIEW: SCHOOL FEES & LIVE BANK API CHECK                       -->
+        <!-- ============================================================ -->
+        <?php
+            $sfTotal = (float)($studentFeeSummary['total_fee'] ?? 0);
+            $sfPaid  = (float)($studentFeeSummary['paid_amount'] ?? 0);
+            $sfBal   = (float)($studentFeeSummary['balance'] ?? 0);
+            $sfStat  = (string)($studentFeeSummary['status'] ?? 'UNPAID');
+            $sfPct   = $sfTotal > 0 ? min(100, round(($sfPaid / $sfTotal) * 100, 1)) : 0;
+            $sfBadgeClass = $sfStat === 'PAID'
+                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                : ($sfStat === 'PARTIAL' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-rose-100 text-rose-900 border-rose-300');
+        ?>
+        <div id="view-fees" class="student-view hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+                <div class="flex flex-wrap justify-between items-start gap-4 border-b border-gray-100 pb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-green flex items-center gap-2">
+                            <i data-lucide="landmark" class="w-5 h-5 text-brand-maroon"></i> School Fees &amp; Live Bank Status
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <?= htmlspecialchars($studentFeeSummary['term'] ?? 'Term III 2026') ?> · <?= htmlspecialchars($student['class'] ?? '') ?>
+                            · Verified directly against school bank &amp; SchoolPay feeds
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="sf-status-badge" class="px-3 py-1 rounded-full text-xs font-black uppercase border <?= $sfBadgeClass ?>">
+                            <?= $sfStat === 'PAID' ? '✓ FULLY PAID' : ($sfStat === 'PARTIAL' ? '⏳ PARTIAL' : '⚠️ UNPAID') ?>
+                        </span>
+                        <button type="button" id="btn-student-check-bank-fees" onclick="checkStudentBankFees();"
+                                class="px-4 py-2 rounded-xl bg-brand-green hover:bg-brand-darkGreen text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Check Live Bank Status
+                        </button>
+                    </div>
+                </div>
+
+                <div id="sf-live-notice" class="hidden rounded-xl border px-4 py-3 text-xs font-semibold"></div>
+
+                <!-- KPI Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                        <div class="text-[11px] font-bold text-gray-500 uppercase">Total Term Fees</div>
+                        <div id="sf-total-fee" class="text-2xl font-black font-mono text-gray-900 mt-1">UGX <?= number_format($sfTotal) ?></div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <div class="text-[11px] font-bold text-emerald-700 uppercase">Amount Paid (Verified)</div>
+                        <div id="sf-paid-amount" class="text-2xl font-black font-mono text-emerald-700 mt-1">UGX <?= number_format($sfPaid) ?></div>
+                    </div>
+                    <div class="p-4 rounded-xl <?= $sfBal > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200' ?> border">
+                        <div class="text-[11px] font-bold <?= $sfBal > 0 ? 'text-rose-700' : 'text-emerald-700' ?> uppercase">Outstanding Balance</div>
+                        <div id="sf-balance" class="text-2xl font-black font-mono <?= $sfBal > 0 ? 'text-rose-700' : 'text-emerald-700' ?> mt-1">UGX <?= number_format($sfBal) ?></div>
+                    </div>
+                </div>
+
+                <!-- Payment Progress Bar -->
+                <div>
+                    <div class="flex justify-between text-xs font-bold text-gray-600 mb-1.5">
+                        <span>Payment Progress</span>
+                        <span id="sf-progress-label"><?= $sfPct ?>% Cleared</span>
+                    </div>
+                    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="sf-progress-bar" class="h-full bg-brand-green transition-all duration-500" style="width: <?= $sfPct ?>%"></div>
+                    </div>
+                </div>
+
+                <!-- Student PayCode & Bank Channels -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl bg-purple-50 border border-purple-200">
+                        <div class="text-xs font-black text-purple-900 uppercase tracking-wide">Your School Fees Payment Code (PayCode)</div>
+                        <div class="mt-2 flex items-center justify-between gap-2 bg-white px-3.5 py-2.5 rounded-lg border border-purple-200">
+                            <span id="sf-pay-code" class="font-mono text-lg font-black text-purple-950 tracking-wider"><?= htmlspecialchars($studentPayCode ?: ($studentLinNumber ?: 'Not Assigned')) ?></span>
+                            <?php if ($studentPayCode || $studentLinNumber): ?>
+                                <button type="button" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($studentPayCode ?: $studentLinNumber, ENT_QUOTES) ?>'); this.textContent='Copied ✓'; setTimeout(()=>this.textContent='Copy Code', 2000);"
+                                        class="px-3 py-1 rounded-lg bg-purple-700 text-white text-xs font-bold hover:bg-purple-800">Copy Code</button>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-[11px] text-purple-900 mt-2">
+                            Use this code when paying via <strong>SchoolPay (*217#)</strong>, <strong>Stanbic FlexiPay (*291#)</strong>, <strong>Centenary CenteMobile</strong>, <strong>Equity Bank</strong>, <strong>MTN MoMo</strong>, or <strong>Airtel Money</strong>. Your balance updates automatically once the bank confirms payment.
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                        <div class="text-xs font-black text-amber-900 uppercase tracking-wide mb-2">Connected Bank Collection Channels</div>
+                        <?php if (!empty($activeBanksForFees)): ?>
+                            <ul class="space-y-1.5 text-xs text-amber-950">
+                                <?php foreach ($activeBanksForFees as $ab): ?>
+                                    <li class="flex justify-between items-center bg-white/80 px-3 py-1.5 rounded-lg border border-amber-200/70">
+                                        <span class="font-bold"><?= htmlspecialchars($ab['bank_name']) ?></span>
+                                        <span class="font-mono text-[11px] text-gray-600"><?= htmlspecialchars($ab['account_number'] ?: $ab['bank_code']) ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <p class="text-xs text-amber-900">Contact the school bursar for active bank account details.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Receipts & Transactions Table -->
+                <div>
+                    <h4 class="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
+                        <i data-lucide="receipt" class="w-4 h-4 text-brand-green"></i> Verified Bank Payments &amp; Receipts
+                    </h4>
+                    <div class="overflow-x-auto rounded-xl border border-gray-200">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
+                                    <th class="p-3">Receipt #</th>
+                                    <th class="p-3">Bank &amp; Channel</th>
+                                    <th class="p-3">Reference</th>
+                                    <th class="p-3 text-right">Amount Paid</th>
+                                    <th class="p-3 text-center">Status</th>
+                                    <th class="p-3 text-right">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sf-transactions-body" class="divide-y divide-gray-100">
+                                <?php if (!empty($studentFeeTransactions)): ?>
+                                    <?php foreach ($studentFeeTransactions as $tx): ?>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="p-3 font-mono font-bold text-gray-800"><?= htmlspecialchars($tx['receipt_number'] ?: '—') ?></td>
+                                            <td class="p-3">
+                                                <span class="font-bold text-gray-900 block"><?= htmlspecialchars($tx['bank_code'] ?: '') ?></span>
+                                                <span class="text-[11px] text-gray-500"><?= htmlspecialchars($tx['payment_channel'] ?: 'Bank API') ?></span>
+                                            </td>
+                                            <td class="p-3 font-mono text-[11px] text-gray-600"><?= htmlspecialchars($tx['transaction_ref'] ?: '') ?></td>
+                                            <td class="p-3 text-right font-mono font-black text-emerald-700">+ UGX <?= number_format((float)$tx['amount']) ?></td>
+                                            <td class="p-3 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900"><?= htmlspecialchars($tx['status'] ?: 'SUCCESS') ?></span>
+                                            </td>
+                                            <td class="p-3 text-right font-mono text-[11px] text-gray-500"><?= htmlspecialchars((string)($tx['payment_date'] ?? $tx['created_at'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="p-8 text-center text-gray-500">
+                                            No bank fee payments recorded yet for this term. Click <strong>Check Live Bank Status</strong> after making a payment.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <footer class="bg-brand-green text-white pt-10 pb-8 mt-auto border-t-4 border-brand-gold">
@@ -1007,6 +1197,86 @@ function formatSize($bytes) {
             document.getElementById('term-marks-average').textContent = `Average: ${template.dataset.termAverage}%`;
             document.getElementById('term-marks-content').replaceChildren(template.content.cloneNode(true));
             dialog.showModal();
+        }
+
+        const STUDENT_FEES_CSRF = <?= json_encode($studentFeesCsrf) ?>;
+        function sfEsc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function sfFmtUgx(n) {
+            return 'UGX ' + Math.round(Number(n || 0)).toLocaleString('en-UG');
+        }
+        async function checkStudentBankFees() {
+            const btn = document.getElementById('btn-student-check-bank-fees');
+            const notice = document.getElementById('sf-live-notice');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Checking Bank APIs...';
+                lucide.createIcons();
+            }
+            try {
+                const body = new URLSearchParams({csrf_token: STUDENT_FEES_CSRF, poll_banks: '1'});
+                const res = await fetch('student_fees_check.php', {method: 'POST', body, credentials: 'same-origin'});
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Could not check live bank fees.');
+
+                const s = data.fee_summary || {};
+                const total = Number(s.total_fee || 0);
+                const paid  = Number(s.paid_amount || 0);
+                const bal   = Number(s.balance || 0);
+                const stat  = String(s.status || 'UNPAID');
+                const pct   = total > 0 ? Math.min(100, Math.round((paid / total) * 1000) / 10) : 0;
+
+                document.getElementById('sf-total-fee').textContent = sfFmtUgx(total);
+                document.getElementById('sf-paid-amount').textContent = sfFmtUgx(paid);
+                document.getElementById('sf-balance').textContent = sfFmtUgx(bal);
+                document.getElementById('sf-progress-label').textContent = `${pct}% Cleared`;
+                document.getElementById('sf-progress-bar').style.width = `${pct}%`;
+
+                const badge = document.getElementById('sf-status-badge');
+                badge.textContent = stat === 'PAID' ? '✓ FULLY PAID' : (stat === 'PARTIAL' ? '⏳ PARTIAL' : '⚠️ UNPAID');
+                badge.className = 'px-3 py-1 rounded-full text-xs font-black uppercase border ' +
+                    (stat === 'PAID' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' :
+                     stat === 'PARTIAL' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-rose-100 text-rose-900 border-rose-300');
+
+                const cardSub = document.getElementById('fee-card-subtitle');
+                if (cardSub) cardSub.textContent = stat === 'PAID' ? 'Fully Paid ✓' : `Bal: ${sfFmtUgx(bal)}`;
+
+                const tbody = document.getElementById('sf-transactions-body');
+                const txs = data.transactions || [];
+                tbody.innerHTML = txs.length
+                    ? txs.map(tx => `<tr class="hover:bg-gray-50">
+                        <td class="p-3 font-mono font-bold text-gray-800">${sfEsc(tx.receipt_number || '—')}</td>
+                        <td class="p-3"><span class="font-bold text-gray-900 block">${sfEsc(tx.bank_code || '')}</span><span class="text-[11px] text-gray-500">${sfEsc(tx.payment_channel || 'Bank API')}</span></td>
+                        <td class="p-3 font-mono text-[11px] text-gray-600">${sfEsc(tx.transaction_ref || '')}</td>
+                        <td class="p-3 text-right font-mono font-black text-emerald-700">+ ${sfFmtUgx(tx.amount)}</td>
+                        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900">${sfEsc(tx.status || 'SUCCESS')}</span></td>
+                        <td class="p-3 text-right font-mono text-[11px] text-gray-500">${sfEsc(tx.payment_date || tx.created_at || '')}</td>
+                    </tr>`).join('')
+                    : '<tr><td colspan="6" class="p-8 text-center text-gray-500">No bank fee payments recorded yet for this term.</td></tr>';
+
+                const newCount = Number(data.new_payments_found || 0);
+                const banksChecked = (data.banks_checked || []).length;
+                const errKeys = Object.keys(data.bank_errors || {});
+                let msg = newCount > 0
+                    ? `✅ Found ${newCount} new bank payment(s) totaling ${sfFmtUgx(data.new_amount_added)}! Ledger updated at ${data.checked_at}.`
+                    : `ℹ️ Checked ledger (${banksChecked} bank API channel(s) queried at ${data.checked_at}). No new unrecorded payments found.`;
+                if (errKeys.length > 0 && newCount === 0) {
+                    msg += ` (Some bank endpoints are offline or in sandbox mode — showing latest verified ledger balance.)`;
+                }
+                notice.textContent = msg;
+                notice.className = 'rounded-xl border px-4 py-3 text-xs font-semibold ' +
+                    (newCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-blue-200 bg-blue-50 text-blue-900');
+            } catch (e) {
+                notice.textContent = '❌ ' + (e.message || 'Unable to check bank fees right now.');
+                notice.className = 'rounded-xl border px-4 py-3 text-xs font-semibold border-red-200 bg-red-50 text-red-900';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Check Live Bank Status';
+                    lucide.createIcons();
+                }
+            }
         }
     </script>
 </body>

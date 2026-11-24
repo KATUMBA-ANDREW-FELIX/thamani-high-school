@@ -8,8 +8,8 @@ A full-featured PHP school management system for Ugandan secondary schools (Seni
 
 | Requirement | Notes |
 |---|---|
-| **PHP 8.0+** | 8.1+ recommended |
-| **PHP extensions** | `pdo`, `pdo_sqlite` (built in), `curl` (for SMS), optionally `pdo_pgsql` |
+| **PHP 8.0+ (Docker uses PHP 8.6)** | PHP 8.6.0 (`php:8.6-apache`) in Docker; compatible with PHP 8.0–8.6 |
+| **PHP extensions** | `pdo`, `pdo_sqlite` (built in), `curl` (for SMS & Bank APIs), optionally `pdo_pgsql` |
 | **Web server** | Apache (with `mod_rewrite`) or Nginx or PHP built-in server |
 | **No Composer needed** | Pure PHP, no external dependencies |
 
@@ -77,9 +77,12 @@ The app runs the schema from `schema_pg.sql` automatically on first boot.
 ├── teacher_dashboard.php     # Teacher workspace
 ├── student-dashboard.php     # Student portal
 │
-├── sms_helper.php            # Ego SMS API helper functions
-├── admin_sms_actions.php     # SMS JSON endpoint (all SMS actions)
+├── sms_helper.php            # Ego SMS API helper (SendSms, Balance, auto fee receipts)
+├── admin_sms_actions.php     # SMS JSON endpoint (contacts, bulk send, balance, fee reminders)
 ├── sms.php                   # SMS workspace for authorised teachers
+├── bank_api_helper.php       # Bank API polling, webhook signature verification & fee reconciliation
+├── admin_fees_actions.php    # Fees admin actions & verified Bank Webhook listener
+├── student_fees_check.php    # Student live Bank API fee status checker
 │
 ├── uploads/                  # File uploads (enrollment docs, gallery, etc.)
 │   ├── enrollment_docs/
@@ -98,8 +101,8 @@ The SMS Centre lets admins (and SMS-authorised teachers) send bulk SMS to saved 
 1. Log in to [comms.egosms.co](https://comms.egosms.co) → **Settings → API Settings**
 2. Copy your **API Username** and **API Password**
 3. In the admin dashboard, open the **SMS Centre** tab → **SMS Settings**
-4. Enter your username, password, and sender ID (max 11 chars, e.g. `THAMANI`)
-5. Click **Save & Test** to send a test SMS to your number
+4. Enter your username and password (Sender ID uses Ego SMS's account default automatically)
+5. Click **Save credentials**, then **Check Ego SMS Balance** or **Send test SMS**
 
 ### API Details (for reference)
 - **Endpoint:** `POST https://comms.egosms.co/api/v1/json/`

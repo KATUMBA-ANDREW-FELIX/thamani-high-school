@@ -335,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
 
             <div class="pt-4 border-t border-gray-100 text-center text-xs text-gray-500 space-y-1">
-                <div>Default Accounts Password: <code class="bg-gray-100 px-1.5 py-0.5 rounded font-mono font-bold text-gray-800">Admin@2026</code></div>
+                <div>Use the login credentials sent to your registered phone number via SMS.</div>
                 <div>Encountering issues? Contact ICT Office: <a href="mailto:ict@thamani.ac.ug" class="text-brand-green font-bold hover:underline">ict@thamani.ac.ug</a></div>
             </div>
         </div>

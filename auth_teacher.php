@@ -11,7 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
 /** Require that a teacher is logged in. Redirects to login otherwise. */
 function require_teacher_login(): void {
     if (empty($_SESSION['teacher_id'])) {
-        header('Location: teacher-login.php');
+        header('Location: login.php');
         exit;
     }
 }

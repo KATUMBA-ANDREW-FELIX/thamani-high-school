@@ -10,7 +10,7 @@
 require_once 'auth_student.php';
 
 if (empty($_SESSION['student_id']) && empty($_SESSION['teacher_id']) && empty($_SESSION['admin_id'])) {
-    header('Location: student-login.php');
+    header('Location: login.php');
     exit;
 }
 

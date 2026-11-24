@@ -1,5 +1,5 @@
 # Production Dockerfile for Thamani High School Application (Optimized with OPcache & Caching)
-FROM php:8.2-apache
+FROM php:8.6-apache
 
 # Install system dependencies & PostgreSQL development libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo pdo_pgsql pdo_sqlite pgsql gd zip curl mbstring opcache \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql pgsql gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache performance modules (rewrite, headers, expires, deflate)
@@ -32,8 +32,7 @@ RUN echo "upload_max_filesize = 50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "opcache.interned_strings_buffer = 16" >> /usr/local/etc/php/conf.d/opcache-recommended.ini \
     && echo "opcache.max_accelerated_files = 10000" >> /usr/local/etc/php/conf.d/opcache-recommended.ini \
     && echo "opcache.revalidate_freq = 2" >> /usr/local/etc/php/conf.d/opcache-recommended.ini \
-    && echo "opcache.validate_timestamps = 1" >> /usr/local/etc/php/conf.d/opcache-recommended.ini \
-    && echo "opcache.fast_shutdown = 1" >> /usr/local/etc/php/conf.d/opcache-recommended.ini
+    && echo "opcache.validate_timestamps = 1" >> /usr/local/etc/php/conf.d/opcache-recommended.ini
 
 # Set Working Directory
 WORKDIR /var/www/html

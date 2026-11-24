@@ -29,6 +29,7 @@ function calendar_event_badge_class(string $category): string {
 }
 
 require_once 'conn.php';
+require_once 'bank_api_helper.php';
 
 // ---------- Stat counters ----------
 function safeCount($conn, string $sql): int {
@@ -143,7 +144,7 @@ $ra = thamani_db_query($conn, "SELECT id, name, year, profession, phone, email F
 if ($ra) while ($r = thamani_db_fetch_assoc($ra)) $allAlumni[] = $r;
 
 $allTeachers = [];
-$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, is_active, created_at FROM teachers ORDER BY created_at DESC");
+$rt = thamani_db_query($conn, "SELECT id, staff_id, full_name, email, phone, department, is_class_teacher, class_teacher_of, class_teacher_stream, classes_taught, can_view_enrollments, can_manage_duty_roster, can_send_sms, is_active, created_at FROM teachers ORDER BY created_at DESC");
 if ($rt) while ($r = thamani_db_fetch_assoc($rt)) $allTeachers[] = $r;
 
 $allCalendar = [];
@@ -722,38 +723,195 @@ if (!empty($_SESSION['admin_flash'])) {
                         <h3 class="text-xl font-black text-gray-900 flex items-center gap-2">
                             <i data-lucide="message-square" class="w-6 h-6 text-rose-700"></i> School SMS Centre
                         </h3>
-                        <p class="text-sm text-gray-500 mt-1">Manage contacts, configure Ego SMS, compose and send bulk or individual messages, and review delivery history.</p>
+                        <p class="text-sm text-gray-500 mt-1">Manage contacts, compose and send bulk or individual messages, and review delivery history.</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2.5">
                         <div id="sms-notice" class="hidden rounded-lg border px-4 py-2 text-sm max-w-sm" role="status" aria-live="polite"></div>
+                        <span class="rounded-xl bg-slate-900 text-white px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 tabular-nums">
+                            <i data-lucide="message-circle" class="w-3.5 h-3.5 text-orange-400"></i>
+                            <span>SMS Credits:</span>
+                            <strong id="sms-dash-wallet-balance" class="text-orange-400">—</strong>
+                        </span>
+                        <button type="button" onclick="openBitlinkSmsTopupModal();" class="rounded-xl bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 text-xs font-black transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Buy More SMS · bitlink pay
+                        </button>
                     </div>
                 </div>
 
-                <!-- ── Provider Credentials (admin only) ──────────────────────── -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
-                    <div class="flex items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <!-- MODAL: BUY MORE SMS VIA BITLINK PAY (Yo! Uganda Mobile Money) -->
+                <div id="modal-bitlink-sms-topup" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 hidden overflow-hidden backdrop-blur-sm">
+                    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col my-auto max-h-[92vh]">
+                        <div class="px-6 py-4 flex justify-between items-center bg-[#0b1220] text-white shrink-0">
+                            <div>
+                                <div class="text-[11px] font-bold uppercase tracking-widest text-[#fb923c]">bitlink pay</div>
+                                <h3 class="text-base sm:text-lg font-black mt-0.5">Buy More SMS Credits</h3>
+                            </div>
+                            <button type="button" onclick="closeBitlinkSmsTopupModal();" class="text-slate-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        </div>
+                        <form id="bitlink-sms-topup-form" class="p-6 space-y-4 overflow-y-auto">
+                            <div id="bitlink-topup-status" class="hidden rounded-xl border px-4 py-3 text-xs font-semibold"></div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Choose SMS Bundle</label>
+                                <div class="grid grid-cols-2 gap-2" id="bitlink-bundle-cards">
+                                    <button type="button" data-sms-pack="300" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">300 SMS</div>
+                                        <div class="text-[11px] text-gray-500">Starter Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="600" class="bitlink-pack-btn rounded-xl border-2 border-orange-500 bg-orange-50/40 p-3 text-left transition">
+                                        <div class="text-sm font-black text-gray-900">600 SMS</div>
+                                        <div class="text-[11px] text-orange-700 font-semibold">Termly Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="1200" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">1,200 SMS</div>
+                                        <div class="text-[11px] text-gray-500">School Pack</div>
+                                    </button>
+                                    <button type="button" data-sms-pack="3000" class="bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition">
+                                        <div class="text-sm font-black text-gray-900">3,000 SMS</div>
+                                        <div class="text-[11px] text-gray-500">Bulk Campus Pack</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="text-xs font-bold text-gray-700">SMS Credits to Buy *
+                                    <input type="number" id="bitlink-sms-units" name="sms_units" value="600" min="20" max="500000" step="10" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm font-mono font-bold">
+                                </label>
+                                <label class="text-xs font-bold text-gray-700">Mobile Money Phone (MTN / Airtel) *
+                                    <input type="tel" id="bitlink-payer-phone" name="payer_phone" placeholder="0772 123 456" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm font-mono">
+                                </label>
+                            </div>
+
+                            <label class="block text-xs font-bold text-gray-700">Thamani Receipt Email (bitlink pay receipt) *
+                                <input type="email" id="bitlink-receipt-email" name="receipt_email" value="info@thamani.ac.ug" required class="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
+                            </label>
+
+                            <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-1.5 text-xs">
+                                <div class="flex justify-between text-slate-600">
+                                    <span>SMS Subtotal (<span id="bitlink-calc-units">600</span> SMS)</span>
+                                    <span id="bitlink-calc-subtotal" class="font-mono font-semibold">UGX 30,000</span>
+                                </div>
+                                <div class="flex justify-between text-slate-600">
+                                    <span>Processing &amp; transactional fees</span>
+                                    <span id="bitlink-calc-fees" class="font-mono font-semibold">UGX 1,900</span>
+                                </div>
+                                <div class="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-slate-200">
+                                    <span>Total to Pay</span>
+                                    <span id="bitlink-calc-total" class="font-mono text-orange-600">UGX 31,900</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 pt-1">
+                                <span class="text-[11px] text-slate-400 font-semibold">Powered by <strong class="text-slate-700">bitlink pay</strong></span>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="closeBitlinkSmsTopupModal();" class="rounded-xl border border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50">Close</button>
+                                    <button type="submit" id="bitlink-pay-submit-btn" class="rounded-xl bg-[#0b1220] hover:bg-slate-800 text-white px-5 py-2.5 text-xs font-black transition flex items-center gap-1.5 shadow">
+                                        <span class="text-[#fb923c]">●</span> Pay with bitlink pay
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── Send Portal Login Credentials via SMS ─────────────────── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
                         <div>
-                            <h4 class="font-black text-gray-900 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-gray-500"></i> Ego SMS Credentials</h4>
-                            <p id="sms-credential-state" class="text-xs text-gray-500 mt-0.5">Loading...</p>
+                            <h4 class="font-black text-gray-900 flex items-center gap-2">
+                                <i data-lucide="key-round" class="w-4 h-4 text-amber-600"></i> Send Portal Login Credentials via SMS
+                            </h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Dispatch personalized portal login IDs, passwords, and PayCodes to Parents/Guardians, Teachers, Alumni Editors, or any individual via Ego SMS.</p>
                         </div>
                     </div>
-                    <form id="sms-dash-credentials-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-                        <label class="text-xs font-bold text-gray-700">Username
-                            <input id="dash-ego-username" name="ego_username" autocomplete="username" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        </label>
-                        <label class="text-xs font-bold text-gray-700">Password
-                            <input id="dash-ego-password" name="ego_password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Blank = keep saved">
-                        </label>
-                        <label class="text-xs font-bold text-gray-700">Sender ID <span class="font-normal text-gray-400">(max 11 chars)</span>
-                            <input id="dash-ego-sender-id" name="ego_sender_id" maxlength="11" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value="THAMANI">
-                        </label>
-                        <button class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-700 transition">Save credentials</button>
-                    </form>
-                    <form id="sms-dash-test-form" class="flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
-                        <label class="text-xs font-bold text-gray-700">Test phone number
-                            <input name="test_phone" inputmode="tel" placeholder="0772 123 456" required class="mt-1 w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        </label>
-                        <button class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold hover:bg-gray-50 transition">Send test SMS</button>
+
+                    <form id="sms-dash-credentials-dispatch-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <label class="text-xs font-bold text-gray-700">Recipient Group
+                                <select id="cred-target-group" name="target_group" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold">
+                                    <option value="parents">Parents / Guardians (Student Portal)</option>
+                                    <option value="teachers">Teachers (Staff Portal)</option>
+                                    <option value="other">Other Person / Alumni Editor / Custom</option>
+                                </select>
+                            </label>
+
+                            <!-- Parents options -->
+                            <label id="cred-parent-class-wrap" class="text-xs font-bold text-gray-700">Filter by Class
+                                <select id="cred-class-level" name="class_level" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="ALL">All Enrolled Classes (S1–S6)</option>
+                                    <option value="Senior 1">Senior 1</option>
+                                    <option value="Senior 2">Senior 2</option>
+                                    <option value="Senior 3">Senior 3</option>
+                                    <option value="Senior 4">Senior 4</option>
+                                    <option value="Senior 5">Senior 5</option>
+                                    <option value="Senior 6">Senior 6</option>
+                                </select>
+                            </label>
+                            <label id="cred-parent-student-wrap" class="text-xs font-bold text-gray-700">Or One Specific Student/Parent
+                                <select id="cred-student-id" name="student_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="0">All in selected class</option>
+                                </select>
+                            </label>
+
+                            <!-- Teachers options -->
+                            <label id="cred-teacher-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Select Teacher(s)
+                                <select id="cred-teacher-id" name="teacher_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="0">All Active Teachers</option>
+                                </select>
+                            </label>
+
+                            <!-- Other / Custom options -->
+                            <label id="cred-other-picker-wrap" class="hidden text-xs font-bold text-gray-700 sm:col-span-2">Quick-fill from Contact / Alumni (Optional)
+                                <select id="cred-other-preset" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                    <option value="">-- Type manually below or pick a saved person --</option>
+                                </select>
+                            </label>
+
+                            <!-- Password to send -->
+                            <div class="text-xs font-bold text-gray-700">Portal Password to Send
+                                <div class="mt-1 flex gap-1.5">
+                                    <input type="text" id="cred-temp-password" name="temp_password" value="Admin@2026" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+                                    <button type="button" id="cred-gen-pwd" class="rounded-lg border border-gray-300 px-2.5 py-2 text-xs font-bold hover:bg-gray-50 shrink-0" title="Generate random password">Random</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Other Person manual fields -->
+                        <div id="cred-other-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-200">
+                            <input type="hidden" id="cred-alumnus-id" name="alumnus_id" value="0">
+                            <label class="text-xs font-bold text-gray-700">Recipient Name
+                                <input type="text" id="cred-recipient-name" name="recipient_name" placeholder="e.g. Eng. Mugisha David" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Phone Number <span class="text-rose-600">*</span>
+                                <input type="text" id="cred-recipient-phone" name="recipient_phone" placeholder="0772 123 456" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Login ID / Email <span class="text-rose-600">*</span>
+                                <input type="text" id="cred-login-identifier" name="login_identifier" placeholder="Email, Staff ID, or LIN" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white font-mono">
+                            </label>
+                            <label class="text-xs font-bold text-gray-700">Portal Role Label
+                                <select id="cred-role-label" name="role_label" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
+                                    <option value="Alumni Page Editor">Alumni Page Editor</option>
+                                    <option value="Staff Portal">Staff Portal</option>
+                                    <option value="Student Portal">Student Portal</option>
+                                    <option value="Admin Portal">Admin Portal</option>
+                                    <option value="Portal Access">General Portal Access</option>
+                                </select>
+                            </label>
+                            <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
+                                <input type="checkbox" id="cred-grant-alumni-editor" name="grant_alumni_editor" value="1" class="rounded border-gray-300 text-amber-600">
+                                <span>Also activate this Alumnus in the database as an <strong>Alumni Page Editor</strong> with the password above</span>
+                            </label>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <label id="cred-sync-pwd-wrap" class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                                <input type="checkbox" id="cred-sync-password" name="sync_password" value="1" checked class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                                <span>Set / reset recipient portal password(s) to the password above and require password change on first login</span>
+                            </label>
+                            <button type="submit" id="cred-send-btn" class="rounded-lg bg-amber-500 hover:bg-amber-400 px-5 py-2.5 text-sm font-black text-gray-950 transition flex items-center gap-2 shadow-sm">
+                                <i data-lucide="key-round" class="w-4 h-4"></i> Send Portal Credentials SMS
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -1054,7 +1212,13 @@ if (!empty($_SESSION['admin_flash'])) {
                                 $code = $bk['bank_code'];
                                 $style = $bankStyleMap[$code] ?? ['bg' => 'bg-slate-900/90 border-slate-700', 'text' => 'text-amber-400', 'badge' => 'bg-slate-800 text-amber-300'];
                                 $isActive = (int)$bk['is_active'] === 1;
-                                $whUrl = !empty($bk['webhook_url']) ? $bk['webhook_url'] : "http://localhost:8080/admin_fees_actions.php?webhook=1&bank=" . urlencode($code);
+                                $whUrl = !empty($bk['webhook_url']) ? $bk['webhook_url'] : bank_api_default_webhook_url($code);
+                                $bkSafe = $bk;
+                                $bkSafe['secret_key'] = '';
+                                $bkSafe['webhook_secret'] = '';
+                                $bkSafe['has_secret'] = !empty($bk['secret_key']);
+                                $bkSafe['has_webhook_secret'] = !empty($bk['webhook_secret']);
+                                $bkSafe['default_webhook_url'] = bank_api_default_webhook_url($code);
                             ?>
                             <div class="rounded-2xl p-4 border <?= $style['bg'] ?> flex flex-col justify-between space-y-3 relative shadow-md">
                                 <div>
@@ -1085,10 +1249,22 @@ if (!empty($_SESSION['admin_flash'])) {
                                         <span class="font-mono text-gray-300 truncate"><?= !empty($bk['last_sync_at']) ? format_thamani_date($bk['last_sync_at'], 'H:i, d M') : 'Never' ?></span>
                                     </div>
 
-                                    <div class="flex items-center gap-1.5 pt-1">
-                                        <button type="button" onclick="openConfigureBankModal(<?= htmlspecialchars(json_encode($bk), ENT_QUOTES, 'UTF-8') ?>);" class="flex-grow py-1.5 px-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-bold text-center transition-colors">
+                                    <div class="flex items-center gap-1 pt-1 flex-wrap">
+                                        <button type="button" onclick="openConfigureBankModal(<?= htmlspecialchars(json_encode($bkSafe), ENT_QUOTES, 'UTF-8') ?>);" class="flex-grow py-1.5 px-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-bold text-center transition-colors">
                                             ⚙️ Edit
                                         </button>
+
+                                        <button type="button" onclick="testBankApiConnection('<?= htmlspecialchars($bk['bank_code'], ENT_QUOTES) ?>', this);" class="px-2 py-1.5 rounded-lg text-[11px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 hover:bg-sky-500/40" title="Test Live Bank API Connection">
+                                            Ping
+                                        </button>
+
+                                        <form action="admin_fees_actions.php" method="post" class="inline">
+                                            <input type="hidden" name="action" value="sync_bank_api">
+                                            <input type="hidden" name="bank_code" value="<?= htmlspecialchars($bk['bank_code']) ?>">
+                                            <button type="submit" class="px-2 py-1.5 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/40" title="Sync Payments From This Bank API">
+                                                Sync
+                                            </button>
+                                        </form>
 
                                         <form action="admin_fees_actions.php" method="post" class="inline">
                                             <input type="hidden" name="action" value="toggle_bank_status">
@@ -1265,7 +1441,12 @@ if (!empty($_SESSION['admin_flash'])) {
                                 <span><strong>Billing Policy:</strong> Individual student fee adjustments are disabled. School fees are assigned uniformly per class level (e.g. S1–S4 or S5–S6) to maintain billing consistency and bank statement reconciliation.</span>
                             </div>
 
+                            <div id="bank-live-feedback" class="hidden w-full rounded-2xl border px-4 py-3 text-xs font-semibold"></div>
+
                             <div class="flex items-center gap-3 flex-wrap">
+                                <button type="button" onclick="sendBulkFeeReminderSms(0, this);" class="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors">
+                                    <i data-lucide="message-square-text" class="w-3.5 h-3.5"></i> Send Unpaid Reminders (Ego SMS)
+                                </button>
                                 <!-- Filter Dropdown -->
                                 <select id="fee-status-filter" onchange="filterFeeLedgerTable();" class="px-3.5 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500">
                                     <option value="ALL">Filter: All Statuses</option>
@@ -1310,6 +1491,7 @@ if (!empty($_SESSION['admin_flash'])) {
                                         <th class="p-3.5 text-right">Amount Paid</th>
                                         <th class="p-3.5 text-right">Outstanding Balance</th>
                                         <th class="p-3.5 text-center">Status</th>
+                                        <th class="p-3.5 text-right">Live Bank / SMS</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 font-medium">
@@ -1355,11 +1537,25 @@ if (!empty($_SESSION['admin_flash'])) {
                                                         <?= $st === 'PAID' ? '✓ FULLY PAID' : ($st === 'PARTIAL' ? '⏳ PARTIAL' : '⚠️ UNPAID') ?>
                                                     </span>
                                                 </td>
+                                                <td class="p-3.5 text-right whitespace-nowrap space-x-1">
+                                                    <button type="button" onclick="checkSingleStudentBankFees(<?= (int)$fa['student_id'] ?>, this);"
+                                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 text-amber-300 font-bold text-[11px] transition-colors"
+                                                            title="Query active Bank APIs for this student">
+                                                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Check Bank
+                                                    </button>
+                                                    <?php if ($bal > 0): ?>
+                                                        <button type="button" onclick="sendBulkFeeReminderSms(<?= (int)$fa['student_id'] ?>, this);"
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition-colors"
+                                                                title="Send fee balance SMS reminder to guardian via Ego SMS">
+                                                            <i data-lucide="send" class="w-3 h-3"></i> Remind
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="8" class="p-10 text-center text-gray-500 text-sm">
+                                            <td colspan="9" class="p-10 text-center text-gray-500 text-sm">
                                                 No student fee accounts found. Enrolled students will appear here automatically.
                                             </td>
                                         </tr>
@@ -2346,10 +2542,14 @@ if (!empty($_SESSION['admin_flash'])) {
                             <input type="text" name="staff_id" required placeholder="e.g. TSC-2026-009" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
                             <input type="email" name="email" required placeholder="teacher@thamani.ac.ug" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number (SMS)</label>
+                            <input type="tel" name="phone" placeholder="0772 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
@@ -2510,10 +2710,14 @@ if (!empty($_SESSION['admin_flash'])) {
                             <input type="text" name="staff_id" id="edit_staff_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address <span class="text-amber-600">*</span></label>
                             <input type="email" name="email" id="edit_email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number (SMS)</label>
+                            <input type="tel" name="phone" id="edit_phone" placeholder="0772 123 456" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Department</label>
@@ -3531,6 +3735,7 @@ if (!empty($_SESSION['admin_flash'])) {
             document.getElementById('edit_full_name').value = t.full_name || '';
             document.getElementById('edit_staff_id').value = t.staff_id || '';
             document.getElementById('edit_email').value = t.email || '';
+            if (document.getElementById('edit_phone')) document.getElementById('edit_phone').value = t.phone || '';
             document.getElementById('edit_department').value = t.department || '';
             document.getElementById('edit_is_active').value = t.is_active !== undefined ? t.is_active : 1;
 
@@ -4326,9 +4531,11 @@ if (!empty($_SESSION['admin_flash'])) {
             document.getElementById('bank-cfg-env').value = bankObj.environment || 'sandbox';
             document.getElementById('bank-cfg-endpoint').value = bankObj.api_endpoint || '';
             document.getElementById('bank-cfg-key').value = bankObj.api_key || '';
-            document.getElementById('bank-cfg-secret').value = bankObj.secret_key || '';
-            document.getElementById('bank-cfg-webhook').value = bankObj.webhook_url || ('http://localhost:8080/admin_fees_actions.php?webhook=1&bank=' + (bankObj.bank_code || ''));
-            document.getElementById('bank-cfg-whsecret').value = bankObj.webhook_secret || '';
+            document.getElementById('bank-cfg-secret').value = '';
+            document.getElementById('bank-cfg-secret').placeholder = bankObj.has_secret ? 'Saved (leave blank to keep)' : 'Secret Key';
+            document.getElementById('bank-cfg-webhook').value = bankObj.webhook_url || bankObj.default_webhook_url || (window.location.origin + '/admin_fees_actions.php?webhook=1&bank=' + encodeURIComponent(bankObj.bank_code || ''));
+            document.getElementById('bank-cfg-whsecret').value = '';
+            document.getElementById('bank-cfg-whsecret').placeholder = bankObj.has_webhook_secret ? 'Saved (leave blank to keep)' : 'e.g. whsec_99182377';
 
             openModal('modal-configure-bank-api');
         }
@@ -4380,6 +4587,74 @@ if (!empty($_SESSION['admin_flash'])) {
                     row.style.display = 'none';
                 }
             });
+        }
+
+        function showBankFeedback(message, ok = false) {
+            const box = document.getElementById('bank-live-feedback');
+            if (!box) return alert(message);
+            box.textContent = message;
+            box.className = 'w-full rounded-2xl border px-4 py-3 text-xs font-semibold ' +
+                (ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900');
+            box.classList.remove('hidden');
+            box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        }
+
+        async function testBankApiConnection(bankCode, btn) {
+            const orig = btn ? btn.textContent : 'Ping';
+            if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            try {
+                const body = new URLSearchParams({action: 'test_bank_connection', bank_code: bankCode, response_format: 'json'});
+                const r = await fetch('admin_fees_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                showBankFeedback((d.success ? '✅ ' : '⚠️ ') + (d.message || d.error || 'Connection check finished.'), !!d.success);
+            } catch (e) {
+                showBankFeedback('❌ Bank API test failed: ' + (e.message || 'Network error'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = orig; }
+            }
+        }
+
+        async function checkSingleStudentBankFees(studentId, btn) {
+            const orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
+            try {
+                const body = new URLSearchParams({action: 'check_student_fees_api', student_id: String(studentId), poll_banks: '1', response_format: 'json'});
+                const r = await fetch('admin_fees_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                if (!r.ok || !d.success) throw new Error(d.error || 'Check failed.');
+                const s = d.fee_summary || {};
+                const stName = (d.student && d.student.full_name) ? d.student.full_name : ('Student #' + studentId);
+                const newCnt = Number(d.new_payments_found || 0);
+                const msg = `${stName}: Paid UGX ${Math.round(Number(s.paid_amount || 0)).toLocaleString()} · Balance UGX ${Math.round(Number(s.balance || 0)).toLocaleString()} (${s.status || 'UNPAID'}). ` +
+                    (newCnt > 0 ? `Imported ${newCnt} new payment(s) — reloading ledger...` : `Checked ${(d.banks_checked || []).length} bank API(s); ledger is up to date.`);
+                showBankFeedback((newCnt > 0 ? '✅ ' : 'ℹ️ ') + msg, newCnt > 0);
+                if (newCnt > 0) setTimeout(() => window.location.reload(), 1200);
+            } catch (e) {
+                showBankFeedback('❌ ' + (e.message || 'Bank check failed.'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+            }
+        }
+
+        async function sendBulkFeeReminderSms(studentId, btn) {
+            const label = studentId > 0 ? 'Send a fee balance SMS reminder to this student\'s guardian via Ego SMS?' : 'Send fee balance SMS reminders to ALL enrolled students with unpaid/partial balances via Ego SMS?';
+            if (!window.confirm(label)) return;
+            const orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+            try {
+                const body = new URLSearchParams({
+                    action: 'send_fee_reminder_sms',
+                    student_id: String(studentId),
+                    csrf_token: <?= json_encode($smsCsrfToken) ?>
+                });
+                const r = await fetch('admin_sms_actions.php', {method: 'POST', body, credentials: 'same-origin'});
+                const d = await r.json();
+                showBankFeedback(d.message || d.error || (d.success ? 'Reminder SMS sent.' : 'Failed to send SMS.'), !!d.success);
+            } catch (e) {
+                showBankFeedback('❌ SMS reminder failed: ' + (e.message || 'Network error'), false);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+            }
         }
 
         // ════════════════════════════════════════════════════════════════════════
@@ -4461,21 +4736,6 @@ if (!empty($_SESSION['admin_flash'])) {
                     : '<tr><td colspan="6" class="p-6 text-center text-gray-400">No contacts found.</td></tr>';
 
                 if (window.lucide) lucide.createIcons();
-            }
-
-            // ── Settings / Credentials ────────────────────────────────────────
-            async function dashLoadSettings() {
-                try {
-                    const d = await smsDashGet('get_sms_settings');
-                    document.getElementById('dash-ego-username').value = d.username || '';
-                    document.getElementById('dash-ego-sender-id').value = d.sender_id || 'THAMANI';
-                    document.getElementById('sms-credential-state').textContent =
-                        d.password_configured
-                        ? '✅ A provider password is saved (not shown for security).'
-                        : '⚠️ No provider password saved — credentials incomplete.';
-                } catch (e) {
-                    document.getElementById('sms-credential-state').textContent = 'Unable to load credential status.';
-                }
             }
 
             // ── SMS Logs ──────────────────────────────────────────────────────
@@ -4574,28 +4834,6 @@ if (!empty($_SESSION['admin_flash'])) {
                 document.getElementById('sms-dash-contact-cancel').classList.add('hidden');
             });
 
-            // ── Credentials form ──────────────────────────────────────────────
-            document.getElementById('sms-dash-credentials-form').addEventListener('submit', async ev => {
-                ev.preventDefault();
-                const vals = Object.fromEntries(new FormData(ev.currentTarget));
-                if (!vals.ego_password) delete vals.ego_password;
-                try {
-                    await smsDashPost('save_sms_credentials', vals);
-                    document.getElementById('dash-ego-password').value = '';
-                    showSmsMsg('Ego SMS credentials saved.', true);
-                    await dashLoadSettings();
-                } catch (e) { showSmsMsg(e.message); }
-            });
-
-            // ── Test form ─────────────────────────────────────────────────────
-            document.getElementById('sms-dash-test-form').addEventListener('submit', async ev => {
-                ev.preventDefault();
-                try {
-                    const d = await smsDashPost('test_sms_credentials', Object.fromEntries(new FormData(ev.currentTarget)));
-                    showSmsMsg(d.success ? `✅ Test SMS sent (${d.sent_count}).` : (d.error || 'Failed.'), d.success);
-                } catch (e) { showSmsMsg(e.message); }
-            });
-
             // ── Filters / refresh ─────────────────────────────────────────────
             document.getElementById('sms-dash-contact-filter').addEventListener('change', () =>
                 dashLoadContacts().catch(e => showSmsMsg(e.message)));
@@ -4661,10 +4899,224 @@ if (!empty($_SESSION['admin_flash'])) {
                 }
             });
 
+            // ── Portal Credentials Dispatcher ─────────────────────────────────
+            let credTargets = {students: [], teachers: [], alumni: []};
+            async function dashLoadCredentialTargets() {
+                try {
+                    const d = await smsDashGet('get_credential_targets');
+                    credTargets = {
+                        students: d.students || [],
+                        teachers: d.teachers || [],
+                        alumni:   d.alumni || []
+                    };
+                    populateCredentialPickers();
+                } catch (e) {}
+            }
+
+            function populateCredentialPickers() {
+                const cls = document.getElementById('cred-class-level')?.value || 'ALL';
+                const stSel = document.getElementById('cred-student-id');
+                if (stSel) {
+                    const filtered = credTargets.students.filter(s => cls === 'ALL' || s.class_level === cls);
+                    const withPhone = filtered.filter(s => s.normalized_phone).length;
+                    stSel.innerHTML = `<option value="0">All in selection (${withPhone} with valid phone)</option>` +
+                        filtered.map(s => `<option value="${Number(s.id)}">${smsEsc(s.full_name)} (${smsEsc(s.class_level)}) · LIN: ${smsEsc(s.lin_number || 'N/A')} · ${smsEsc(s.guardian_phone || 'No phone')}</option>`).join('');
+                }
+
+                const tSel = document.getElementById('cred-teacher-id');
+                if (tSel) {
+                    const withPhone = credTargets.teachers.filter(t => t.normalized_phone).length;
+                    tSel.innerHTML = `<option value="0">All Active Teachers (${withPhone} of ${credTargets.teachers.length} with valid phone)</option>` +
+                        credTargets.teachers.map(t => `<option value="${Number(t.id)}">${smsEsc(t.full_name)} · ${smsEsc(t.staff_id)} · ${smsEsc(t.phone || 'No phone')}</option>`).join('');
+                }
+
+                const oSel = document.getElementById('cred-other-preset');
+                if (oSel) {
+                    const alOpts = credTargets.alumni.map(a =>
+                        `<option value="alumni:${Number(a.id)}" data-name="${smsEsc(a.name)}" data-phone="${smsEsc(a.phone || '')}" data-login="${smsEsc(a.email || '')}" data-role="Alumni Page Editor" data-alumnus="${Number(a.id)}">[Alumni] ${smsEsc(a.name)} · ${smsEsc(a.email || 'No email')} · ${smsEsc(a.phone || 'No phone')}</option>`
+                    ).join('');
+                    const ctOpts = smsAllContacts.map(c =>
+                        `<option value="contact:${Number(c.id)}" data-name="${smsEsc(c.full_name)}" data-phone="${smsEsc(c.phone || '')}" data-login="" data-role="Portal Access" data-alumnus="0">[${smsEsc(c.category)}] ${smsEsc(c.full_name)} · ${smsEsc(c.phone)}</option>`
+                    ).join('');
+                    oSel.innerHTML = '<option value="">-- Type manually below or pick a saved person --</option>' + alOpts + ctOpts;
+                }
+            }
+
+            document.getElementById('cred-target-group')?.addEventListener('change', ev => {
+                const g = ev.target.value;
+                document.getElementById('cred-parent-class-wrap')?.classList.toggle('hidden', g !== 'parents');
+                document.getElementById('cred-parent-student-wrap')?.classList.toggle('hidden', g !== 'parents');
+                document.getElementById('cred-teacher-wrap')?.classList.toggle('hidden', g !== 'teachers');
+                document.getElementById('cred-other-picker-wrap')?.classList.toggle('hidden', g !== 'other');
+                document.getElementById('cred-other-fields')?.classList.toggle('hidden', g !== 'other');
+                document.getElementById('cred-sync-pwd-wrap')?.classList.toggle('hidden', g === 'other');
+            });
+
+            document.getElementById('cred-class-level')?.addEventListener('change', populateCredentialPickers);
+
+            document.getElementById('cred-other-preset')?.addEventListener('change', ev => {
+                const opt = ev.target.selectedOptions[0];
+                if (!opt || !opt.value) return;
+                document.getElementById('cred-recipient-name').value = opt.dataset.name || '';
+                document.getElementById('cred-recipient-phone').value = opt.dataset.phone || '';
+                if (opt.dataset.login) document.getElementById('cred-login-identifier').value = opt.dataset.login;
+                if (opt.dataset.role) document.getElementById('cred-role-label').value = opt.dataset.role;
+                document.getElementById('cred-alumnus-id').value = opt.dataset.alumnus || '0';
+                document.getElementById('cred-grant-alumni-editor').checked = Number(opt.dataset.alumnus || 0) > 0;
+            });
+
+            document.getElementById('cred-gen-pwd')?.addEventListener('click', () => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let out = 'Thm@';
+                for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+                document.getElementById('cred-temp-password').value = out;
+            });
+
+            document.getElementById('sms-dash-credentials-dispatch-form')?.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                const f = ev.currentTarget;
+                const vals = Object.fromEntries(new FormData(f));
+                vals.sync_password = document.getElementById('cred-sync-password')?.checked ? '1' : '0';
+                vals.grant_alumni_editor = document.getElementById('cred-grant-alumni-editor')?.checked ? '1' : '0';
+                if (!window.confirm('Send portal login credentials via Ego SMS to the selected recipient(s)?')) return;
+
+                const btn = document.getElementById('cred-send-btn');
+                const orig = btn ? btn.innerHTML : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Sending Credentials…'; }
+                try {
+                    const d = await smsDashPost('send_portal_credentials', vals);
+                    showSmsMsg(d.message || 'Credentials sent.', !!d.success);
+                    await dashLoadLogs();
+                } catch (e) {
+                    showSmsMsg(e.message || 'Failed to send credentials.');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+                }
+            });
+
             // ── Initial load: trigger when SMS tab is active ───────────────────
+            let bitlinkWalletCfg = {unit_price_ugx: 50, collection_fee_percent: 4.0, thamani_receipt_email: 'info@thamani.ac.ug'};
+            let bitlinkPollTimer = null;
+
+            async function dashLoadSmsWallet() {
+                try {
+                    const d = await smsDashGet('get_sms_wallet');
+                    const balEl = document.getElementById('sms-dash-wallet-balance');
+                    if (balEl) balEl.textContent = Number(d.wallet_balance || 0).toLocaleString();
+                    if (d.config) {
+                        bitlinkWalletCfg = d.config;
+                        const em = document.getElementById('bitlink-receipt-email');
+                        if (em && !em.dataset.touched) em.value = d.config.thamani_receipt_email || 'info@thamani.ac.ug';
+                    }
+                    recalcBitlinkTopup();
+                } catch (e) {}
+            }
+
+            function recalcBitlinkTopup() {
+                const units = Math.max(20, parseInt(document.getElementById('bitlink-sms-units')?.value || '600', 10) || 600);
+                const unitPrice = Number(bitlinkWalletCfg.unit_price_ugx || 50);
+                const subtotal = units * unitPrice;
+                const collFee = Math.round(subtotal * (Number(bitlinkWalletCfg.collection_fee_percent || 4.0) / 100));
+                let clearFee = 500;
+                if (subtotal > 1000000) clearFee = 2000;
+                else if (subtotal > 500000) clearFee = 1000;
+                else if (subtotal > 60000) clearFee = 800;
+                const procFees = collFee + clearFee;
+                const total = subtotal + procFees;
+
+                const uEl = document.getElementById('bitlink-calc-units');
+                const sEl = document.getElementById('bitlink-calc-subtotal');
+                const fEl = document.getElementById('bitlink-calc-fees');
+                const tEl = document.getElementById('bitlink-calc-total');
+                if (uEl) uEl.textContent = units.toLocaleString();
+                if (sEl) sEl.textContent = 'UGX ' + subtotal.toLocaleString();
+                if (fEl) fEl.textContent = 'UGX ' + procFees.toLocaleString();
+                if (tEl) tEl.textContent = 'UGX ' + total.toLocaleString();
+            }
+
+            window.openBitlinkSmsTopupModal = function() {
+                recalcBitlinkTopup();
+                document.getElementById('modal-bitlink-sms-topup')?.classList.remove('hidden');
+            };
+            window.closeBitlinkSmsTopupModal = function() {
+                clearInterval(bitlinkPollTimer);
+                document.getElementById('modal-bitlink-sms-topup')?.classList.add('hidden');
+            };
+
+            document.querySelectorAll('.bitlink-pack-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.bitlink-pack-btn').forEach(b => {
+                        b.className = 'bitlink-pack-btn rounded-xl border border-gray-200 p-3 text-left hover:border-orange-500 transition';
+                    });
+                    btn.className = 'bitlink-pack-btn rounded-xl border-2 border-orange-500 bg-orange-50/40 p-3 text-left transition';
+                    const u = document.getElementById('bitlink-sms-units');
+                    if (u) { u.value = btn.dataset.smsPack; recalcBitlinkTopup(); }
+                });
+            });
+            document.getElementById('bitlink-sms-units')?.addEventListener('input', recalcBitlinkTopup);
+            document.getElementById('bitlink-receipt-email')?.addEventListener('input', ev => { ev.target.dataset.touched = '1'; });
+
+            function showBitlinkTopupStatus(msg, style = 'info') {
+                const box = document.getElementById('bitlink-topup-status');
+                if (!box) return;
+                box.textContent = msg;
+                box.className = 'rounded-xl border px-4 py-3 text-xs font-semibold ' +
+                    (style === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' :
+                     style === 'error' ? 'border-rose-200 bg-rose-50 text-rose-900' :
+                     'border-orange-200 bg-orange-50 text-orange-950');
+                box.classList.remove('hidden');
+            }
+
+            document.getElementById('bitlink-sms-topup-form')?.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                clearInterval(bitlinkPollTimer);
+                const btn = document.getElementById('bitlink-pay-submit-btn');
+                const orig = btn ? btn.innerHTML : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Sending Mobile Money Prompt…'; }
+                try {
+                    const vals = Object.fromEntries(new FormData(ev.currentTarget));
+                    const d = await smsDashPost('initiate_sms_topup', vals);
+                    if (d.wallet_balance !== undefined) {
+                        const balEl = document.getElementById('sms-dash-wallet-balance');
+                        if (balEl) balEl.textContent = Number(d.wallet_balance).toLocaleString();
+                    }
+                    if (d.payment_status === 'PAID') {
+                        showBitlinkTopupStatus(d.message, 'success');
+                        showSmsMsg(d.message, true);
+                        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                        return;
+                    }
+                    showBitlinkTopupStatus(d.message, 'info');
+                    let attempts = 0;
+                    bitlinkPollTimer = setInterval(async () => {
+                        attempts++;
+                        try {
+                            const p = await smsDashPost('poll_sms_topup', {order_number: d.order_number});
+                            if (p.wallet_balance !== undefined) {
+                                const balEl = document.getElementById('sms-dash-wallet-balance');
+                                if (balEl) balEl.textContent = Number(p.wallet_balance).toLocaleString();
+                            }
+                            if (p.payment_status === 'PAID') {
+                                clearInterval(bitlinkPollTimer);
+                                showBitlinkTopupStatus(p.message, 'success');
+                                showSmsMsg(p.message, true);
+                                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                            } else if (p.payment_status === 'FAILED' || attempts >= 40) {
+                                clearInterval(bitlinkPollTimer);
+                                showBitlinkTopupStatus(p.message || 'Payment timed out.', 'error');
+                                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                            }
+                        } catch (err) {}
+                    }, 3500);
+                } catch (e) {
+                    showBitlinkTopupStatus(e.message || 'Could not start bitlink pay payment.', 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                }
+            });
+
             function smsDashInit() {
-                dashLoadSettings().catch(() => {});
-                dashLoadContacts().catch(e => showSmsMsg(e.message));
+                dashLoadSmsWallet().catch(() => {});
+                dashLoadContacts().then(() => dashLoadCredentialTargets()).catch(e => showSmsMsg(e.message));
                 dashLoadLogs().catch(() => {});
             }
 

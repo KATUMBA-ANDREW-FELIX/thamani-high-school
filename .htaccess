@@ -1,5 +1,16 @@
 # Production Performance & Caching Rules for Apache
 # ----------------------------------------------------
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Redirect legacy login & raw template .html URLs to their live PHP controllers
+    RewriteRule ^teacher-login\.(php|html)$ login.php [R=302,L]
+    RewriteRule ^student-login\.(php|html)$ login.php [R=302,L]
+    RewriteRule ^admin(\.html)?$ admin_dashboard.php [R=302,L]
+    RewriteRule ^(enrollment|alumni|library|calendar|gallery)\.html$ $1.php [R=302,L]
+</IfModule>
 
 # 1. Enable Gzip Compression
 <IfModule mod_deflate.c>
